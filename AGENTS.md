@@ -40,7 +40,7 @@ Pour ne pas se marcher dessus :
 
 - **Backend** : Python 3.12, FastAPI, Pydantic v2, uvicorn. Gestionnaire : **uv** (jamais `pip install`).
 - **ML** : Python 3.12, dans le même environnement uv que le backend.
-- **Frontend** : React 19, TypeScript 7, Vite 8. Gestionnaire : **npm**.
+- **Frontend** : React 19, TypeScript 7, Vite 8. Gestionnaire : **npm 11.19 ou plus** (comme la CI). Un npm plus ancien écrit un `package-lock.json` incomplet que la CI refuse (« Missing: … from lock file »). Mise à jour : `npm install -g npm@latest`.
 - **Qualité** : ruff (lint + format Python), prettier (format front), oxlint (lint front), pytest, pre-commit, CI GitHub Actions.
 
 ## Commandes

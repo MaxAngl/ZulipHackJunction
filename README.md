@@ -7,7 +7,7 @@ L'avancement de chacun est dans **[STATUS.md](STATUS.md)**.
 
 ## Démarrage rapide
 
-Prérequis : [uv](https://docs.astral.sh/uv/) et Node.js 22 ou plus.
+Prérequis : [uv](https://docs.astral.sh/uv/), Node.js 22 ou plus avec npm 11.19 ou plus (`npm install -g npm@latest`), et [GitHub CLI](https://cli.github.com/) (`gh auth login`).
 
 ```bash
 uv sync
