@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+
+# Secrets (modèle : .env.example)
+.env
+.env.*
+!.env.example
+
+# ML : données et poids hors de git (trop lourds, partager par lien)
+ml/data/
+ml/models/
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Réglages locaux des agents
+.claude/settings.local.json

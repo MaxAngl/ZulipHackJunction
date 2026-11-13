@@ -1,0 +1,64 @@
+# Installer une fois : uv run pre-commit install
+# Tout vérifier à la main : uv run pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=5000] # pas de poids de modèle ni de dataset dans git
+      - id: check-yaml
+      - id: check-json
+        exclude: ^frontend/tsconfig.*\.json$ # tsconfig accepte les commentaires
+      - id: end-of-file-fixer
+        exclude: ^frontend/src/api/schema\.d\.ts$
+      - id: trailing-whitespace
+        exclude: ^frontend/src/api/schema\.d\.ts$
+
+  - repo: local
+    hooks:
+      # --- Python : backend/ et ml/ ---
+      - id: ruff-check
+        name: ruff check (lint Python)
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+      - id: ruff-format
+        name: ruff format (format Python)
+        entry: uv run ruff format
+        language: system
+        types: [python]
+
+      # --- Contrat d'API ---
+      - id: gen-api-types
+        name: types TS régénérés depuis contract/openapi.json
+        entry: npm --prefix frontend run gen:api
+        language: system
+        files: ^contract/openapi\.json$
+        pass_filenames: false
+      - id: pytest
+        name: pytest (contrat API + ML)
+        entry: uv run pytest -q
+        language: system
+        files: ^(backend|ml|contract)/
+        pass_filenames: false
+
+      # --- Frontend ---
+      - id: prettier
+        name: prettier (format front)
+        entry: node frontend/node_modules/prettier/bin/prettier.cjs --write --ignore-unknown
+        language: system
+        files: ^frontend/
+        exclude: ^frontend/(src/api/schema\.d\.ts|package-lock\.json)$
+      - id: oxlint
+        name: oxlint (lint front)
+        entry: npm --prefix frontend run lint
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
+      - id: typecheck
+        name: tsc (types front)
+        entry: npm --prefix frontend run typecheck
+        language: system
+        files: ^(frontend/|contract/)
+        pass_filenames: false
