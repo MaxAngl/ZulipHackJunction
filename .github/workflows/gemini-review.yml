@@ -1,0 +1,60 @@
+# Relecture automatique de chaque PR par Gemini, à l'ouverture : un commentaire de synthèse.
+# Prérequis : secret GEMINI_API_KEY (clé Google AI Studio).
+# Volontairement simple (CLI + gh, sans extension ni serveur MCP) : l'exemple officiel de
+# run-gemini-cli dépend d'un MCP GitHub lancé dans Docker, fragile avec les versions récentes de la CLI.
+name: Gemini Review
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+concurrency:
+  group: gemini-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      # Le mode headless de Gemini CLI refuse de tourner dans un dossier non approuvé.
+      GEMINI_CLI_TRUST_WORKSPACE: 'true'
+      REVIEW_PROMPT: |
+        Tu relis une pull request d'un hackathon. Le diff de la PR est fourni en entrée.
+        Les conventions du projet sont dans AGENTS.md, à la racine du dépôt.
+        Signale uniquement les problèmes réels :
+        - bugs et cas non gérés ;
+        - failles de sécurité, secrets commités ;
+        - contrat d'API (backend/schemas.py, contract/openapi.json, ml/model.py) modifié
+          sans régénération des fichiers générés ou sans annonce dans STATUS.md ;
+        - conventions d'AGENTS.md non respectées.
+        Pour chaque problème : fichier, ligne si possible, explication en une ou deux phrases,
+        correction proposée. Pas de compliments ni de remarques de mise en forme
+        (prettier et ruff s'en chargent). S'il n'y a rien d'important, réponds seulement « RAS ».
+        Réponds en français, en Markdown, sans titre.
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Relecture par Gemini
+        run: |
+          gh pr diff "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" > "$RUNNER_TEMP/pr.diff"
+          npx --yes @google/gemini-cli --prompt "$REVIEW_PROMPT" < "$RUNNER_TEMP/pr.diff" > "$RUNNER_TEMP/review.md"
+          {
+            echo "### Relecture Gemini"
+            echo
+            cat "$RUNNER_TEMP/review.md"
+          } > "$RUNNER_TEMP/comment.md"
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/comment.md"
