@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { type AccountRole, logout, type SessionResponse } from './api/client'
 import InAppNotificationBanner from './components/InAppNotificationBanner'
+import Mascot from './components/Mascot'
 import AdminScreen from './screens/AdminScreen'
 import ClinicianScreen from './screens/ClinicianScreen'
 import DemoScreen from './screens/DemoScreen'
@@ -159,6 +160,10 @@ function App() {
     <>
       <InAppNotificationBanner />
       {content}
+      {/* La mascotte se promène dans la communauté, pas dans les portails ni la console. */}
+      {route !== 'demo' && route !== 'clinician' && route !== 'admin' && (
+        <Mascot />
+      )}
     </>
   )
 }
