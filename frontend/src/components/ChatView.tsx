@@ -207,12 +207,10 @@ function ChatView({
 
   // --- Vue 1 : la liste des fils ---
   if (!activeThread) {
-    const unread = threads.filter(isUnread).length
     return (
       <section className="stack chat-list-section">
         <div className="chat-list-header">
           <h2>Messages</h2>
-          <span className="quiet font-small">{unread} unread</span>
         </div>
 
         {threads.length === 0 ? (

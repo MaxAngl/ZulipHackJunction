@@ -1,0 +1,487 @@
+/* Système de design de Needed (issue #43), posé par-dessus la structure d'index.css.
+   Chargé après index.css (main.tsx) : à spécificité égale, ces règles l'emportent.
+
+   Les couleurs vivent dans index.css (--bg, --ink, --muted, --cyan, --rule). Ici :
+   - une échelle d'espacement de base 4 (--space-1 à --space-7) ;
+   - cinq tailles de texte (--text-sm à --text-2xl) ;
+   - deux épaisseurs de trait (--stroke, --stroke-thin) ;
+   - un seul rayon extérieur (--radius). Un élément posé dans un conteneur prend
+     le rayon du conteneur moins sa marge intérieure (--pad) : --radius-inner.
+
+   Le principe visuel : le contenu est posé sur le papier, sans carte ni ornement.
+   Un filet sépare les sections. Les seuls aplats sont le bandeau cyan, la sélection
+   en cyan et les suggestions en bloc inversé. Les couleurs de marque (#0a0a0a,
+   #faf8f2) restent fixes là où le fond est cyan, quel que soit le thème. */
+
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.25rem;
+
+  --stroke: 2px;
+  --stroke-thin: 1.5px;
+
+  --radius: 4px;
+  --pad: 0px;
+}
+
+/* Le rayon intérieur se calcule sur chaque conteneur qui fixe sa marge (--pad) :
+   une variable calculée sur :root y resterait figée. */
+:root,
+.helper-proposal-card,
+.theme-segmented-control,
+.modal-card,
+.custom-select-menu,
+.bottom-nav {
+  --radius-inner: max(0px, calc(var(--radius) - var(--pad)));
+}
+
+/* --- Typographie ---------------------------------------------------------------------- */
+
+.screen-body h1 {
+  font-size: var(--text-2xl);
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.screen-body h2 {
+  font-size: var(--text-lg);
+  letter-spacing: -0.02em;
+}
+
+.eyebrow {
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.helper-patient-bio {
+  font-style: normal;
+}
+
+/* Un lien dans le texte : l'encre, soulignée, jamais le bleu du navigateur */
+.screen-body a:not(.button) {
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* --- En-tête : un bandeau cyan plein -------------------------------------------------- */
+
+.screen .topbar {
+  background: var(--cyan);
+  color: #0a0a0a;
+  border-bottom: var(--stroke) solid #0a0a0a;
+}
+
+.screen .topbar .brand-name {
+  color: #0a0a0a;
+}
+
+.screen .topbar .logo-hand-ink {
+  stroke: #0a0a0a;
+}
+
+.screen .topbar .logo-hand-cyan {
+  stroke: #faf8f2;
+}
+
+.screen .topbar .button,
+.topbar-settings-btn {
+  background: transparent;
+  border: var(--stroke) solid #0a0a0a;
+  border-radius: var(--radius);
+  color: #0a0a0a;
+}
+
+.topbar-settings-btn:hover,
+.screen .topbar .button:hover:not(:disabled) {
+  background: #0a0a0a;
+  color: var(--cyan);
+}
+
+/* --- Accueil : une affiche cyan, texte noir ------------------------------------------- */
+
+.screen:has(.hero) {
+  background: var(--cyan);
+}
+
+.hero,
+.hero h1,
+.hero .lead,
+.hero .brand-hero-name {
+  color: #0a0a0a;
+}
+
+.hero h1 {
+  font-size: var(--text-2xl);
+}
+
+.hero .logo-hand-ink {
+  stroke: #0a0a0a;
+}
+
+.hero .logo-hand-cyan {
+  stroke: #faf8f2;
+}
+
+.hero .button {
+  border-color: #0a0a0a;
+  color: #0a0a0a;
+}
+
+.hero .button-primary,
+.hero .button-primary:hover:not(:disabled) {
+  background: #0a0a0a;
+  border-color: #0a0a0a;
+  color: #faf8f2;
+}
+
+.hero .button:not(.button-primary):hover:not(:disabled) {
+  background: #0a0a0a;
+  color: var(--cyan);
+}
+
+.hero .button-info,
+.hero .button-admin-pill {
+  background: transparent;
+  border: none;
+  color: #0a0a0a;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* --- Sections : pas de carte, un filet en tête ---------------------------------------- */
+
+.settings-card,
+.profile-hero-card,
+.profile-details-card,
+.profile-achievements-card,
+.clinic-meta-box,
+.card-patient-oversight,
+.card-patient-ask,
+.peer-profile-section,
+.admin-stat-card {
+  background: transparent;
+  border: none;
+  border-top: var(--stroke) solid var(--rule);
+  border-radius: 0;
+}
+
+.clinical-metric {
+  border: none;
+  border-top: var(--stroke-thin) solid var(--rule);
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* --- Boutons -------------------------------------------------------------------------- */
+
+.button {
+  border-width: var(--stroke);
+  border-radius: var(--radius);
+}
+
+.button-primary,
+.button-primary:hover:not(:disabled),
+[data-theme='dark'] .button-primary:hover:not(:disabled) {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: #0a0a0a;
+}
+
+/* Pas encore cliquable : un contour plein estompé, ni pointillés ni cyan délavé */
+.button-primary:disabled {
+  opacity: 1;
+  background: transparent;
+  border-color: var(--muted);
+  color: var(--muted);
+}
+
+/* Aucun trait en pointillés : un filet est plein ou n'existe pas */
+.helper-own-section {
+  border-top: var(--stroke) solid var(--rule);
+}
+
+.passion-photo-add-box {
+  border: var(--stroke-thin) solid var(--rule);
+}
+
+.model-band-ceiling {
+  border-style: solid;
+  background: transparent;
+}
+
+/* --- Champs : un trait dessous, cyan quand on écrit ----------------------------------- */
+
+textarea,
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='date'],
+.custom-select-trigger {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  background: transparent;
+  border: none;
+  border-bottom: var(--stroke) solid var(--rule);
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+textarea:focus,
+input[type='text']:focus,
+input[type='email']:focus,
+input[type='password']:focus,
+input[type='date']:focus,
+.custom-select-trigger:hover,
+.custom-select-trigger.open {
+  border-bottom-color: var(--cyan);
+  box-shadow: none;
+  outline: none;
+}
+
+/* --- Centres d'intérêt : contour fin, cyan plein quand c'est choisi ------------------- */
+
+.chip-off,
+button.chip.chip-off {
+  background: transparent;
+  border: var(--stroke-thin) solid var(--rule);
+  color: var(--ink);
+}
+
+.chip-on,
+button.chip.chip-on {
+  background: var(--cyan);
+  border: var(--stroke-thin) solid var(--cyan);
+  color: #0a0a0a;
+}
+
+.helper-patient-pill {
+  border: var(--stroke-thin) solid var(--rule);
+  background: transparent;
+}
+
+.helper-patient-pill.active {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: #0a0a0a;
+}
+
+.helper-hobby-chip {
+  background: var(--cyan);
+  border: none;
+  color: #0a0a0a;
+  font-weight: 700;
+}
+
+/* --- L'appariement : un bouton, puis une seule personne ------------------------------- */
+
+.helper-match-start {
+  gap: var(--space-5);
+  padding-top: var(--space-6);
+}
+
+.helper-match-person {
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.helper-match-bio {
+  font-size: var(--text-lg);
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+/* --- La fonction principale : la demande à envoyer, en grand -------------------------- */
+
+.proposals {
+  gap: var(--space-4);
+}
+
+.helper-ai-title {
+  font-size: var(--text-lg);
+}
+
+/* Le bloc redéfinit encre ET fond : un bouton survolé s'inverse (fond = encre,
+   texte = fond) et doit rester lisible à l'intérieur du bloc. */
+.helper-proposal-card {
+  --pad: var(--space-5);
+  --bg: #0a0a0a;
+  --ink: #faf8f2;
+  --text: #faf8f2;
+  --muted: #bdb7aa;
+  --rule: #faf8f2;
+  gap: var(--space-5);
+  padding: var(--pad);
+  background: #0a0a0a;
+  color: #faf8f2;
+  border: none;
+  border-radius: var(--radius);
+}
+
+[data-theme='dark'] .helper-proposal-card {
+  --bg: #faf8f2;
+  --ink: #0a0a0a;
+  --text: #0a0a0a;
+  --muted: #4d493f;
+  --rule: #0a0a0a;
+  background: #faf8f2;
+  color: #0a0a0a;
+}
+
+.helper-proposal-card:hover {
+  transform: none;
+}
+
+.helper-proposal-text {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.helper-proposal-card .row {
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+}
+
+.helper-proposal-card .button,
+.helper-proposal-card textarea {
+  border-radius: var(--radius-inner);
+}
+
+.helper-proposal-card .button-primary {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-lg);
+}
+
+/* --- Messagerie : des lignes séparées par un filet, des bulles en aplats -------------- */
+
+.thread-row-item {
+  background: transparent;
+  border: none;
+  border-bottom: var(--stroke-thin) solid var(--rule);
+  border-radius: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.thread-row-item:hover {
+  transform: none;
+}
+
+/* Non lu : le point sur l'avatar suffit, pas de barre ni de fond */
+.thread-row-unread {
+  background: transparent;
+  border-color: var(--rule);
+  box-shadow: none;
+}
+
+.chat-bubble-peer,
+[data-theme='dark'] .chat-bubble-peer {
+  background: var(--ink);
+  color: var(--bg);
+  border: none;
+}
+
+/* --- Réglages : le choix du thème glisse sur un pavé cyan ----------------------------- */
+
+.theme-segmented-control {
+  --pad: var(--space-1);
+  padding: var(--pad);
+  border: var(--stroke) solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.theme-sliding-glider,
+[data-theme='dark'] .theme-sliding-glider {
+  top: var(--pad);
+  bottom: var(--pad);
+  background: var(--cyan);
+  border: none;
+  border-radius: var(--radius-inner);
+}
+
+.theme-segmented-btn.active,
+[data-theme='dark'] .theme-segmented-btn.active {
+  color: #0a0a0a;
+}
+
+/* --- Éléments qui flottent : un cadre, sans ombre ------------------------------------- */
+
+.modal-card {
+  --pad: var(--space-5);
+  padding: var(--pad);
+  border: var(--stroke) solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.modal-card .button {
+  border-radius: var(--radius-inner);
+}
+
+.custom-select-menu {
+  --pad: var(--space-1);
+  padding: var(--pad);
+  border-color: var(--rule);
+  border-radius: var(--radius);
+}
+
+.custom-select-option {
+  border-radius: var(--radius-inner);
+}
+
+/* --- Dock : un aplat noir, l'onglet actif est un pavé cyan ---------------------------- */
+
+.bottom-nav {
+  --pad: var(--space-1);
+  padding: var(--pad);
+  border: var(--stroke) solid var(--glass-dock-border);
+  border-radius: var(--radius);
+}
+
+.bottom-nav-item {
+  border-radius: var(--radius-inner);
+}
+
+.bottom-nav-item-active,
+.bottom-nav-item-active:hover {
+  background: var(--cyan);
+  color: #0a0a0a;
+}
+
+.bottom-nav-item-active .bottom-nav-icon {
+  stroke: #0a0a0a;
+}
+
+.bottom-nav-badge {
+  background: #faf8f2;
+  color: #0a0a0a;
+  border: var(--stroke) solid #0a0a0a;
+}
+
+/* --- Graphiques de la console : la grille reste discrète ------------------------------ */
+
+.axis-grid {
+  stroke: var(--grid);
+}

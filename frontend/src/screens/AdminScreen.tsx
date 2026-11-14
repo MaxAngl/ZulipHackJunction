@@ -455,13 +455,13 @@ function AdminScreen({ token, onLeave }: AdminScreenProps) {
                   }`}
                   style={{
                     padding: '12px 14px',
-                    borderRadius: '12px',
+                    borderRadius: '4px',
                     background: msg.resolved
                       ? 'var(--bg)'
-                      : 'rgba(0, 216, 255, 0.05)',
+                      : 'var(--surface-soft)',
                     border: msg.resolved
                       ? '1px solid var(--line)'
-                      : '1px solid rgba(0, 216, 255, 0.35)',
+                      : '2px solid var(--ink)',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '8px',
@@ -484,7 +484,7 @@ function AdminScreen({ token, onLeave }: AdminScreenProps) {
                           fontSize: '0.75rem',
                           fontWeight: 700,
                           padding: '2px 8px',
-                          borderRadius: '6px',
+                          borderRadius: '4px',
                           background:
                             msg.category === 'bug'
                               ? '#ffebee'

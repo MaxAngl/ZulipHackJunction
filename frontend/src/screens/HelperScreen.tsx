@@ -127,10 +127,7 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
           <div className="helper-screen-content">
             {needs.length > 0 && (
               <section className="stack patient-needs-banner-section">
-                <div className="flex-between">
-                  <p className="eyebrow">Direct patient requests</p>
-                  <span className="badge-highlight">{needs.length} open</span>
-                </div>
+                <p className="eyebrow">Direct patient requests</p>
                 {needs.map((need) => (
                   <div key={need.id} className="card-patient-need-banner">
                     <div className="patient-need-header">
@@ -149,15 +146,12 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                         <div>
                           <strong>{need.patient.name}</strong>
                           <span className="quiet font-small block">
-                            Patient · {clock(need.created_at)}
+                            {clock(need.created_at)}
                           </span>
                         </div>
                       </div>
-                      <span className="patient-need-tag">
-                        Community request
-                      </span>
                     </div>
-                    <p className="patient-need-body">« {need.text} »</p>
+                    <p className="patient-need-body">{need.text}</p>
                     <div className="row">
                       <button
                         type="button"
@@ -176,10 +170,6 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
             <section className="stack">
               <div className="helper-screen-header">
                 <h1 className="helper-screen-title">Someone you could ask</h1>
-                <p className="quiet" style={{ margin: 0, fontSize: '0.88rem' }}>
-                  Needed picks a member whose interests meet yours, and drafts
-                  three requests at their pace.
-                </p>
               </div>
             </section>
 
@@ -220,24 +210,20 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                     <h2 className="helper-patient-name">
                       {`${patient.name} ${patient.last_name}`.trim()}
                     </h2>
-                    <span className="helper-patient-city">
-                      {patient.city ? `${patient.city} · ` : ''}Community member
-                    </span>
+                    {patient.city && (
+                      <span className="helper-patient-city">
+                        {patient.city}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 {patient.bio && (
-                  <p className="helper-patient-bio">« {patient.bio} »</p>
+                  <p className="helper-patient-bio">{patient.bio}</p>
                 )}
 
                 {patient.interests.length > 0 ? (
                   <div className="helper-hobbies-section">
-                    <div className="helper-hobbies-label">
-                      <span>Hobbies & Interests</span>
-                      <span className="badge-highlight-subtle">
-                        {patient.interests.length} topics
-                      </span>
-                    </div>
                     <div className="helper-hobbies-chips">
                       {patient.interests.map((hobby) => (
                         <span key={hobby} className="helper-hobby-chip">
@@ -260,14 +246,9 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                   <h2 className="helper-ai-title">
                     Suggestions to write to {patient.name}
                   </h2>
-                  <span className="badge-ai-pill">Gemini AI</span>
                 </div>
-                <p className="quiet font-small" style={{ margin: 0 }}>
-                  Written between your interests and {patient.name}&apos;s, at a
-                  pace that suits them today.
-                </p>
 
-                <div className="proposals" style={{ marginTop: '4px' }}>
+                <div className="proposals">
                   {home.proposals.map((proposal) => (
                     <div key={proposal.id} className="helper-proposal-card">
                       {editingId === proposal.id ? (
@@ -304,14 +285,6 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                         </>
                       ) : (
                         <>
-                          <div className="helper-proposal-header">
-                            <span className="helper-proposal-topic">
-                              {proposal.patient_interest}
-                              {proposal.helper_interest !==
-                                proposal.patient_interest &&
-                                ` × ${proposal.helper_interest}`}
-                            </span>
-                          </div>
                           <p className="helper-proposal-text">
                             {proposal.text}
                           </p>
