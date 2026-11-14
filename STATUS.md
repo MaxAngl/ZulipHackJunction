@@ -44,6 +44,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 15:30] Résultat en boucle fermée sur des patients jamais vus : le réseau B fait nettement mieux que la règle fixe. Chiffres et limites : `docs/modele.md`, section 14. Tout est simulé.
 - [14/11 15:30] Pour réentraîner : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`, puis `uv run python -m ml.nets.train` et `uv run python -m ml.nets.evaluate`. Une dizaine de minutes sur CPU.
 - **Bloqué :** —
+- [14/11 18:10] #51 : une notification déjà vue ne revient plus à chaque rechargement (`saveNotification` la garde comme lue).
 - [14/11 17:00] Gemini testé en réel dans la console, avec la zone du réseau B (#36) : trois propositions à plusieurs états du patient, message libre retenu, demande d'argent refusée. Le modèle léger par défaut et le repli vers un autre modèle viennent de #33 (Rami) ; #36 ajoute les formats permis dans le prompt et une nouvelle tentative sur les embeddings. La clé va dans `.env` (jamais dans git) ; la demander à Max. Vérifier chez soi : `uv run python -m ml.check_gemini`.
 - **Notes pour la suite :**
   - Données simulées : `uv run python -m ml.simulation` écrit `ml/data/sim` (hors git). Le sens de chaque colonne est dans `meta.json`, les règles dans `docs/modele.md`, section 12.
