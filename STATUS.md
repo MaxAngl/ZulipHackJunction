@@ -69,7 +69,9 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Le commentaire libre de l'inscription n'est pas encore dans l'API. Quand il arrive, le passer à `build_profile(tags, comment)` : chaque phrase devient un élément d'intérêt, comparé à tous ceux de l'autre personne.
   - Le bonus d'attente (`WAIT_WEIGHT`, `WAIT_FULL_DAYS` dans `ml/matching.py`) est un premier réglage, à ajuster avec l'équipe.
   - Le repli hors ligne (trigrammes de lettres) ne comprend pas le sens : « ski » et « montagne » n'y sont pas proches. Il ne sert qu'à ne jamais casser sans clé Gemini.
-  - Rapport de bout en bout (#47) sur 100 patients jamais vus : couples à 0,72 de score contre 0,23 au hasard ; A classe bien les demandes (récompense réelle 65 pour son cinquième préféré contre 37 pour celui qu'il déconseille) mais prédit mal la réponse (AUC 0,57) ; plus l'aide est fréquente, plus le patient se rapproche de la zone saine. Chiffres dans `ml/data/e2e/rapport.md` après lancement.
+  - Rapport de bout en bout (#47), `uv run python -m ml.end_to_end`, résultats dans `resultats/` : A classe bien les demandes mais prédit mal la réponse (AUC 0,57). Délai entre deux aides, avec les demandes écrites par le générateur hors ligne : pour un patient moyen, d passe de 2,90 sans aide à 2,55 tous les 3 jours et 2,03 tous les jours.
+  - Hors ligne, 43 % des demandes prévues ne partent pas pour les patients presque guéris et graves : les textes de la banque tombent presque tous vers λ = 0,68, alors que B vise plus bas (presque guéri) ou plus haut (grave). Jamais à cause du coût. À relancer avec `--gemini` quand la clé est là.
+  - Un même intérêt chez le patient et son aidant (paire « podcasts / podcasts ») rend la position λ indéfinie : la mesure part aux extrêmes et rien n'entre dans la zone. À corriger dans `ml/pipeline.py` (l'app est touchée aussi) ; le rapport écarte ces paires.
   - Un profil enregistré n'est pas recalculé si les intérêts changent : supprimer sa ligne dans la table `profiles` pour le recalculer.
 
 ## Rami (Antigravity)

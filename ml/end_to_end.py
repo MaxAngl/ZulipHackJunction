@@ -68,33 +68,44 @@ FAMILIES = {
     "mind": ["reading", "chess", "board games", "crosswords", "history"],
     "screen": ["photography", "films", "video games", "podcasts", "drawing"],
 }
+# Sans Gemini, seulement les neuf intérêts que la banque hors ligne connaît (`ml/lexicon.py`).
+LEXICON_FAMILIES = {
+    "outdoors": ["gardening", "hiking", "cycling"],
+    "food": ["baking", "cooking"],
+    "culture": ["jazz", "photography"],
+    "hands": ["woodworking", "board games"],
+}
 OWN_FAMILY = 0.75  # part des intérêts tirés dans la famille principale de la personne
-RHYTHMS = {
-    "Aucune demande": None,
-    "Tous les 7 jours": 7,
-    "Tous les 3 jours": 3,
-    "Tous les jours": 1,
-}
-COLORS = {
-    "Aucune demande": "#9ca3af",
-    "Tous les 7 jours": "#60a5fa",
-    "Tous les 3 jours": "#f59e0b",
-    "Tous les jours": "#16a34a",
-}
+
+DELAYS = (1, 2, 3, 5, 7, 14)  # jours entre deux aides
+PANEL_DELAYS = (None, 7, 3, 1)  # les rythmes tracés jour après jour, pour rester lisible
+PER_TYPE = 5  # patients par type : la moyenne de cinq est plus solide qu'un seul
+TYPES = {"Presque guéri": 0.10, "Moyen": 0.50, "Grave": 0.90}  # centile de gravité visé
+COLORS = {None: "#9ca3af", 14: "#c4b5fd", 7: "#60a5fa", 5: "#22d3ee", 3: "#f59e0b",
+          2: "#f97316", 1: "#16a34a"}  # fmt: skip
+TYPE_COLORS = {"Presque guéri": "#16a34a", "Moyen": "#f59e0b", "Grave": "#dc2626"}
+
+
+def rhythm_label(every: int | None) -> str:
+    if every is None:
+        return "Aucune aide"
+    return "Tous les jours" if every == 1 else f"Tous les {every} jours"
 
 
 # --- 1. Appariement ----------------------------------------------------------------------------
 
 
-def draw_interests(rng: np.random.Generator, n: int) -> list[list[str]]:
+def draw_interests(
+    rng: np.random.Generator, n: int, families: dict[str, list[str]] = FAMILIES
+) -> list[list[str]]:
     """De 2 à 4 intérêts par personne, surtout dans sa famille principale."""
-    names = list(FAMILIES)
+    names = list(families)
     people = []
     for _ in range(n):
-        home = FAMILIES[names[rng.integers(len(names))]]
+        home = families[names[rng.integers(len(names))]]
         chosen: list[str] = []
         for _ in range(rng.integers(2, 5)):
-            pool = home if rng.random() < OWN_FAMILY else FAMILIES[names[rng.integers(len(names))]]
+            pool = home if rng.random() < OWN_FAMILY else families[names[rng.integers(len(names))]]
             chosen.append(pool[rng.integers(len(pool))])
         people.append(list(dict.fromkeys(chosen)))
     return people
@@ -121,9 +132,10 @@ Pairing = tuple[list[str], list[str]]  # intérêts du patient, intérêts de so
 
 
 def matching_part(
-    rng: np.random.Generator, n: int, out: Path
+    rng: np.random.Generator, n: int, out: Path, families: dict[str, list[str]]
 ) -> tuple[dict, list[str], dict[int, Pairing]]:
-    patients_tags, helpers_tags = draw_interests(rng, n), draw_interests(rng, n)
+    patients_tags = draw_interests(rng, n, families)
+    helpers_tags = draw_interests(rng, n, families)
     patients = {f"p{i}": offline_profile(interest_items(t)) for i, t in enumerate(patients_tags)}
     helpers = {f"h{i}": offline_profile(interest_items(t)) for i, t in enumerate(helpers_tags)}
     matched = stable_match(patients, helpers, {})
@@ -358,10 +370,16 @@ class RequestWriter:
     tried: list[set[str]] = field(default_factory=list)
     sent: list[list[Sent]] = field(default_factory=list)
     empty_days: int = 0
+    # Pourquoi rien n'est parti, par patient : aucun format assez léger pour la zone (le coût
+    # vient du format, quel que soit le générateur), ou des textes mal placés entre les intérêts.
+    blocked_cost: list[int] = field(default_factory=list)
+    blocked_interest: list[int] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.tried = [set() for _ in self.couples]
         self.sent = [[] for _ in self.couples]
+        self.blocked_cost = [0 for _ in self.couples]
+        self.blocked_interest = [0 for _ in self.couples]
 
     def write(
         self, i: int, day: int, low: np.ndarray, high: np.ndarray, startup: float
@@ -371,6 +389,9 @@ class RequestWriter:
         zone = Zone(center, half, _heaviest_format(box), center, box)
         mine, theirs = self.couples[i]
         pairs = [InterestPair(p, h) for p in mine for h in theirs]
+        # Un même intérêt des deux côtés ne laisse pas d'axe entre les deux : la position d'une
+        # demande y est indéfinie. On garde ces paires seulement s'il n'y en a pas d'autre.
+        pairs = [pair for pair in pairs if pair.patient_interest != pair.helper_interest] or pairs
         candidates, chosen = [], []
         for attempt in range(2):  # une seconde génération si la zone est peu fournie, comme l'app
             candidates += generate_candidates(
@@ -386,6 +407,10 @@ class RequestWriter:
                 break
         if not chosen:
             self.empty_days += 1
+            if any(box.allows_costs(fmt.axes) for fmt in FORMATS.values()):
+                self.blocked_interest[i] += 1
+            else:
+                self.blocked_cost[i] += 1
             return None
         best = chosen[0][1]
         axes = best.axes or request_axes(best.lam, best.format)
@@ -450,6 +475,52 @@ def live_with_rhythm(
     return state, theta, sent
 
 
+def pick_types(severity: np.ndarray) -> dict[str, list[int]]:
+    """Pour chaque type, les `PER_TYPE` patients les plus proches de son centile de gravité."""
+    order = np.argsort(severity)
+    groups = {}
+    for name, quantile in TYPES.items():
+        center = int(round(quantile * (len(order) - 1)))
+        start = min(max(center - PER_TYPE // 2, 0), len(order) - PER_TYPE)
+        groups[name] = [int(index) for index in order[start : start + PER_TYPE]]
+    return groups
+
+
+def slug(name: str) -> str:
+    plain = name.lower().replace("é", "e").replace("è", "e")
+    return "_".join(plain.split())
+
+
+def delay_figure(table: dict[str, dict], out: Path) -> None:
+    """d moyen des 4 dernières semaines en fonction du délai, une courbe par type de patient."""
+    figure, axes_pair = plt.subplots(1, 2, figsize=(12, 4.8), sharey=True)
+    for axis, key, title in (
+        (axes_pair[0], "reel", "État réel (caché)"),
+        (axes_pair[1], "mesure", "État mesuré L(θ), ce que l'app voit"),
+    ):
+        for name, rows in table.items():
+            color = TYPE_COLORS[name]
+            values = [rows[d][key] for d in DELAYS]
+            spread = [rows[d][f"{key}_ecart"] for d in DELAYS]
+            axis.errorbar(DELAYS, values, yerr=spread, marker="o", capsize=3, color=color,
+                          label=f"{name} : avec aide")  # fmt: skip
+            axis.axhline(rows[None][key], color=color, linestyle="--", linewidth=1.2,
+                         label=f"{name} : sans aide")  # fmt: skip
+        axis.axhline(1.0, color="#6b7280", linestyle=":", linewidth=1)
+        axis.set_xscale("log")
+        axis.set_xticks(DELAYS, [str(d) for d in DELAYS])
+        axis.minorticks_off()
+        axis.set_xlabel("Délai entre deux aides (jours)")
+        axis.set_title(title, fontsize=10)
+    axes_pair[0].set_ylabel("Distance à la zone saine d, 4 dernières semaines\n(↑ = va mieux)")
+    axes_pair[0].invert_yaxis()
+    axes_pair[1].legend(fontsize=8, loc="lower right")
+    figure.suptitle("Bien-être final selon le délai entre deux aides")
+    figure.tight_layout()
+    figure.savefig(out / "4_delai.png", dpi=130)
+    plt.close(figure)
+
+
 def wellbeing_part(
     networks: Networks,
     people: People,
@@ -459,33 +530,49 @@ def wellbeing_part(
     out: Path,
     partners: dict[int, Pairing],
 ) -> tuple[dict, list[str]]:
-    severity = distance(people.natural, *l_ref).mean(axis=1)
-    order = np.argsort(severity)
-    chosen = {
-        "Patient sévère": int(order[int(0.9 * (len(order) - 1))]),
-        "Patient moyen": int(order[len(order) // 2]),
-        "Patient léger": int(order[int(0.1 * (len(order) - 1))]),
-    }
-    trio_people, trio_rules = subset(people, rules, np.array(list(chosen.values())))
-    couples = [partners[index] for index in chosen.values()]
+    groups = pick_types(distance(people.natural, *l_ref).mean(axis=1))
+    members = [index for group in groups.values() for index in group]
+    cohort, cohort_rules = subset(people, rules, np.array(members))
+    couples = [partners[index] for index in members]
+    row_of = {name: [members.index(i) for i in group] for name, group in groups.items()}
     days = np.arange(people.natural.shape[1])
+    last = slice(-28, None)
 
     curves, writers = {}, {}
-    for rhythm, every in RHYTHMS.items():
+    for every in (None, *DELAYS):
         writer = RequestWriter(couples, seed)
-        state, theta, sent = live_with_rhythm(
-            networks, trio_people, trio_rules, every, seed, writer
-        )
-        latent = measured_states(networks, theta).reshape(len(chosen), len(days), SLOTS, -1)
+        state, theta, sent = live_with_rhythm(networks, cohort, cohort_rules, every, seed, writer)
+        latent = measured_states(networks, theta).reshape(len(members), len(days), SLOTS, -1)
         real = distance(state, *l_ref)
         seen = networks.distance(np.nanmean(latent, axis=2))
-        curves[rhythm], writers[rhythm] = (real, seen, sent), writer
+        curves[every], writers[every] = (real, seen, sent), writer
 
     providers = {s.provider for w in writers.values() for texts in w.sent for s in texts}
     empty = sum(w.empty_days for w in writers.values())
+    planned = sum(int(schedule(len(days) - REWARD_DELAY_DAYS, e).sum()) for e in DELAYS)
     summary: dict[str, dict] = {"generateur": sorted(providers), "jours_sans_demande": empty}
+
+    # Synthèse : d moyen sur les 4 dernières semaines, par type et par délai.
+    table: dict[str, dict] = {}
+    for name, rows in row_of.items():
+        table[name] = {}
+        for every, (real, seen, sent) in curves.items():
+            final_real, final_seen = real[rows, last].mean(axis=1), seen[rows, last].mean(axis=1)
+            writer = writers[every]
+            table[name][every] = {
+                "demandes": float(sent[rows].sum(axis=1).mean()),
+                "bloquees_cout": float(np.mean([writer.blocked_cost[r] for r in rows])),
+                "bloquees_interets": float(np.mean([writer.blocked_interest[r] for r in rows])),
+                "reel": float(final_real.mean()),
+                "reel_ecart": float(final_real.std()),
+                "mesure": float(final_seen.mean()),
+                "mesure_ecart": float(final_seen.std()),
+            }
+    summary["par_type"] = {n: {str(e): v for e, v in t.items()} for n, t in table.items()}
+    delay_figure(table, out)
+
     lines = [
-        "## 3. Bien-être dans le temps",
+        "## 3. Bien-être selon le délai entre deux aides",
         "",
         "Sans aide, le patient suit sa trajectoire naturelle générée. Avec aide, chaque demande "
         "est écrite comme dans l'app : zone du réseau B, textes du générateur pour les intérêts "
@@ -493,30 +580,61 @@ def wellbeing_part(
         "patient simulé réagit au texte envoyé. Entre deux demandes, l'état suit la trajectoire "
         "naturelle, et l'effet des demandes passées s'estompe d'un quart par jour.",
         "",
-        f"Générateur utilisé : **{', '.join(sorted(providers)) or 'aucun'}**. Jours prévus où "
-        f"aucune demande générée n'entrait dans la zone (rien n'est alors envoyé) : {empty}.",
+        f"Trois types de patients, {PER_TYPE} patients chacun, choisis autour des centiles de "
+        "gravité 10 (presque guéri), 50 (moyen) et 90 (grave) de leur trajectoire naturelle. "
+        f"Délais testés : {', '.join(str(d) for d in DELAYS)} jours, et aucune aide. Mêmes "
+        "tirages pour tous les délais : seule l'aide change.",
+        "",
+        f"Générateur utilisé : **{', '.join(sorted(providers)) or 'aucun'}**. Demandes prévues "
+        f"sans aucune demande générée dans la zone (rien n'est alors envoyé) : {empty} sur "
+        f"{planned * len(members)}.",
         "",
         "Ordonnée : la distance à la zone saine, d. Une personne saine typique est autour de 1. "
-        "**L'axe est retourné : plus la courbe monte, mieux le patient va.** En haut, l'état "
-        "réel (caché, la vérité du simulateur) ; en bas, l'état mesuré L(θ), ce que l'app voit. "
-        "Chaque trait vertical sous un graphe est une demande envoyée. Mêmes tirages pour les "
-        "quatre rythmes : seule l'aide change.",
+        "**L'axe est retourné : plus la courbe monte, mieux le patient va.**",
         "",
-        "| Patient | Intérêts du patient / de son aidant | Rythme | Demandes envoyées "
-        "| d réel, 4 dernières semaines | d mesuré, 4 dernières semaines |",
-        "|---|---|---|---|---|---|",
+        "| Type | Délai | Demandes prévues | Envoyées | Bloquées : coût / intérêts "
+        "| d réel, 4 dernières semaines | Gain réel contre aucune aide "
+        "| d mesuré, 4 dernières semaines |",
+        "|---|---|---|---|---|---|---|---|",
     ]
-    for k, (name, _) in enumerate(chosen.items()):
+    for name, rows in table.items():
+        base = rows[None]["reel"]
+        for every, row in rows.items():
+            gain = "—" if every is None else f"{base - row['reel']:+.2f}"
+            planned_here = int(schedule(len(days) - REWARD_DELAY_DAYS, every).sum())
+            lines.append(
+                f"| {name} | {rhythm_label(every)} | {planned_here} | {row['demandes']:.0f} "
+                f"| {row['bloquees_cout']:.0f} / {row['bloquees_interets']:.0f} "
+                f"| {row['reel']:.2f} ± {row['reel_ecart']:.2f} | {gain} "
+                f"| {row['mesure']:.2f} ± {row['mesure_ecart']:.2f} |"
+            )
+    lines += [
+        "",
+        "Gain réel : de combien d baisse par rapport à aucune aide (positif = le patient va "
+        "mieux). « ± » : écart-type entre les patients du type. Bloquées : demandes prévues "
+        "qui ne sont pas parties, en moyenne par patient. « Coût » : aucun format de demande "
+        "n'est assez léger pour la zone de B (le coût d'une demande vient de son format, quel "
+        "que soit le générateur). « Intérêts » : des formats passaient, mais aucun texte "
+        "généré n'était placé dans l'intervalle voulu entre les intérêts.",
+        "",
+        "![Bien-être selon le délai](4_delai.png)",
+        "",
+        "### Un patient de chaque type, jour après jour",
+        "",
+        "En haut, l'état réel (caché, la vérité du simulateur) ; en bas, l'état mesuré L(θ), ce "
+        "que l'app voit. Chaque trait vertical sous un graphe est une demande envoyée.",
+    ]
+    for name, rows in row_of.items():
+        k = rows[PER_TYPE // 2]  # le patient du milieu de son groupe
         figure, (top, bottom) = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
-        summary[name] = {}
         mine, theirs = couples[k]
-        for rhythm, (real, seen, sent) in curves.items():
-            color = COLORS[rhythm]
-            top.plot(days, real[k], color=color, label=rhythm, linewidth=1.8)
-            bottom.plot(days, seen[k], color=color, label=rhythm, linewidth=1.4)
-            if rhythm != "Aucune demande":
+        for level, every in enumerate(PANEL_DELAYS):
+            real, seen, sent = curves[every]
+            color, label = COLORS[every], rhythm_label(every)
+            top.plot(days, real[k], color=color, label=label, linewidth=1.8)
+            bottom.plot(days, seen[k], color=color, label=label, linewidth=1.4)
+            if every is not None:
                 # Une ligne de traits par rythme, sous le graphe : un trait = une demande.
-                level = list(RHYTHMS).index(rhythm)
                 for axis in (top, bottom):
                     axis.eventplot(
                         days[sent[k]],
@@ -526,17 +644,6 @@ def wellbeing_part(
                         transform=axis.get_xaxis_transform(),
                         clip_on=False,
                     )
-            last = slice(-28, None)
-            row = {
-                "demandes": int(sent[k].sum()),
-                "reel": float(real[k, last].mean()),
-                "mesure": float(np.nanmean(seen[k, last])),
-            }
-            summary[name][rhythm] = row
-            lines.append(
-                f"| {name} | {', '.join(mine)} / {', '.join(theirs)} | {rhythm} "
-                f"| {row['demandes']} | {row['reel']:.2f} | {row['mesure']:.2f} |"
-            )
         for axis, title in (
             (top, "État réel (caché)"),
             (bottom, "État mesuré L(θ), ce que l'app voit"),
@@ -554,14 +661,16 @@ def wellbeing_part(
             *top.get_legend_handles_labels(), loc="upper center", ncol=4, fontsize=9,
             bbox_to_anchor=(0.5, 0.95), frameon=False,
         )  # fmt: skip
-        figure.suptitle(f"{name} : bien-être selon le rythme d'aide", y=0.99)
+        figure.suptitle(
+            f"{name} ({', '.join(mine)} ; aidant : {', '.join(theirs)})", y=0.99, fontsize=11
+        )
         figure.subplots_adjust(top=0.86, hspace=0.42)
-        file = f"3_bien_etre_{k + 1}.png"
+        file = f"3_bien_etre_{slug(name)}.png"
         figure.savefig(out / file, dpi=130, bbox_inches="tight")
         plt.close(figure)
         lines += ["", f"![{name}]({file})", ""]
 
-    examples = writers["Tous les 3 jours"].sent[list(chosen).index("Patient moyen")][:6]
+    examples = writers[3].sent[row_of["Moyen"][PER_TYPE // 2]][:6]
     lines += [
         "### Les premières demandes envoyées au patient moyen, tous les 3 jours",
         "",
@@ -640,7 +749,8 @@ def run(
         "",
     ]
     rng = np.random.default_rng([seed, 4])
-    matching, part1, partners = matching_part(rng, n_patients, out)
+    families = FAMILIES if gemini.is_configured() else LEXICON_FAMILIES
+    matching, part1, partners = matching_part(rng, n_patients, out, families)
     convergence, part2 = convergence_part(networks, people, rules, l_ref, seed, out)
     wellbeing, part3 = wellbeing_part(networks, people, rules, l_ref, seed, out, partners)
     part4 = meter.lines() if meter is not None else []
