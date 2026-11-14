@@ -1,8 +1,8 @@
 """Stockage de la vraie app : un fichier SQLite, avec la bibliothèque standard.
 
 Tables : les comptes et leurs sessions, les demandes, les propositions en attente de chaque
-aidant, le profil d'intérêts de chaque personne, les messages des fils, les besoins publiés par
-les patients, les notes des cliniciens et les messages envoyés à l'équipe.
+aidant, le profil d'intérêts de chaque personne, les messages des fils, les notes des
+cliniciens et les messages envoyés à l'équipe.
 Le journal des demandes (état avant et après, position, effort, réponse) est ce qui servira
 plus tard à entraîner le vrai modèle de zone.
 
@@ -94,15 +94,6 @@ CREATE TABLE IF NOT EXISTS messages (
     text TEXT NOT NULL,
     attachments TEXT NOT NULL DEFAULT '[]',
     created_at REAL NOT NULL
-);
-CREATE TABLE IF NOT EXISTS needs (
-    id TEXT PRIMARY KEY,
-    patient_id TEXT NOT NULL,
-    text TEXT NOT NULL,
-    status TEXT NOT NULL,
-    helper_id TEXT,
-    created_at REAL NOT NULL,
-    taken_at REAL
 );
 CREATE TABLE IF NOT EXISTS clinician_notes (
     patient_id TEXT PRIMARY KEY,
@@ -196,17 +187,6 @@ class StoredMessage:
     text: str
     attachments: list[dict[str, Any]]
     created_at: float
-
-
-@dataclass(frozen=True)
-class StoredNeed:
-    id: str
-    patient_id: str
-    text: str
-    status: str  # open, taken ou closed
-    helper_id: str | None
-    created_at: float
-    taken_at: float | None
 
 
 @dataclass(frozen=True)
@@ -441,7 +421,7 @@ class Store:
     def clear_suggestions(self, helper_id: str) -> None:
         self._run("DELETE FROM suggestions WHERE helper_id = ?", (helper_id,))
 
-    # --- Messages d'un fil (une demande ou un besoin) -----------------------------------------
+    # --- Messages d'un fil (la suite d'une demande) -----------------------------------------
 
     def add_message(
         self,
@@ -474,43 +454,6 @@ class Store:
 
     def count_messages(self) -> int:
         return int(self._run("SELECT count(*) AS n FROM messages")[0]["n"])
-
-    # --- Besoins publiés par les patients ------------------------------------------------------
-
-    def add_need(self, patient_id: str, text: str) -> StoredNeed:
-        need_id = _new_id()
-        self._insert(
-            "needs",
-            {
-                "id": need_id,
-                "patient_id": patient_id,
-                "text": text,
-                "status": "open",
-                "created_at": time.time(),
-            },
-        )
-        need = self.need(need_id)
-        assert need is not None
-        return need
-
-    def need(self, need_id: str) -> StoredNeed | None:
-        rows = self._run("SELECT * FROM needs WHERE id = ?", (need_id,))
-        return StoredNeed(**dict(rows[0])) if rows else None
-
-    def needs(self, status: str | None = None) -> list[StoredNeed]:
-        if status is None:
-            rows = self._run("SELECT * FROM needs ORDER BY created_at")
-        else:
-            rows = self._run("SELECT * FROM needs WHERE status = ? ORDER BY created_at", (status,))
-        return [StoredNeed(**dict(row)) for row in rows]
-
-    def needs_of(self, role: str, user_id: str) -> list[StoredNeed]:
-        column = "helper_id" if role == "helper" else "patient_id"
-        rows = self._run(f"SELECT * FROM needs WHERE {column} = ? ORDER BY created_at", (user_id,))
-        return [StoredNeed(**dict(row)) for row in rows]
-
-    def update_need(self, need_id: str, **fields: Any) -> None:
-        self._update("needs", "id", need_id, fields)
 
     # --- Notes des cliniciens --------------------------------------------------------------
 

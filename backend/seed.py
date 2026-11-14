@@ -207,12 +207,6 @@ def seed(store: Store) -> dict[str, User]:
     # Thomas et Sofia : la demande attend la réponse de Sofia.
     deliver(community, thomas, sofia, "Any tip to catch warm evening light on the waterfront?")
 
-    # Les besoins publiés par les patients : l'un pris par Thomas, l'autre encore libre.
-    taken = store.add_need(julien.id, "Does anyone know a quiet park for a slow Sunday walk?")
-    store.update_need(taken.id, status="taken", helper_id=thomas.id, taken_at=time.time())
-    store.add_message(taken.id, thomas.id, "Sinebrychoff park is calm in the morning, very green.")
-    store.add_need(lucas.id, "Could someone recommend an easy cycling loop around Espoo?")
-
     store.save_note(
         julien.id,
         clinician.id,

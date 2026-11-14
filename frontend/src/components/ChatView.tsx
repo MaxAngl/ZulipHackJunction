@@ -45,7 +45,7 @@ function peerName(thread: Thread): string {
   if (thread.peer) {
     return `${thread.peer.name} ${thread.peer.last_name}`.trim()
   }
-  return 'The community'
+  return 'Someone'
 }
 
 function lastIncoming(thread: Thread): number {
@@ -55,9 +55,6 @@ function lastIncoming(thread: Thread): number {
 
 // Où en est un fil, en deux ou trois mots, dans la liste.
 function badge(thread: Thread, role: Role): string | null {
-  if (thread.kind === 'need') {
-    return thread.status === 'open' ? 'Waiting for a helper' : null
-  }
   if (thread.status === 'to_answer') return 'Needs your answer'
   if (thread.status === 'on_its_way') return 'On its way'
   if (thread.thanked) return 'Service completed'
@@ -76,7 +73,7 @@ function avatar(
   )
 }
 
-// Les fils de la vraie app : une demande (avec sa réponse et le merci) ou un besoin de patient.
+// Les fils de la vraie app : une demande, avec sa réponse, le merci et la suite.
 function ChatView({
   role,
   userId,
@@ -226,7 +223,7 @@ function ChatView({
                 className="button button-primary button-wide"
                 onClick={onStartNewRequest}
               >
-                {role === 'patient' ? 'Ask the community' : 'New request'}
+                New request
               </button>
             )}
           </div>
@@ -310,7 +307,6 @@ function ChatView({
   const name = peerName(activeThread)
   const helperMustThank =
     role === 'helper' &&
-    activeThread.kind === 'request' &&
     activeThread.status === 'answered' &&
     !activeThread.thanked
   const placeholder = answering
@@ -355,11 +351,9 @@ function ChatView({
               <strong>{name}</strong>
             </div>
             <span className="quiet font-small block">
-              {activeThread.peer
-                ? activeThread.peer.role === 'patient'
-                  ? 'Community member · Patient'
-                  : 'Community helper'
-                : 'Waiting for a helper'}
+              {activeThread.peer?.role === 'patient'
+                ? 'Community member · Patient'
+                : 'Community helper'}
             </span>
           </div>
         </button>
@@ -374,21 +368,18 @@ function ChatView({
             ✓ Helped me
           </button>
         )}
-        {role === 'helper' &&
-          activeThread.kind === 'request' &&
-          activeThread.thanked &&
-          onStartNewRequest && (
-            <button
-              type="button"
-              className="button button-primary button-small"
-              onClick={onStartNewRequest}
-            >
-              + New request
-            </button>
-          )}
+        {role === 'helper' && activeThread.thanked && onStartNewRequest && (
+          <button
+            type="button"
+            className="button button-primary button-small"
+            onClick={onStartNewRequest}
+          >
+            + New request
+          </button>
+        )}
       </div>
 
-      {activeThread.kind === 'request' && activeThread.thanked && (
+      {activeThread.thanked && (
         <div className="chat-finished-notice">
           <span>
             {role === 'helper'
@@ -566,9 +557,7 @@ function ChatView({
         </>
       ) : (
         <p className="quiet font-small text-center" role="status">
-          {activeThread.kind === 'need'
-            ? 'Shared with the community. A helper will pick it up soon.'
-            : `Sent. ${activeThread.peer?.name ?? 'They'} will answer when they can.`}
+          {`Sent. ${activeThread.peer?.name ?? 'They'} will answer when they can.`}
         </p>
       )}
 

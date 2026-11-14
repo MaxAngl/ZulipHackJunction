@@ -208,37 +208,6 @@ def test_a_stranger_cannot_read_or_write_a_thread():
     assert response.status_code == 404
 
 
-def test_a_patient_need_is_picked_up_once_and_becomes_a_thread():
-    patient = _signup("patient", "Aino", ["gardening"])
-    mikko = _signup("helper", "Mikko", ["cooking"])
-    sara = _signup("helper", "Sara", ["hiking"])
-
-    response = client.post(
-        "/api/app/patient/needs", json={"text": "A quiet park?"}, headers=patient
-    )
-    assert response.status_code == 200, response.text
-    need = ThreadsResponse.model_validate(response.json()).threads[0]
-    assert (need.kind, need.status, need.can_write, need.peer) == ("need", "open", False, None)
-
-    home = HelperHome.model_validate(client.get("/api/app/helper", headers=sara).json())
-    assert [(item.id, item.patient.name) for item in home.needs] == [(need.id, "Aino")]
-
-    response = client.post(f"/api/app/helper/needs/{need.id}/take", headers=mikko)
-    assert response.status_code == 200, response.text
-    response = client.post(f"/api/app/helper/needs/{need.id}/take", headers=sara)
-    assert response.status_code == 409 and _error(response) == "need_taken"
-    assert HelperHome.model_validate(client.get("/api/app/helper", headers=sara).json()).needs == []
-
-    _write(mikko, need.id, "Sinebrychoff park, early morning.")
-    thread = _write(patient, need.id, "Thank you!").threads[0]
-    assert (thread.status, thread.peer and thread.peer.name) == ("taken", "Mikko")
-    assert [(m.kind, m.mine) for m in thread.messages] == [
-        ("need", True),
-        ("message", False),
-        ("message", True),
-    ]
-
-
 # --- Portails ----------------------------------------------------------------------------------
 
 
@@ -284,14 +253,13 @@ def test_the_admin_sees_the_community_and_handles_feedback():
     patient = _signup("patient", "Aino", ["gardening"])
     helper = _signup("helper", "Mikko", ["cooking"])
     _send_first_proposal(helper)
-    client.post("/api/app/patient/needs", json={"text": "A quiet park?"}, headers=patient)
     client.post("/api/app/feedback", json={"category": "bug", "message": "Slow"}, headers=patient)
     client.post("/api/app/feedback", json={"category": "question", "message": "Who are you?"})
 
     admin = _staff("admin", "admin@test.demo")
     home = AdminHome.model_validate(client.get("/api/admin", headers=admin).json())
     assert {member.name for member in home.members} >= {"Aino", "Mikko", "Staff"}
-    assert sorted(item.kind for item in home.exchanges) == ["need", "request"]
+    assert [(item.from_name, item.to_name) for item in home.exchanges] == [("Mikko", "Aino")]
     assert {(item.sender_name, item.sender_role) for item in home.feedback} == {
         ("Aino", "patient"),
         ("Visitor", "visitor"),
@@ -332,6 +300,5 @@ def test_the_demo_accounts_sign_in_and_tell_a_story(tmp_path: Path):
     assert [t.status for t in threads.for_user(sofia).threads] == ["to_answer"]
     elena_thread = threads.for_user(people["Elena"]).threads[0]
     assert (elena_thread.status, elena_thread.thanked) == ("answered", False)
-    assert [need.patient.name for need in community.open_needs()] == ["Lucas"]
     for email in ("clinic@needed.demo", "admin@needed.demo", "clara@needed.demo"):
         assert community.login(email, DEMO_PASSWORD).user.email == email

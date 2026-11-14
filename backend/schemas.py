@@ -342,15 +342,6 @@ class AppRequest(BaseModel):
     created_at: float
 
 
-class OpenNeed(BaseModel):
-    """Un besoin publié par un patient, que personne n'a encore pris."""
-
-    id: str
-    text: str
-    created_at: float
-    patient: PublicProfile
-
-
 class HelperHome(BaseModel):
     user: AppUser
     patient_name: str | None = Field(description="La personne à qui s'adressent les propositions")
@@ -359,7 +350,6 @@ class HelperHome(BaseModel):
     )
     proposals: list[AppProposal]
     requests: list[AppRequest]
-    needs: list[OpenNeed] = Field(default_factory=list)
 
 
 class PatientHome(BaseModel):
@@ -393,8 +383,8 @@ class Attachment(BaseModel):
     size: str | None = Field(default=None, max_length=20)
 
 
-ThreadStatus = Literal["to_answer", "on_its_way", "answered", "declined", "open", "taken"]
-MessageKind = Literal["request", "reply", "thanks", "need", "message"]
+ThreadStatus = Literal["to_answer", "on_its_way", "answered"]
+MessageKind = Literal["request", "reply", "thanks", "message"]
 
 
 class ThreadMessage(BaseModel):
@@ -408,12 +398,11 @@ class ThreadMessage(BaseModel):
 
 
 class Thread(BaseModel):
-    """Un fil vu par l'un des deux. `id` est celui de la demande ou du besoin."""
+    """Une demande vue par l'aidant ou par le patient. `id` est celui de la demande."""
 
     id: str
-    kind: Literal["request", "need"]
     status: ThreadStatus
-    peer: PublicProfile | None = Field(description="Vide tant qu'aucun aidant n'a pris le besoin")
+    peer: PublicProfile | None = Field(description="Vide si le compte de l'autre a disparu")
     messages: list[ThreadMessage]
     updated_at: float
     can_write: bool
@@ -433,10 +422,6 @@ class MessageRequest(BaseModel):
     text: str = Field(default="", max_length=1000)
     attachments: list[Attachment] = Field(default_factory=list, max_length=4)
     typing: TypingSignals | None = None
-
-
-class NeedRequest(BaseModel):
-    text: str = Field(min_length=1, max_length=600)
 
 
 class FeedbackRequest(BaseModel):
@@ -502,12 +487,13 @@ class AdminMember(BaseModel):
 
 
 class AdminExchange(BaseModel):
+    """Une demande d'aidant à patient, avec sa réponse."""
+
     id: str
-    kind: Literal["request", "need"]
     from_name: str
     to_name: str | None
     text: str
-    status: Literal["held", "delivered", "answered", "declined", "open", "taken"]
+    status: Literal["held", "delivered", "answered", "declined"]
     reply: str | None
     created_at: float
 

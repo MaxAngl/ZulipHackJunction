@@ -1447,219 +1447,6 @@
         }
       }
     },
-    "/api/app/patient/needs": {
-      "post": {
-        "summary": "Post Need",
-        "description": "Le patient demande un coup de main à la communauté.",
-        "operationId": "post_need_api_app_patient_needs_post",
-        "parameters": [
-          {
-            "name": "X-Needed-Token",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Needed-Token"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/NeedRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ThreadsResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unprocessable Entity"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
-    "/api/app/helper/needs/{need_id}/take": {
-      "post": {
-        "summary": "Take Need",
-        "description": "Un aidant prend le besoin d'un patient ; un fil s'ouvre entre eux.",
-        "operationId": "take_need_api_app_helper_needs__need_id__take_post",
-        "parameters": [
-          {
-            "name": "need_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Need Id"
-            }
-          },
-          {
-            "name": "X-Needed-Token",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "X-Needed-Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ThreadsResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unauthorized"
-          },
-          "403": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Forbidden"
-          },
-          "404": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Not Found"
-          },
-          "409": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Conflict"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Unprocessable Entity"
-          },
-          "500": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            },
-            "description": "Internal Server Error"
-          }
-        }
-      }
-    },
     "/api/clinician": {
       "get": {
         "summary": "Clinician Home",
@@ -3703,14 +3490,6 @@
             "type": "string",
             "title": "Id"
           },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "request",
-              "need"
-            ],
-            "title": "Kind"
-          },
           "from_name": {
             "type": "string",
             "title": "From Name"
@@ -3736,9 +3515,7 @@
               "held",
               "delivered",
               "answered",
-              "declined",
-              "open",
-              "taken"
+              "declined"
             ],
             "title": "Status"
           },
@@ -3761,7 +3538,6 @@
         "type": "object",
         "required": [
           "id",
-          "kind",
           "from_name",
           "to_name",
           "text",
@@ -3769,7 +3545,8 @@
           "reply",
           "created_at"
         ],
-        "title": "AdminExchange"
+        "title": "AdminExchange",
+        "description": "Une demande d'aidant à patient, avec sa réponse."
       },
       "AdminFeedback": {
         "properties": {
@@ -4734,13 +4511,6 @@
             },
             "type": "array",
             "title": "Requests"
-          },
-          "needs": {
-            "items": {
-              "$ref": "#/components/schemas/OpenNeed"
-            },
-            "type": "array",
-            "title": "Needs"
           }
         },
         "type": "object",
@@ -5171,49 +4941,6 @@
           "observations"
         ],
         "title": "ModelState"
-      },
-      "NeedRequest": {
-        "properties": {
-          "text": {
-            "type": "string",
-            "maxLength": 600,
-            "minLength": 1,
-            "title": "Text"
-          }
-        },
-        "type": "object",
-        "required": [
-          "text"
-        ],
-        "title": "NeedRequest"
-      },
-      "OpenNeed": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "text": {
-            "type": "string",
-            "title": "Text"
-          },
-          "created_at": {
-            "type": "number",
-            "title": "Created At"
-          },
-          "patient": {
-            "$ref": "#/components/schemas/PublicProfile"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "text",
-          "created_at",
-          "patient"
-        ],
-        "title": "OpenNeed",
-        "description": "Un besoin publié par un patient, que personne n'a encore pris."
       },
       "PatientHome": {
         "properties": {
@@ -5873,23 +5600,12 @@
             "type": "string",
             "title": "Id"
           },
-          "kind": {
-            "type": "string",
-            "enum": [
-              "request",
-              "need"
-            ],
-            "title": "Kind"
-          },
           "status": {
             "type": "string",
             "enum": [
               "to_answer",
               "on_its_way",
-              "answered",
-              "declined",
-              "open",
-              "taken"
+              "answered"
             ],
             "title": "Status"
           },
@@ -5902,7 +5618,7 @@
                 "type": "null"
               }
             ],
-            "description": "Vide tant qu'aucun aidant n'a pris le besoin"
+            "description": "Vide si le compte de l'autre a disparu"
           },
           "messages": {
             "items": {
@@ -5928,7 +5644,6 @@
         "type": "object",
         "required": [
           "id",
-          "kind",
           "status",
           "peer",
           "messages",
@@ -5937,7 +5652,7 @@
           "thanked"
         ],
         "title": "Thread",
-        "description": "Un fil vu par l'un des deux. `id` est celui de la demande ou du besoin."
+        "description": "Une demande vue par l'aidant ou par le patient. `id` est celui de la demande."
       },
       "ThreadMessage": {
         "properties": {
@@ -5959,7 +5674,6 @@
               "request",
               "reply",
               "thanks",
-              "need",
               "message"
             ],
             "title": "Kind"

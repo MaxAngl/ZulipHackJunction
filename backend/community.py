@@ -199,24 +199,7 @@ class Community:
                 self._view(request, "helper")
                 for request in reversed(self.store.requests_of("helper", helper.id))
             ],
-            needs=self.open_needs(),
         )
-
-    def open_needs(self) -> list[schemas.OpenNeed]:
-        """Besoins publiés par des patients et encore libres ; le plus récent d'abord."""
-        needs = []
-        for need in reversed(self.store.needs("open")):
-            patient = self.store.user(need.patient_id)
-            if patient is not None:
-                needs.append(
-                    schemas.OpenNeed(
-                        id=need.id,
-                        text=need.text,
-                        created_at=need.created_at,
-                        patient=public_profile(patient),
-                    )
-                )
-        return needs
 
     def suggest(self, helper: User) -> schemas.HelperHome:
         """Choisit un patient, calcule sa zone, génère, mesure et garde trois propositions."""

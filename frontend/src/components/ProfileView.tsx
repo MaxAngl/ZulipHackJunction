@@ -93,7 +93,7 @@ function ProfileView({
 
   // Services rendus (patient) ou reçus (aidant) : les demandes qui ont une réponse.
   const servicesCount = threads.filter(
-    (thread) => thread.kind === 'request' && thread.status === 'answered',
+    (thread) => thread.status === 'answered',
   ).length
   const historyData = lastSevenDays(threads)
   const maxVal = Math.max(...historyData.map((d) => d.count), 1)

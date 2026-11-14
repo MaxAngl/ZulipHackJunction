@@ -4,42 +4,47 @@ type BottomNavProps = {
   activeTab: TabType
   onSelectTab: (tab: TabType) => void
   unreadBadge?: number
+  // L'onglet « New Request » : l'aidant seulement, le patient ne fait que répondre.
+  withRequest?: boolean
 }
 
 // Bottom navigation bar, slightly translucent with cream glassmorphism.
-// Three primary actions: New Request (left), Messages (middle), Profile (right).
+// Aidant : New Request, Messages, Profile. Patient : Messages, Profile.
 function BottomNav({
   activeTab,
   onSelectTab,
   unreadBadge = 0,
+  withRequest = true,
 }: BottomNavProps) {
   return (
     <nav className="bottom-nav" aria-label="Main navigation">
-      <button
-        type="button"
-        className={`bottom-nav-item ${
-          activeTab === 'request' ? 'bottom-nav-item-active' : ''
-        }`}
-        aria-selected={activeTab === 'request'}
-        onClick={() => onSelectTab('request')}
-      >
-        <svg
-          className="bottom-nav-icon"
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+      {withRequest && (
+        <button
+          type="button"
+          className={`bottom-nav-item ${
+            activeTab === 'request' ? 'bottom-nav-item-active' : ''
+          }`}
+          aria-selected={activeTab === 'request'}
+          onClick={() => onSelectTab('request')}
         >
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="8" x2="12" y2="16" />
-          <line x1="8" y1="12" x2="16" y2="12" />
-        </svg>
-        <span className="bottom-nav-label">New Request</span>
-      </button>
+          <svg
+            className="bottom-nav-icon"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="16" />
+            <line x1="8" y1="12" x2="16" y2="12" />
+          </svg>
+          <span className="bottom-nav-label">New Request</span>
+        </button>
+      )}
 
       <button
         type="button"

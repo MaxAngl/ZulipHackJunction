@@ -2,13 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import {
   type AppUser,
   getHelperHome,
-  type OpenNeed,
   postMessage,
   type SendRequest,
   sendToPatient,
   skipSuggestions,
   suggest,
-  takeNeed,
 } from '../api/client'
 import BottomNav, { type TabType } from '../components/BottomNav'
 import ChatView from '../components/ChatView'
@@ -22,22 +20,10 @@ type HelperScreenProps = {
   onLeave: () => void
 }
 
-function clock(seconds: number): string {
-  return new Date(seconds * 1000).toLocaleTimeString('en-GB', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 // L'écran de l'aidant. La boucle choisit la personne et écrit trois demandes à sa mesure ;
 // l'aidant en envoie une, la modifie, écrit la sienne, ou en demande d'autres.
-// Il peut aussi prendre le besoin qu'un patient a confié à la communauté.
 function HelperScreen({ token, onLeave }: HelperScreenProps) {
-  const { home, error, busy, run, refresh } = useHome(
-    token,
-    getHelperHome,
-    onLeave,
-  )
+  const { home, error, busy, run } = useHome(token, getHelperHome, onLeave)
   const chat = useThreads(token, 'helper', onLeave)
   const [activeTab, setActiveTab] = useState<TabType>('request')
   const [openId, setOpenId] = useState<string | null>(null)
@@ -76,14 +62,6 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
     })
   }
 
-  async function pickUpNeed(need: OpenNeed) {
-    const taken = await chat.run(() => takeNeed(token, need.id))
-    void refresh()
-    if (!taken) return
-    setOpenId(need.id)
-    setActiveTab('messages')
-  }
-
   if (!home) {
     return (
       <ScreenFrame>
@@ -95,12 +73,8 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
   const me = updatedUser ?? home.user
   const threads = chat.threads ?? []
   const patient = home.patient
-  const needs = home.needs ?? []
   const toThank = threads.filter(
-    (thread) =>
-      thread.kind === 'request' &&
-      thread.status === 'answered' &&
-      !thread.thanked,
+    (thread) => thread.status === 'answered' && !thread.thanked,
   ).length
 
   return (
@@ -125,48 +99,6 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
 
         {activeTab === 'request' && (
           <div className="helper-screen-content">
-            {needs.length > 0 && (
-              <section className="stack patient-needs-banner-section">
-                <p className="eyebrow">Direct patient requests</p>
-                {needs.map((need) => (
-                  <div key={need.id} className="card-patient-need-banner">
-                    <div className="patient-need-header">
-                      <div className="row-align-center-tight">
-                        {need.patient.avatar_url ? (
-                          <img
-                            src={need.patient.avatar_url}
-                            alt={need.patient.name}
-                            className="patient-need-avatar"
-                          />
-                        ) : (
-                          <div className="thread-avatar-fallback">
-                            {need.patient.name.charAt(0).toUpperCase()}
-                          </div>
-                        )}
-                        <div>
-                          <strong>{need.patient.name}</strong>
-                          <span className="quiet font-small block">
-                            {clock(need.created_at)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="patient-need-body">{need.text}</p>
-                    <div className="row">
-                      <button
-                        type="button"
-                        className="button button-primary button-small"
-                        disabled={chat.busy}
-                        onClick={() => void pickUpNeed(need)}
-                      >
-                        Reply to {need.patient.name}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </section>
-            )}
-
             <section className="stack">
               <div className="helper-screen-header">
                 <h1 className="helper-screen-title">Someone you could ask</h1>

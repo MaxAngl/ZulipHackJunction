@@ -9,7 +9,7 @@ Le guide pratique pour les humains (installation, boucle de travail, prompts typ
 ## Projet
 
 **Sujet :** Needed (nom provisoire), pour le challenge Junction sur le maintien à domicile après un traitement de la dépression par TMS. Une communauté où ce sont les patients en rémission qui rendent service : une IA décide quoi leur demander, quand et de la part de qui, selon leur état.
-**Démo attendue :** deux choses. La **vraie app** (`#/helper`, `#/patient`) : deux personnes s'inscrivent sur leur téléphone (e-mail et mot de passe), l'une demande un service, l'autre répond, la première remercie ; un patient peut aussi confier un besoin à la communauté, et le clinicien (`#/clinician`) et l'équipe (`#/admin`) ont chacun leur portail. Tout vient du backend : le navigateur ne garde que les jetons de session, le thème et les fils déjà lus. Et la **console** (`#/demo`) : la boucle fermée pour un patient simulé, où l'on voit les signaux θ, l'état L(θ) lu par l'autoencodeur, la zone sur six axes sortie par le réseau B, les demandes générées, mesurées et filtrées, la récompense de 0 à 100 et le vecteur du patient qui s'ajuste.
+**Démo attendue :** deux choses. La **vraie app** (`#/helper`, `#/patient`) : deux personnes s'inscrivent sur leur téléphone (e-mail et mot de passe), l'une demande un service, l'autre répond, la première remercie ; le patient ne demande rien lui-même, et le clinicien (`#/clinician`) et l'équipe (`#/admin`) ont chacun leur portail. Tout vient du backend : le navigateur ne garde que les jetons de session, le thème et les fils déjà lus. Et la **console** (`#/demo`) : la boucle fermée pour un patient simulé, où l'on voit les signaux θ, l'état L(θ) lu par l'autoencodeur, la zone sur six axes sortie par le réseau B, les demandes générées, mesurées et filtrées, la récompense de 0 à 100 et le vecteur du patient qui s'ajuste.
 **À lire :** [HYPOTHESES.md](HYPOTHESES.md) liste ce qui a été décidé sans validation de l'équipe et ce qui est simulé dans le code actuel.
 **Modèle cible :** [docs/modele.md](docs/modele.md) définit les objets, les axes d'une demande, les trois réseaux, leur entraînement et leur évaluation. Les trois réseaux sont codés, entraînés (`ml/nets`, poids dans `ml/weights`, résultats en section 14) et branchés dans l'app, console et vraie app. Seul le patient lui-même reste simulé : sa montre et la façon dont une demande agit sur lui (`ml/virtual.py`). Avant de toucher à `ml/`, lire ce document et sa section 8, « Ce qui reste simulé ».
 
@@ -102,7 +102,7 @@ backend/
   schemas.py         # CONTRAT : modèles Pydantic requête/réponse
   loop.py            # console de démo : la boucle en 12 étapes sur les réseaux, un patient virtuel, état en mémoire
   community.py       # vraie app : comptes, demandes, réponses ; même boucle, un corps virtuel par patient
-  threads.py         # vraie app : les fils (demande, réponse, merci, messages) et les besoins des patients
+  threads.py         # vraie app : les fils (demande, réponse, merci, messages)
   portals.py         # vraie app : portails du clinicien (sans le contenu des échanges) et de l'admin
   auth.py            # mots de passe (PBKDF2, bibliothèque standard) et jetons de session
   views.py           # un compte vu par son propriétaire, ou par un autre membre (profil privé respecté)
@@ -212,8 +212,9 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Le patient ne publie plus de besoin à la communauté : plus d'onglet « New Request » chez lui, plus de « Direct patient requests » chez l'aidant (issue #53) — cela brouillait la lecture du concept, où c'est le patient qui rend service. Décision de Max.
 - 2026-11-14 — Comptes à e-mail et mot de passe (PBKDF2-SHA256 de la bibliothèque standard, un sel par compte), une session par connexion (table `sessions`, en-tête `X-Needed-Token`). **Cela remplace les comptes par jeton d'appareil décidés plus bas** — il fallait pouvoir se reconnecter depuis un autre téléphone ; aucune dépendance ajoutée.
-- 2026-11-14 — Tout ce que l'app affiche vient du backend : profils, fils, besoins des patients, notes du clinicien, messages à l'équipe. Le navigateur ne garde que les jetons, le thème, les notifications du bandeau et les fils lus — deux téléphones doivent voir la même chose.
+- 2026-11-14 — Tout ce que l'app affiche vient du backend : profils, fils, notes du clinicien, messages à l'équipe. Le navigateur ne garde que les jetons, le thème, les notifications du bandeau et les fils lus — deux téléphones doivent voir la même chose.
 - 2026-11-14 — Quatre rôles de compte : aidant et patient s'inscrivent eux-mêmes ; clinicien et admin sont créés par l'équipe (`backend/seed.py`). Le clinicien voit les patients qui ont donné son e-mail, leur bien-être et leur activité, jamais le contenu de leurs échanges.
 - 2026-11-14 — Schéma SQLite versionné (`PRAGMA user_version`) : au démarrage, une base plus ancienne est renommée en `.bak` et une base neuve la remplace, sans migration — on est en démo, aucune donnée réelle à garder.
 - 2026-11-14 — Photos et pièces jointes stockées en base sous forme d'images encodées (data URL), réduites à 800 ou 1 200 px par le front ; 2 Mo au plus pour un autre fichier — pas de service de fichiers à installer.
