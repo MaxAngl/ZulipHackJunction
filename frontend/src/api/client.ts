@@ -22,6 +22,8 @@ export type HelperHome = Schemas['HelperHome']
 export type PatientHome = Schemas['PatientHome']
 export type AppRequest = Schemas['AppRequest']
 export type AppProposal = Schemas['AppProposal']
+export type WatchStatus = Schemas['WatchStatus']
+export type WatchReading = Schemas['WatchReading']
 
 export class ApiError extends Error {
   readonly status: number
@@ -176,6 +178,25 @@ export function declineRequest(
   return post<PatientHome>(
     '/api/app/patient/decline',
     { request_id: requestId },
+    token,
+  )
+}
+
+// --- Montre Garmin du patient ----------------------------------------------------------
+
+export function getWatch(token: string): Promise<WatchStatus> {
+  return request<WatchStatus>('/api/app/patient/watch', undefined, token)
+}
+
+// `code` : les six chiffres qu'affiche l'app Needed sur la montre.
+export function linkWatch(token: string, code: string): Promise<WatchStatus> {
+  return post<WatchStatus>('/api/app/patient/watch', { code }, token)
+}
+
+export function unlinkWatch(token: string): Promise<WatchStatus> {
+  return request<WatchStatus>(
+    '/api/app/patient/watch',
+    { method: 'DELETE' },
     token,
   )
 }

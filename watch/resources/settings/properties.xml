@@ -1,0 +1,6 @@
+<!-- Adresse HTTPS du backend : la montre (et le simulateur) refusent le HTTP. Vide = http://localhost:8000,
+     qui ne marche donc pas. Mettre ici l'adresse du tunnel avant de compiler (voir watch/README.md),
+     ou la régler ensuite dans l'app Garmin Connect, réglages de l'app Needed. -->
+<properties>
+    <property id="ServerUrl" type="string"></property>
+</properties>

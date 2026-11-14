@@ -3,6 +3,7 @@ import { getPatientHome } from '../api/client'
 import BottomNav, { type TabType } from '../components/BottomNav'
 import ChatView from '../components/ChatView'
 import ProfileView from '../components/ProfileView'
+import WatchLink from '../components/WatchLink'
 import { readUserProfile, savePatientCommunityNeed } from '../session'
 import ScreenFrame from './ScreenFrame'
 import { useHome } from './useHome'
@@ -121,9 +122,11 @@ function PatientScreen({ token, onLeave }: PatientScreenProps) {
           />
         )}
 
-        {/* Onglet 3 : Mon profil */}
+        {/* Onglet 3 : Mon profil, avec la montre Garmin */}
         {activeTab === 'profile' && (
-          <ProfileView role="patient" name={home.user.name} onLeave={onLeave} />
+          <ProfileView role="patient" name={home.user.name} onLeave={onLeave}>
+            <WatchLink token={token} onSignedOut={onLeave} />
+          </ProfileView>
         )}
       </main>
     </ScreenFrame>

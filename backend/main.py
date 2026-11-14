@@ -23,8 +23,16 @@ from backend.schemas import (
     SessionResponse,
     ThanksRequest,
     ThetaRequest,
+    WatchAnswer,
+    WatchHome,
+    WatchLinkRequest,
+    WatchPairing,
+    WatchPairingStatus,
+    WatchReading,
+    WatchStatus,
 )
 from backend.store import Store, User
+from backend.watch import WatchDevice, Watches
 from ml.model import load_env_file
 
 # La clé Gemini vient de `.env` (jamais commité). Sans clé, la boucle tourne hors ligne.
@@ -183,3 +191,58 @@ def patient_decline(body: DeclineRequest, user: Patient) -> PatientHome:
 def patient_state(body: ThetaRequest, user: Patient) -> PatientHome:
     """Entrée de démonstration : fixe le niveau de fond du corps virtuel du patient."""
     return get_community().push_state(user, body.theta)
+
+
+# --- Montre Garmin : app Connect IQ, liée au patient par un code ---------------------------
+
+
+@functools.cache
+def get_watches() -> Watches:
+    return Watches(get_community())
+
+
+def watch_device(token: Token = None) -> WatchDevice:
+    return get_watches().signed_in(token)
+
+
+Watch = Annotated[WatchDevice, Depends(watch_device)]
+
+
+@app.post("/api/watch/pair", responses=ERROR_RESPONSES)
+def watch_pair() -> WatchPairing:
+    """La montre demande un code à afficher, que le patient saisira dans l'app."""
+    return get_watches().start_pairing()
+
+
+@app.get("/api/watch/pair/{pairing_id}", responses=ERROR_RESPONSES)
+def watch_pair_status(pairing_id: str) -> WatchPairingStatus:
+    """La montre attend que le code soit saisi ; elle reçoit alors son jeton."""
+    return get_watches().pairing_status(pairing_id)
+
+
+@app.post("/api/watch/sync", responses=ERROR_RESPONSES)
+def watch_sync(body: WatchReading, device: Watch) -> WatchHome:
+    """La montre envoie ses mesures : θ est réestimé, et la demande en attente lui revient."""
+    return get_watches().sync(device, body)
+
+
+@app.post("/api/watch/answer", responses=ERROR_RESPONSES)
+def watch_answer(body: WatchAnswer, device: Watch) -> WatchHome:
+    """Le patient accepte ou refuse la demande depuis sa montre."""
+    return get_watches().answer(device, body.request_id, body.accept)
+
+
+@app.get("/api/app/patient/watch", responses=ERROR_RESPONSES)
+def patient_watch(user: Patient) -> WatchStatus:
+    return get_watches().status(user)
+
+
+@app.post("/api/app/patient/watch", responses=ERROR_RESPONSES)
+def patient_watch_link(body: WatchLinkRequest, user: Patient) -> WatchStatus:
+    """Le patient saisit le code affiché par sa montre."""
+    return get_watches().link(user, body.code)
+
+
+@app.delete("/api/app/patient/watch", responses=ERROR_RESPONSES)
+def patient_watch_unlink(user: Patient) -> WatchStatus:
+    return get_watches().unlink(user)

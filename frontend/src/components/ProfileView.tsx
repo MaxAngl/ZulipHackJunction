@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import type { Role } from '../api/client'
 import { readUserProfile, saveUserProfile, type UserProfile } from '../session'
 
@@ -6,9 +6,11 @@ type ProfileViewProps = {
   role: Role
   name: string
   onLeave?: () => void
+  // Cartes en plus, affichées avant les réglages (ex. la montre Garmin du patient).
+  children?: ReactNode
 }
 
-function ProfileView({ role, name, onLeave }: ProfileViewProps) {
+function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
   const [profile, setProfile] = useState<UserProfile | null>(() =>
     readUserProfile(role),
   )
@@ -412,6 +414,8 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
           </div>
         )}
       </div>
+
+      {children}
 
       <div className="profile-actions-stack stack">
         <a href="#/settings" className="button button-ghost button-wide">

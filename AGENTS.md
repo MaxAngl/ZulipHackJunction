@@ -68,6 +68,8 @@ uv run pre-commit run --all-files          # tous les hooks (format, lint, tests
 
 uv run python -m ml.check_gemini           # vérifie la clé Gemini et la mesure λ
 uv run python -m ml.simulation             # génère les données simulées dans ml/data/sim (hors git)
+uv run python -m garmin login              # montre : première connexion Garmin, dans son propre terminal
+uv run python -m garmin read --push        # montre : lit Garmin Connect et pousse θ au patient (--simulate sans montre)
 
 # Réseaux (docs/modele.md, sections 13 et 14). Sur CPU : sept minutes d'entraînement, deux d'évaluation.
 uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big   # le jeu d'entraînement
@@ -100,6 +102,7 @@ backend/
   loop.py            # console de démo : la boucle en 12 étapes sur les réseaux, un patient virtuel, état en mémoire
   community.py       # vraie app : comptes, demandes, réponses ; même boucle, un corps virtuel par patient
   readout.py         # traduit ce que rendent les réseaux vers le contrat d'API
+  watch.py           # vraie app : montre Garmin liée par code, ses mesures, sa réponse aux demandes
   store.py           # vraie app : stockage SQLite (data/needed.db, ignoré par git)
   errors.py          # ApiError + format d'erreur unique
   export_openapi.py  # schemas -> contract/openapi.json
@@ -114,11 +117,17 @@ ml/
   lexicon.py         # mode hors ligne : banque de demandes et mesure par mots-clés
   formats.py         # grille fixe des formats et de leur effort
   check_gemini.py    # vérification de la clé Gemini
+  watch.py           # θ provisoire à partir d'un relevé de la montre, en attendant l'autoencodeur
   simulation/        # données simulées : θ, état caché, patient simulé, journal d'épisodes (docs/modele.md, 11 et 12)
   nets/              # les trois réseaux : features, models, train, policy, evaluate, runtime (docs/modele.md, 13 et 14)
   weights/           # poids entraînés et leurs mesures, VERSIONNÉS (moins d'1 Mo) : personne n'a à réentraîner
   tests/             # tests du contrat ML, des données simulées et des réseaux
   data/, models/     # données et essais : ignorés par git (trop lourds)
+garmin/              # montre Garmin : relevé θ depuis Garmin Connect, envoi à la vraie app
+  signals.py         # réponses de Garmin Connect -> les 19 signaux montre de ml/simulation/spec.py
+  simulated.py       # montre simulée, pour la démo sans montre
+  connect.py         # connexion garminconnect (jetons dans ~/.garminconnect, hors du repo)
+watch/               # app Connect IQ (Monkey C) : liaison par code, mesures, demande au poignet (voir son README)
 docs/
   modele.md          # le modèle : objets, axes, réseaux, entraînement, résultats
 contract/
@@ -196,6 +205,9 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Montre Garmin lue par Garmin Connect avec la bibliothèque non officielle `garminconnect` (nouvelle dépendance), sans app sur la montre — la montre se synchronise déjà en Bluetooth avec le téléphone ; l'API santé officielle de Garmin demande un partenariat de plusieurs semaines.
+- 2026-11-14 — App Connect IQ sur la montre (`watch/`), liée au patient par un code à 6 chiffres saisi dans l'écran patient, avec un jeton propre à la montre ; elle envoie ses mesures et traite la demande en attente (`/api/watch/*`) — pas de jeton à recopier, et délier la montre ne déconnecte pas le téléphone. Elle n'envoie rien quand elle est fermée.
+- 2026-11-14 — En attendant l'autoencodeur, `ml/watch.py` tire un seul `theta` d'un relevé de la montre en inversant le générateur de `ml/simulation` pour une personne moyenne — l'app n'accepte qu'un nombre ; règle provisoire, sans normalisation par personne.
 - 2026-11-14 — L'app tourne sur les réseaux : état L(θ), zone à six axes, récompense de 0 à 100, vecteur du patient. `backend/sensor.py` est supprimé — remplacé par `ml/virtual.py`, un patient virtuel tiré du même simulateur que les données d'entraînement ; c'est la seule partie encore simulée.
 - 2026-11-14 — Cinq des six positions d'une demande viennent de son format (`ml/formats.py`), posées à la main — aucun modèle ne note encore une demande axe par axe ; la position entre les intérêts reste mesurée sur le texte.
 - 2026-11-14 — Nouvelle dépendance `torch`, en version CPU — les trois réseaux font 82 000 paramètres et s'entraînent en sept minutes sur un portable ; la version GPU pèserait plusieurs Go pour rien.
