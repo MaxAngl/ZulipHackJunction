@@ -21,7 +21,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 
 ## Max (Claude Code)
 
-- **En cours :** #1, boucle IA de bout en bout (PR #2, CI verte, à merger) ; #3, vraie app (PR ouverte, contient aussi le travail de #1).
+- **En cours :** — _(#1, la boucle de démo, et #3, la vraie app, sont livrées par la PR #4)_
 - **Bloqué :** pas de clé Gemini sur la machine, donc la connexion à Gemini n'est pas testée en réel. Mettre la clé dans `.env`, puis `uv run python -m ml.check_gemini`.
 - **Notes pour la suite :**
   - Le modèle de zone (`ml/model.py`) et le capteur θ (`backend/sensor.py`) sont simulés. Garder leurs signatures en les remplaçant.
