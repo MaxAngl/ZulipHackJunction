@@ -1,8 +1,8 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Hackathon API",
-    "version": "0.1.0"
+    "title": "Needed API",
+    "version": "0.2.0"
   },
   "paths": {
     "/api/health": {
@@ -23,15 +23,35 @@
         }
       }
     },
-    "/api/predict": {
+    "/api/loop": {
+      "get": {
+        "summary": "Get Loop",
+        "description": "État complet de la boucle.",
+        "operationId": "get_loop_api_loop_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoopState"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loop/theta": {
       "post": {
-        "summary": "Predict Route",
-        "operationId": "predict_route_api_predict_post",
+        "summary": "Set Theta",
+        "description": "Étape 1 : nouvelle mesure de l'état du patient (capteur simulé).",
+        "operationId": "set_theta_api_loop_theta_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PredictRequest"
+                "$ref": "#/components/schemas/ThetaRequest"
               }
             }
           },
@@ -43,7 +63,342 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PredictResponse"
+                  "$ref": "#/components/schemas/LoopState"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loop/propose": {
+      "post": {
+        "summary": "Propose",
+        "description": "Étapes 2 à 6 : zone, paires, génération, mesure, trois propositions pour l'aidant.",
+        "operationId": "propose_api_loop_propose_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoopState"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loop/send": {
+      "post": {
+        "summary": "Send",
+        "description": "Étapes 7 et 8 : l'aidant envoie une demande, qui est vérifiée avant d'être transmise.",
+        "operationId": "send_api_loop_send_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoopState"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loop/skip": {
+      "post": {
+        "summary": "Skip",
+        "description": "Étape 7 : l'aidant passe son tour.",
+        "operationId": "skip_api_loop_skip_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoopState"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loop/respond": {
+      "post": {
+        "summary": "Respond",
+        "description": "Étapes 9 à 12 : réponse du patient, nouvelle mesure, récompense, apprentissage.",
+        "operationId": "respond_api_loop_respond_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RespondRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoopState"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/loop/reset": {
+      "post": {
+        "summary": "Reset",
+        "description": "Remet la démo à zéro.",
+        "operationId": "reset_api_loop_reset_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoopState"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -74,6 +429,104 @@
   },
   "components": {
     "schemas": {
+      "CandidateState": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "pair": {
+            "$ref": "#/components/schemas/InterestPair"
+          },
+          "lam": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lam",
+            "description": "Position mesurée sur l'axe λ"
+          },
+          "intended": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intended",
+            "description": "Position visée par le générateur"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format"
+          },
+          "format_label": {
+            "type": "string",
+            "title": "Format Label"
+          },
+          "effort": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Effort"
+          },
+          "in_zone": {
+            "type": "boolean",
+            "title": "In Zone"
+          },
+          "off_topic": {
+            "type": "boolean",
+            "title": "Off Topic"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "best",
+                  "bridge",
+                  "explore"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot",
+            "description": "Case occupée parmi les trois propositions"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "gemini",
+              "offline"
+            ],
+            "title": "Provider"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "pair",
+          "lam",
+          "intended",
+          "format",
+          "format_label",
+          "effort",
+          "in_zone",
+          "off_topic",
+          "slot",
+          "provider"
+        ],
+        "title": "CandidateState",
+        "description": "Une demande générée, puis mesurée."
+      },
       "ErrorDetail": {
         "properties": {
           "code": {
@@ -107,6 +560,66 @@
         "title": "ErrorResponse",
         "description": "Format unique de toutes les erreurs renvoyées par l'API."
       },
+      "FormatState": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "effort": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Effort"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "effort"
+        ],
+        "title": "FormatState",
+        "description": "Un format de la grille fixe, avec l'effort qu'il demande au patient."
+      },
+      "GeneratorState": {
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "gemini",
+              "offline"
+            ],
+            "title": "Provider"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "note": {
+            "type": "string",
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "provider",
+          "model",
+          "note"
+        ],
+        "title": "GeneratorState"
+      },
       "HealthResponse": {
         "properties": {
           "status": {
@@ -119,40 +632,493 @@
         "type": "object",
         "title": "HealthResponse"
       },
-      "PredictRequest": {
+      "HistoryEntry": {
         "properties": {
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "helper_name": {
+            "type": "string",
+            "title": "Helper Name"
+          },
           "text": {
             "type": "string",
-            "maxLength": 5000,
-            "minLength": 1,
+            "title": "Text"
+          },
+          "lam": {
+            "type": "number",
+            "title": "Lam"
+          },
+          "effort": {
+            "type": "number",
+            "title": "Effort"
+          },
+          "format_label": {
+            "type": "string",
+            "title": "Format Label"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "suggested",
+              "edited",
+              "real_need"
+            ],
+            "title": "Source"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "helped",
+              "ignored"
+            ],
+            "title": "Action"
+          },
+          "theta_before": {
+            "type": "number",
+            "title": "Theta Before"
+          },
+          "theta_expected": {
+            "type": "number",
+            "title": "Theta Expected"
+          },
+          "theta_after": {
+            "type": "number",
+            "title": "Theta After"
+          },
+          "reward": {
+            "type": "number",
+            "title": "Reward",
+            "description": "θ après − θ attendu"
+          },
+          "center_before": {
+            "type": "number",
+            "title": "Center Before"
+          },
+          "center_after": {
+            "type": "number",
+            "title": "Center After",
+            "description": "Centre de la zone au même θ, après apprentissage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "number",
+          "helper_name",
+          "text",
+          "lam",
+          "effort",
+          "format_label",
+          "source",
+          "action",
+          "theta_before",
+          "theta_expected",
+          "theta_after",
+          "reward",
+          "center_before",
+          "center_after"
+        ],
+        "title": "HistoryEntry"
+      },
+      "InterestPair": {
+        "properties": {
+          "patient_interest": {
+            "type": "string",
+            "title": "Patient Interest"
+          },
+          "helper_interest": {
+            "type": "string",
+            "title": "Helper Interest"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_interest",
+          "helper_interest"
+        ],
+        "title": "InterestPair"
+      },
+      "LoopState": {
+        "properties": {
+          "patient": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "helpers": {
+            "items": {
+              "$ref": "#/components/schemas/Person"
+            },
+            "type": "array",
+            "title": "Helpers"
+          },
+          "theta": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Theta",
+            "description": "État du patient (capteur simulé)"
+          },
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/FormatState"
+            },
+            "type": "array",
+            "title": "Formats"
+          },
+          "zone": {
+            "$ref": "#/components/schemas/ZoneState"
+          },
+          "round": {
+            "$ref": "#/components/schemas/RoundState"
+          },
+          "held": {
+            "items": {
+              "$ref": "#/components/schemas/MessageState"
+            },
+            "type": "array",
+            "title": "Held"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/HistoryEntry"
+            },
+            "type": "array",
+            "title": "History"
+          },
+          "generator": {
+            "$ref": "#/components/schemas/GeneratorState"
+          },
+          "model": {
+            "$ref": "#/components/schemas/ModelState"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient",
+          "helpers",
+          "theta",
+          "formats",
+          "zone",
+          "round",
+          "held",
+          "history",
+          "generator",
+          "model"
+        ],
+        "title": "LoopState",
+        "description": "Tout l'état de la démo : un patient, sa zone, la manche en cours et l'historique."
+      },
+      "MessageState": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "helper_id": {
+            "type": "string",
+            "title": "Helper Id"
+          },
+          "pair": {
+            "$ref": "#/components/schemas/InterestPair"
+          },
+          "lam": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Lam"
+          },
+          "format": {
+            "type": "string",
+            "title": "Format"
+          },
+          "format_label": {
+            "type": "string",
+            "title": "Format Label"
+          },
+          "effort": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Effort"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "suggested",
+              "edited",
+              "real_need"
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "delivered",
+              "held"
+            ],
+            "title": "Status"
+          },
+          "hold_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Reason",
+            "description": "Pourquoi le message est retenu, s'il l'est"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "helper_id",
+          "pair",
+          "lam",
+          "format",
+          "format_label",
+          "effort",
+          "source",
+          "status",
+          "hold_reason"
+        ],
+        "title": "MessageState",
+        "description": "La demande envoyée par l'aidant, après mesure."
+      },
+      "ModelState": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "simulated",
+            "title": "Kind",
+            "default": "simulated"
+          },
+          "offset": {
+            "type": "number",
+            "title": "Offset",
+            "description": "Correction personnelle du centre de la zone"
+          },
+          "observations": {
+            "type": "integer",
+            "title": "Observations"
+          }
+        },
+        "type": "object",
+        "required": [
+          "offset",
+          "observations"
+        ],
+        "title": "ModelState"
+      },
+      "Person": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "interests"
+        ],
+        "title": "Person"
+      },
+      "RespondRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "helped",
+              "ignored"
+            ],
+            "title": "Action"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "RespondRequest"
+      },
+      "RoundState": {
+        "properties": {
+          "number": {
+            "type": "integer",
+            "title": "Number"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "idle",
+              "proposed",
+              "held",
+              "sent",
+              "answered"
+            ],
+            "title": "Stage"
+          },
+          "step": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Step",
+            "description": "Étape courante de la boucle, de 1 à 12"
+          },
+          "helper_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Helper Id"
+          },
+          "pairs": {
+            "items": {
+              "$ref": "#/components/schemas/InterestPair"
+            },
+            "type": "array",
+            "title": "Pairs"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateState"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MessageState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "number",
+          "stage",
+          "step",
+          "helper_id",
+          "pairs",
+          "candidates",
+          "message"
+        ],
+        "title": "RoundState"
+      },
+      "SendRequest": {
+        "properties": {
+          "proposal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 600
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Text"
           }
         },
         "type": "object",
-        "required": [
-          "text"
-        ],
-        "title": "PredictRequest"
+        "title": "SendRequest",
+        "description": "Choix de l'aidant : une proposition, une proposition modifiée, ou son propre texte."
       },
-      "PredictResponse": {
+      "ThetaRequest": {
         "properties": {
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "score": {
+          "theta": {
             "type": "number",
             "maximum": 1.0,
             "minimum": 0.0,
-            "title": "Score"
+            "title": "Theta"
           }
         },
         "type": "object",
         "required": [
-          "label",
-          "score"
+          "theta"
         ],
-        "title": "PredictResponse"
+        "title": "ThetaRequest"
+      },
+      "ZoneState": {
+        "properties": {
+          "center": {
+            "type": "number",
+            "title": "Center",
+            "description": "Centre sur l'axe λ (0 = aidant, 1 = patient)"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low"
+          },
+          "high": {
+            "type": "number",
+            "title": "High"
+          },
+          "half_width": {
+            "type": "number",
+            "title": "Half Width",
+            "description": "Demi-largeur : l'incertitude du modèle"
+          },
+          "effort_max": {
+            "type": "number",
+            "title": "Effort Max",
+            "description": "Effort maximal acceptable, entre 0 et 1"
+          },
+          "common_center": {
+            "type": "number",
+            "title": "Common Center",
+            "description": "Centre du modèle commun, avant correction"
+          }
+        },
+        "type": "object",
+        "required": [
+          "center",
+          "low",
+          "high",
+          "half_width",
+          "effort_max",
+          "common_center"
+        ],
+        "title": "ZoneState",
+        "description": "Zone des demandes acceptables pour le patient, maintenant."
       }
     }
   }

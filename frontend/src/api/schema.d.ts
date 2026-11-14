@@ -21,7 +21,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/predict": {
+    "/api/loop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Loop
+         * @description État complet de la boucle.
+         */
+        get: operations["get_loop_api_loop_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loop/theta": {
         parameters: {
             query?: never;
             header?: never;
@@ -30,8 +50,111 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Predict Route */
-        post: operations["predict_route_api_predict_post"];
+        /**
+         * Set Theta
+         * @description Étape 1 : nouvelle mesure de l'état du patient (capteur simulé).
+         */
+        post: operations["set_theta_api_loop_theta_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loop/propose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Propose
+         * @description Étapes 2 à 6 : zone, paires, génération, mesure, trois propositions pour l'aidant.
+         */
+        post: operations["propose_api_loop_propose_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loop/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send
+         * @description Étapes 7 et 8 : l'aidant envoie une demande, qui est vérifiée avant d'être transmise.
+         */
+        post: operations["send_api_loop_send_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loop/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Skip
+         * @description Étape 7 : l'aidant passe son tour.
+         */
+        post: operations["skip_api_loop_skip_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loop/respond": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Respond
+         * @description Étapes 9 à 12 : réponse du patient, nouvelle mesure, récompense, apprentissage.
+         */
+        post: operations["respond_api_loop_respond_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/loop/reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reset
+         * @description Remet la démo à zéro.
+         */
+        post: operations["reset_api_loop_reset_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -42,6 +165,47 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * CandidateState
+         * @description Une demande générée, puis mesurée.
+         */
+        CandidateState: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+            pair: components["schemas"]["InterestPair"];
+            /**
+             * Lam
+             * @description Position mesurée sur l'axe λ
+             */
+            lam: number;
+            /**
+             * Intended
+             * @description Position visée par le générateur
+             */
+            intended: number | null;
+            /** Format */
+            format: string;
+            /** Format Label */
+            format_label: string;
+            /** Effort */
+            effort: number;
+            /** In Zone */
+            in_zone: boolean;
+            /** Off Topic */
+            off_topic: boolean;
+            /**
+             * Slot
+             * @description Case occupée parmi les trois propositions
+             */
+            slot: ("best" | "bridge" | "explore") | null;
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "gemini" | "offline";
+        };
         /** ErrorDetail */
         ErrorDetail: {
             /**
@@ -62,6 +226,30 @@ export interface components {
         ErrorResponse: {
             error: components["schemas"]["ErrorDetail"];
         };
+        /**
+         * FormatState
+         * @description Un format de la grille fixe, avec l'effort qu'il demande au patient.
+         */
+        FormatState: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Effort */
+            effort: number;
+        };
+        /** GeneratorState */
+        GeneratorState: {
+            /**
+             * Provider
+             * @enum {string}
+             */
+            provider: "gemini" | "offline";
+            /** Model */
+            model: string | null;
+            /** Note */
+            note: string;
+        };
         /** HealthResponse */
         HealthResponse: {
             /**
@@ -71,17 +259,215 @@ export interface components {
              */
             status: "ok";
         };
-        /** PredictRequest */
-        PredictRequest: {
+        /** HistoryEntry */
+        HistoryEntry: {
+            /** Number */
+            number: number;
+            /** Helper Name */
+            helper_name: string;
             /** Text */
             text: string;
+            /** Lam */
+            lam: number;
+            /** Effort */
+            effort: number;
+            /** Format Label */
+            format_label: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "suggested" | "edited" | "real_need";
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "helped" | "ignored";
+            /** Theta Before */
+            theta_before: number;
+            /** Theta Expected */
+            theta_expected: number;
+            /** Theta After */
+            theta_after: number;
+            /**
+             * Reward
+             * @description θ après − θ attendu
+             */
+            reward: number;
+            /** Center Before */
+            center_before: number;
+            /**
+             * Center After
+             * @description Centre de la zone au même θ, après apprentissage
+             */
+            center_after: number;
         };
-        /** PredictResponse */
-        PredictResponse: {
-            /** Label */
-            label: string;
-            /** Score */
-            score: number;
+        /** InterestPair */
+        InterestPair: {
+            /** Patient Interest */
+            patient_interest: string;
+            /** Helper Interest */
+            helper_interest: string;
+        };
+        /**
+         * LoopState
+         * @description Tout l'état de la démo : un patient, sa zone, la manche en cours et l'historique.
+         */
+        LoopState: {
+            patient: components["schemas"]["Person"];
+            /** Helpers */
+            helpers: components["schemas"]["Person"][];
+            /**
+             * Theta
+             * @description État du patient (capteur simulé)
+             */
+            theta: number;
+            /** Formats */
+            formats: components["schemas"]["FormatState"][];
+            zone: components["schemas"]["ZoneState"];
+            round: components["schemas"]["RoundState"];
+            /** Held */
+            held: components["schemas"]["MessageState"][];
+            /** History */
+            history: components["schemas"]["HistoryEntry"][];
+            generator: components["schemas"]["GeneratorState"];
+            model: components["schemas"]["ModelState"];
+        };
+        /**
+         * MessageState
+         * @description La demande envoyée par l'aidant, après mesure.
+         */
+        MessageState: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+            /** Helper Id */
+            helper_id: string;
+            pair: components["schemas"]["InterestPair"];
+            /** Lam */
+            lam: number;
+            /** Format */
+            format: string;
+            /** Format Label */
+            format_label: string;
+            /** Effort */
+            effort: number;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "suggested" | "edited" | "real_need";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "delivered" | "held";
+            /**
+             * Hold Reason
+             * @description Pourquoi le message est retenu, s'il l'est
+             */
+            hold_reason: string | null;
+        };
+        /** ModelState */
+        ModelState: {
+            /**
+             * Kind
+             * @default simulated
+             * @constant
+             */
+            kind: "simulated";
+            /**
+             * Offset
+             * @description Correction personnelle du centre de la zone
+             */
+            offset: number;
+            /** Observations */
+            observations: number;
+        };
+        /** Person */
+        Person: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Interests */
+            interests: string[];
+        };
+        /** RespondRequest */
+        RespondRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "helped" | "ignored";
+        };
+        /** RoundState */
+        RoundState: {
+            /** Number */
+            number: number;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "idle" | "proposed" | "held" | "sent" | "answered";
+            /**
+             * Step
+             * @description Étape courante de la boucle, de 1 à 12
+             */
+            step: number;
+            /** Helper Id */
+            helper_id: string | null;
+            /** Pairs */
+            pairs: components["schemas"]["InterestPair"][];
+            /** Candidates */
+            candidates: components["schemas"]["CandidateState"][];
+            message: components["schemas"]["MessageState"] | null;
+        };
+        /**
+         * SendRequest
+         * @description Choix de l'aidant : une proposition, une proposition modifiée, ou son propre texte.
+         */
+        SendRequest: {
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Text */
+            text?: string | null;
+        };
+        /** ThetaRequest */
+        ThetaRequest: {
+            /** Theta */
+            theta: number;
+        };
+        /**
+         * ZoneState
+         * @description Zone des demandes acceptables pour le patient, maintenant.
+         */
+        ZoneState: {
+            /**
+             * Center
+             * @description Centre sur l'axe λ (0 = aidant, 1 = patient)
+             */
+            center: number;
+            /** Low */
+            low: number;
+            /** High */
+            high: number;
+            /**
+             * Half Width
+             * @description Demi-largeur : l'incertitude du modèle
+             */
+            half_width: number;
+            /**
+             * Effort Max
+             * @description Effort maximal acceptable, entre 0 et 1
+             */
+            effort_max: number;
+            /**
+             * Common Center
+             * @description Centre du modèle commun, avant correction
+             */
+            common_center: number;
         };
     };
     responses: never;
@@ -112,7 +498,27 @@ export interface operations {
             };
         };
     };
-    predict_route_api_predict_post: {
+    get_loop_api_loop_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoopState"];
+                };
+            };
+        };
+    };
+    set_theta_api_loop_theta_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -121,7 +527,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PredictRequest"];
+                "application/json": components["schemas"]["ThetaRequest"];
             };
         };
         responses: {
@@ -131,7 +537,313 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PredictResponse"];
+                    "application/json": components["schemas"]["LoopState"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    propose_api_loop_propose_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoopState"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    send_api_loop_send_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoopState"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    skip_api_loop_skip_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoopState"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    respond_api_loop_respond_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RespondRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoopState"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    reset_api_loop_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoopState"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Unprocessable Entity */
