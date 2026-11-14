@@ -1,12 +1,15 @@
 # Le modèle : objets, réseaux, entraînement
 
-Ce document fixe le modèle cible, tel que l'équipe l'a arrêté le 14 novembre. **Rien de ce qui suit n'est encore codé** : l'app tourne avec la version précédente, où l'état du patient est un seul nombre et la zone une règle écrite à la main. Les écarts sont listés en section 8.
+Ce document fixe le modèle cible, tel que l'équipe l'a arrêté le 14 novembre. **Les réseaux ne sont pas encore codés** : l'app tourne avec la version précédente, où l'état du patient est un seul nombre et la zone une règle écrite à la main. Les écarts sont listés en section 8.
 
 Chaque élément porte un statut :
 
 - **Décidé** : tranché par l'équipe.
+- **Délégué** : choisi par Claude à la demande de l'équipe (« je te laisse faire le mieux »). À relire.
 - **Proposé** : suggestion qui n'a pas été confirmée.
 - **À définir** : question ouverte.
+
+Seule la génération des données simulées est codée (`ml/simulation/`, sections 11 et 12).
 
 ## 1. Le processus, en neuf étapes
 
@@ -26,9 +29,9 @@ On mesure l'état du patient, on en déduit quel genre de demande lui convient, 
 
 | Objet | Symbole | Type et domaine | Définition | Statut |
 |---|---|---|---|---|
-| Données brutes | θ_t | Vecteur de signaux, à un instant t | Tout ce qu'on relève sur le patient à cet instant, sans rien lui demander | Décidé ; contenu à définir |
-| État | L(θ_t) | Vecteur de dimension k | Code latent de l'autoencodeur appliqué à θ_t | Décidé ; k et composantes à définir |
-| Référence saine | L_ref | Même espace que L | L d'une personne saine | Décidé ; une région plutôt qu'un point : proposé |
+| Données brutes | θ_t | Vecteur de 22 signaux, à un instant t | Tout ce qu'on relève sur le patient à cet instant, sans rien lui demander | Décidé ; contenu délégué (section 11) |
+| État | L(θ_t) | Vecteur de dimension 6 | Code latent de l'autoencodeur appliqué à θ_t | Décidé ; composantes déléguées (section 11) |
+| Référence saine | L_ref | Une moyenne et une dispersion par composante | L des personnes saines | Décidé ; forme déléguée (section 11) |
 | Centre d'intérêt | p (patient), h (aidant) | Texte, et son vecteur | Ce que la personne aime ou connaît | Décidé |
 | Paire | (p, h) | Un centre d'intérêt de chaque côté | Les deux sujets entre lesquels une demande se place | Décidé ; règle de choix à définir |
 | Demande | a | Texte, origine, état | Un petit service demandé au patient par un aidant | Décidé |
@@ -36,14 +39,14 @@ On mesure l'état du patient, on en déduit quel genre de demande lui convient, 
 | Zone | Z | Un intervalle ou un plafond par axe | Les demandes acceptables pour ce patient, maintenant | Décidé |
 | Propositions | — | Trois demandes de la zone | Ce que l'aidant se voit proposer | Décidé |
 | Réaction du patient | — | Répond ou non, délai, longueur | Ce qu'on observe après la demande ; elle fait partie de θ | Décidé |
-| Récompense | r | Nombre de 0 à 100 | Amélioration de l'état, en comparant L(θ_t) à L(θ_t+dt) | Décidé ; formule à définir |
+| Récompense | r | Nombre de 0 à 100 | Amélioration de l'état, en comparant L(θ_t) à L(θ_t+dt) | Décidé ; formule déléguée (section 11) |
 | Ligne du journal | — | Un enregistrement par demande | Contexte, positions de la demande, réaction, récompense | Décidé ; champs à définir |
 
 Origines possibles d'une demande : suggérée, modifiée par l'aidant, ou vrai besoin écrit par lui. États possibles : retenue, transmise, répondue, mise de côté.
 
 | Objet | D'où viennent ses données | Qui le voit | Dans le code actuel |
 |---|---|---|---|
-| θ | Comportement dans l'app, capteurs | Personne | N'existe pas sous forme brute |
+| θ | Montre Garmin Forerunner 965 et comportement dans l'app | Personne | N'existe pas dans l'app ; simulé par `ml/simulation` |
 | L(θ) | Calculé par l'autoencodeur | Personne | `theta`, un seul nombre (`backend/loop.py`, colonne `theta` de `backend/store.py`) |
 | L_ref | Personnes saines, simulées puis réelles | Personne | N'existe pas |
 | Centre d'intérêt | Saisi à l'inscription | L'aidant et le patient voient le leur | `interests` (`backend/store.py`) |
@@ -199,22 +202,170 @@ Passer à la cible changera les deux contrats, API et ML : `theta` et `ZoneState
 ## 9. Proposé, à confirmer
 
 - Un autoencodeur variationnel, pour que la distance à L_ref ait un sens.
-- L_ref comme une région, et une mise à l'échelle par personne.
-- Une récompense qui compare L après à l'état attendu sans la demande, et qui mesure si le patient se rapproche de L_ref.
+- Une récompense qui compare L après à l'état attendu sans la demande, plutôt qu'à L avant. Les données simulées contiennent les deux (`reward` et `reward_counterfactual`), pour pouvoir comparer.
 - Les demandes passées et leurs notes ajoutées aux entrées de B.
 - Un encodeur commun à A et B.
 - Pour A : prédire aussi l'acceptation et le délai de réponse, et fournir une incertitude.
-- Une famille de générateurs aux règles tirées au hasard, plutôt qu'un seul.
 - Figer la normale de chaque patient sur une période de référence, pour qu'une dégradation lente ne devienne pas sa nouvelle normale.
 - À grande échelle : un Transformer sur l'historique du patient en entrée de A.
 
 ## 10. À définir
 
-- Le contenu de θ, signal par signal.
-- Les composantes de L : leur nombre, et la source de chacune.
-- La grille de temps de la séquence donnée à B, et la durée dt.
-- La formule exacte de la récompense.
-- Les deux générateurs : leurs composantes, leurs règles, leur bruit. **C'est la prochaine étape**, et tout ce que les réseaux sauront en découle.
-- La grille de notation de chaque axe.
+- La grille de notation de chaque axe, pour mesurer une vraie demande écrite par Gemini ou par l'aidant.
 - La règle de choix de la paire de centres d'intérêt.
 - Le cas d'un vrai besoin sans lien avec les centres d'intérêt du patient.
+- Le branchement d'une vraie montre : quelle voie d'accès aux données Garmin, et à quelle cadence.
+- Les architectures exactes des trois réseaux : tailles, nombre de couches.
+
+## 11. θ, L et la récompense, en détail
+
+Ces choix sont **délégués**. Ils sont appliqués par `ml/simulation/spec.py` et `ml/simulation/reward.py`.
+
+### θ : 22 signaux
+
+θ réunit ce qu'une montre Garmin Forerunner 965 mesure d'utile pour suivre une personne, plus son comportement dans l'app. Un relevé est pris à un instant : les signaux de la nuit et du jour y figurent avec leur dernière valeur connue.
+
+| Bloc | Signal | Unité | Composante de l'état qui pèse le plus |
+|---|---|---|---|
+| Instant | `heart_rate` | bpm | Calme |
+| Instant | `stress` | 0 à 100 | Calme |
+| Instant | `body_battery` | 0 à 100 | Énergie |
+| Instant | `respiration` | respirations par minute | Calme |
+| Instant | `steps_last_hour` | pas | Activité |
+| Journée | `steps_today` | pas | Activité |
+| Journée | `intensity_minutes_today` | minutes | Activité |
+| Journée | `floors_today` | étages | Activité |
+| Journée | `outdoor_minutes_today` | minutes | Activité |
+| Nuit | `sleep_hours` | heures | Sommeil |
+| Nuit | `sleep_score` | 0 à 100 | Sommeil |
+| Nuit | `deep_sleep_minutes` | minutes | Sommeil |
+| Nuit | `rem_sleep_minutes` | minutes | Sommeil |
+| Nuit | `awake_minutes` | minutes | Sommeil |
+| Nuit | `bedtime_hour` | heures après midi | Rythme |
+| Nuit | `wake_hour` | heure | Rythme |
+| Nuit | `hrv_overnight_ms` | ms | Calme |
+| Nuit | `spo2_sleep` | % | Sommeil |
+| Jour | `resting_hr` | bpm | Énergie |
+| App | `reply_rate_7d` | 0 à 1 | Engagement |
+| App | `reply_delay_hours_7d` | heures | Engagement |
+| App | `reply_length_7d` | caractères | Engagement |
+
+À savoir :
+
+- **La montre n'est pas un dispositif médical**, et Garmin le dit. Ces signaux décrivent un mode de vie, pas un diagnostic.
+- Les minutes dehors viennent des activités enregistrées avec le GPS. La montre ne suit pas la position en continu.
+- Non retenus : VO2max, charge et statut d'entraînement, score de préparation à l'entraînement. Ce sont des mesures sportives, lentes ou déduites des signaux déjà retenus.
+- La mesure de l'oxygène pendant le sommeil est souvent désactivée, car elle vide la batterie. Le générateur la coupe chez une personne sur deux.
+
+### L : 6 composantes
+
+Vingt-deux signaux, six composantes : une par groupe de signaux qui bougent ensemble. Chaque composante va de 0 à 1, et plus elle est haute, mieux la personne va.
+
+| Composante | Ce qu'elle décrit | Signaux qui la portent |
+|---|---|---|
+| Sommeil (`sleep`) | La qualité des nuits | Durée, score, sommeil profond, paradoxal, éveils, oxygène |
+| Rythme (`rhythm`) | La régularité des horaires | Heure du coucher, heure du lever |
+| Énergie (`energy`) | Les réserves de la personne | Body Battery, fréquence cardiaque de repos |
+| Calme (`calm`) | La tension du système nerveux | Stress, variabilité cardiaque, fréquence cardiaque, respiration |
+| Activité (`activity`) | Le mouvement et les sorties | Pas, minutes intensives, étages, minutes dehors |
+| Engagement (`engagement`) | Le lien avec les autres dans l'app | Taux, délai et longueur des réponses |
+
+Dans les données simulées, l'état caché a exactement ces six composantes. C'est ce que la tête supervisée de l'autoencodeur devra retrouver.
+
+### Grille de temps et délai
+
+- Quatre relevés par jour : 8 h, 13 h, 18 h et 22 h.
+- Le réseau B lit sept jours, soit 28 relevés.
+- dt vaut 24 heures : la nouvelle mesure se fait le lendemain, au même moment de la journée.
+
+### Récompense
+
+L_ref est une moyenne et une dispersion par composante, calculées sur les personnes saines. La distance d'un état à L_ref se compte en largeurs de cette dispersion :
+
+```
+d(L) = racine de la moyenne, sur les six composantes, de ((L − moyenne saine) / dispersion saine)²
+```
+
+Une personne saine typique est à une distance proche de 1. C'est ce qui fait de L_ref une région plutôt qu'un point.
+
+```
+gain       = (d_avant − d_après) / (d_avant + 1)
+récompense = 50 + 150 · gain, ramenée entre 0 et 100
+```
+
+- 50 veut dire que rien n'a changé.
+- Le « + 1 » évite qu'un patient déjà proche de L_ref fasse exploser le rapport.
+- Une amélioration d'un tiers donne 100.
+
+Dans les données simulées, la récompense est calculée sur l'état caché. Une fois l'autoencodeur entraîné, la même formule s'appliquera à L(θ).
+
+## 12. Les générateurs : toutes les hypothèses
+
+Les réseaux entraînés sur ces données apprendront ces règles, rien de plus. Chacune est une hypothèse, **déléguée**, à défendre ou à corriger.
+
+```bash
+uv run python -m ml.simulation --people 600 --days 56 --seed 0 --out ml/data/sim
+```
+
+La commande écrit `people.npz` (θ, masque, état caché, groupe, parcours, L_ref), `episodes.npz` (le journal) et `meta.json` (le sens de chaque colonne). Ces fichiers ne sont pas dans git.
+
+### Les personnes et leur état (`ml/simulation/people.py`)
+
+| Hypothèse | Valeur |
+|---|---|
+| Part de personnes saines | 40 % |
+| Niveau moyen de l'état | Saines : 0,78 ± 0,05. Patients : 0,52 ± 0,09 |
+| Parcours d'un patient | Stable 50 %, rechute 30 % (−0,22 en trois semaines), rétablissement 20 % (+0,15) |
+| État d'un jour | Niveau propre + une part commune aux six composantes + une part propre à chacune, toutes deux corrélées d'un jour à l'autre |
+| Habitudes | Besoin de sommeil, heure du coucher, fréquence cardiaque de repos, variabilité cardiaque, pas, longueur des réponses : tirés par personne, **sans lien avec l'état** |
+| Signal | Habitude de la personne + effet de l'état + effet de l'heure + bruit |
+| Données absentes | Montre non portée le jour (1 à 10 % des jours) ou la nuit (2 à 20 %), oxygène coupé chez une personne sur deux, 3 % de mesures instantanées perdues, 8 % des jours sans comportement dans l'app |
+
+Les habitudes sans lien avec l'état sont ce qui oblige à normaliser θ par personne : deux personnes au même état n'ont pas les mêmes chiffres.
+
+Simplification : le bloc « app » de θ est tiré de la composante d'engagement. Il n'est pas recalculé à partir des réponses du journal.
+
+### Le patient simulé (`ml/simulation/patient.py`)
+
+Chaque patient a ses propres règles, tirées au hasard. Les réseaux ne les voient jamais.
+
+| Hypothèse | Règle |
+|---|---|
+| Ce qu'il supporte sur un axe de coût | Une base (0,10 à 0,30) plus une part de son état (0,50 à 0,90) |
+| D'où vient ce qu'il supporte | Durée : énergie et sommeil. Échange : engagement. Exposition : calme. Démarrage : énergie |
+| Ce qui lui convient sur l'axe des intérêts | 1 − pente × état moyen. Plus il va mal, plus c'est proche de ses intérêts |
+| Ce qui lui convient sur l'axe concret | 0,95 − pente × état moyen. Plus il va mal, plus c'est concret |
+| Dose | Une demande apporte d'autant plus qu'elle mobilise, tant qu'elle reste supportable |
+| Surcharge | Au-delà de ce qu'il supporte, il répond bien moins, et la demande lui pèse |
+| Sans réponse | Son état baisse légèrement |
+| Durée d'un effet | Il en reste 75 % le lendemain |
+
+### Le journal (`ml/simulation/episodes.py`)
+
+- Un patient reçoit une demande 8 jours sur 10, à partir du huitième jour. Les jours sans demande montrent comment son état évolue tout seul.
+- La zone est tirée au hasard, puis la demande est tirée dans la zone. C'est voulu : le réseau A doit voir de bonnes et de mauvaises demandes.
+- Les personnes saines ne reçoivent pas de demandes.
+
+### Ce que donne le réglage par défaut
+
+Avec 600 personnes, 56 jours et la graine 0 :
+
+| Mesure | Valeur |
+|---|---|
+| Personnes | 217 saines, 383 patients |
+| Relevés | 224 par personne, 22 signaux, 10,8 % de données absentes |
+| Distance à L_ref | Saines : 0,93. Patients : 3,20 |
+| Demandes | 14 703, dont 54 % reçoivent une réponse |
+| Demandes supportables | 46 % du journal, 73 % de réponses |
+| Demandes trop lourdes | 15 % de réponses |
+| Récompense | Moyenne 49,0, écart-type 14,8 |
+
+Parmi les demandes supportables, la récompense suit bien la qualité du placement :
+
+| Placement de la demande | Réponses | Récompense | Récompense contre l'état attendu |
+|---|---|---|---|
+| Loin de ce qui convient | 62 % | 46,9 | 48,8 |
+| Moyen | 77 % | 50,3 | 53,3 |
+| Proche de ce qui convient | 90 % | 56,6 | 59,8 |
+
+L'écart-type de 14,8 est du même ordre que ces différences : l'état d'un patient bouge tout seul d'un jour à l'autre, et une seule récompense dit peu. Le réseau A aura besoin de beaucoup d'épisodes, ce qui est aussi vrai dans la réalité.

@@ -42,7 +42,7 @@ Pour ne pas se marcher dessus :
 ## Stack
 
 - **Backend** : Python 3.12, FastAPI, Pydantic v2, uvicorn. Gestionnaire : **uv** (jamais `pip install`).
-- **ML** : Python 3.12, dans le même environnement uv que le backend.
+- **ML** : Python 3.12, dans le même environnement uv que le backend. `numpy` pour les données simulées.
 - **IA générative** : API Gemini appelée en REST avec la bibliothèque standard (`ml/gemini.py`), sans SDK. Clé dans `.env` (`GEMINI_API_KEY`). Sans clé, ou si Gemini échoue, `ml/lexicon.py` prend le relais.
 - **Frontend** : React 19, TypeScript 7, Vite 8. Gestionnaire : **npm 11.19 ou plus** (comme la CI). Un npm plus ancien écrit un `package-lock.json` incomplet que la CI refuse (« Missing: … from lock file »). Mise à jour : `npm install -g npm@latest`.
 - **Qualité** : ruff (lint + format Python), prettier (format front), oxlint (lint front), pytest, pre-commit, CI GitHub Actions.
@@ -67,6 +67,7 @@ npm --prefix frontend run typecheck        # types TS
 uv run pre-commit run --all-files          # tous les hooks (format, lint, tests)
 
 uv run python -m ml.check_gemini           # vérifie la clé Gemini et la mesure λ
+uv run python -m ml.simulation             # génère les données simulées dans ml/data/sim (hors git)
 
 # Contrat d'API (voir plus bas)
 uv run python -m backend.export_openapi    # régénère contract/openapi.json
@@ -105,7 +106,8 @@ ml/
   lexicon.py         # mode hors ligne : banque de demandes et mesure par mots-clés
   formats.py         # grille fixe des formats et de leur effort
   check_gemini.py    # vérification de la clé Gemini
-  tests/             # tests du contrat ML
+  simulation/        # données simulées : θ, état caché, patient simulé, journal d'épisodes (docs/modele.md, 11 et 12)
+  tests/             # tests du contrat ML et des données simulées
   data/, models/     # données et poids : ignorés par git (trop lourds)
 docs/
   modele.md          # le modèle cible : objets, axes, réseaux, entraînement (pas encore codé)
@@ -183,6 +185,10 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Nouvelle dépendance `numpy` — générer et enregistrer les données simulées ; les réseaux en auront besoin de toute façon.
+- 2026-11-14 — θ compte 22 signaux : ceux d'une montre Garmin Forerunner 965 utiles au suivi, plus le comportement dans l'app. L a 6 composantes : sommeil, rythme, énergie, calme, activité, engagement — choix délégués à Claude, à relire (`docs/modele.md`, section 11).
+- 2026-11-14 — Récompense = 50 + 150 × l'amélioration relative de la distance à L_ref, entre 0 et 100, mesurée 24 heures après la demande — L_ref est une moyenne et une dispersion des personnes saines, donc une région.
+- 2026-11-14 — Les données d'entraînement sont simulées par `ml/simulation` et restent hors git — aucune donnée réelle ; toutes les règles du générateur sont listées en section 12 de `docs/modele.md`.
 - 2026-11-14 — Le modèle cible est fixé dans `docs/modele.md` et remplacera la règle écrite à la main — le code actuel tient l'état en un seul nombre ; la cible sépare les données brutes θ du vecteur d'état L(θ).
 - 2026-11-14 — Trois réseaux : un autoencodeur pour L(θ), B (un Transformer) qui sort la zone, A (petit réseau dense) qui prédit la récompense. **A ne sert qu'à l'entraînement, B décide seul** — la décision tient en un réseau, et la réalité corrige A, qui corrige B.
 - 2026-11-14 — Poids généraux partagés, plus une dernière couche par patient dans A et dans B — un réseau entier par patient n'aurait pas assez de données.
