@@ -13,7 +13,7 @@ from dataclasses import dataclass, replace
 from typing import Any
 
 from ml import gemini, lexicon
-from ml.embedding import cosine, embed_texts
+from ml.embedding import Measure, cosine, embed_texts, measure_kind
 from ml.formats import FORMATS, effort_of, guess_format, request_axes
 from ml.types import Candidate, InterestPair, Provider, ProviderInfo, Review, Slot, Zone
 
@@ -24,8 +24,10 @@ MAX_TEXT_LENGTH = 400
 
 # En dessous de cette ressemblance avec les deux centres d'intérêt, un texte est « hors sujet ».
 # Hors ligne, la mesure lexicale donne 0 dès qu'aucun mot-clé n'est présent. Avec de vrais
-# embeddings, deux textes se ressemblent toujours un peu : le seuil reste à calibrer.
-MIN_RELEVANCE: dict[Provider, float] = {"offline": 0.03, "gemini": 0.0}
+# embeddings, deux textes se ressemblent toujours un peu. Modèle local : calibré sur des demandes
+# sans rapport (« help me move a sofa ») contre des demandes sur le sujet (issue #69). Gemini :
+# reste à calibrer.
+MIN_RELEVANCE: dict[Measure, float] = {"offline": 0.03, "local": 0.25, "gemini": 0.0}
 MIN_POINTS_TO_CALIBRATE = 4
 
 _UNSAFE = re.compile(
@@ -34,6 +36,7 @@ _UNSAFE = re.compile(
 
 _state = {"note": ""}  # dernier incident Gemini, affiché dans l'interface
 _scale = {"gain": 1.0, "shift": 0.0}  # dernier recalage de l'axe pour les embeddings Gemini
+_local_scale = {"gain": 1.0, "shift": 0.0}  # idem pour le modèle local (issue #69)
 
 GENERATION_SYSTEM = """You write short requests for a community app where members ask each other \
 for small favours.
@@ -72,6 +75,7 @@ class _Draft:
     format: str
     text: str
     intended: float | None = None
+    aim: float | None = None  # banque hors ligne : position que vise son niveau de mélange
 
 
 def provider_info() -> ProviderInfo:
@@ -85,7 +89,7 @@ def _clip(value: float) -> float:
 
 
 def lambda_position(
-    a: list[float], p: list[float], h: list[float], provider: Provider = "offline"
+    a: list[float], p: list[float], h: list[float], provider: Measure = "offline"
 ) -> tuple[float, bool]:
     """Position d'un texte entre l'intérêt de l'aidant (0) et celui du patient (1).
 
@@ -103,8 +107,10 @@ def lambda_position(
     return _clip(0.5 + (to_patient - to_helper) / (2.0 * span)), False
 
 
-def _calibrate(raw: list[float], intended: list[float | None]) -> None:
-    """Recale l'échelle de l'axe sur un lot généré par Gemini.
+def _calibrate(
+    raw: list[float], intended: list[float | None], scale: dict[str, float] | None = None
+) -> None:
+    """Recale l'échelle de l'axe sur un lot généré par Gemini (ou par la banque, mesuré en local).
 
     Avec de vrais embeddings, une phrase ressemble moins à un mot qu'un mot à un autre : les
     positions brutes se tassent autour de 0,5. On cherche donc la droite qui relie au mieux les
@@ -112,6 +118,7 @@ def _calibrate(raw: list[float], intended: list[float | None]) -> None:
     demande garde sa propre mesure : une demande qui ne tient pas ce qu'elle annonce s'écarte
     de la droite, et c'est sa position mesurée qui compte.
     """
+    scale = _scale if scale is None else scale
     points = [(r, t) for r, t in zip(raw, intended, strict=True) if t is not None]
     if len(points) < MIN_POINTS_TO_CALIBRATE:
         return
@@ -121,14 +128,15 @@ def _calibrate(raw: list[float], intended: list[float | None]) -> None:
     together = sum((r - mean_raw) * (t - mean_aim) for r, t in points)
     if spread < 1e-6 or together <= 0:
         return  # mesures toutes égales, ou sans rapport avec les annonces : on ne recale pas
-    _scale["gain"] = together / spread
-    _scale["shift"] = mean_aim - _scale["gain"] * mean_raw
+    scale["gain"] = together / spread
+    scale["shift"] = mean_aim - scale["gain"] * mean_raw
 
 
-def _rescaled(raw: float, provider: Provider) -> float:
-    if provider == "offline":
+def _rescaled(raw: float, kind: Measure) -> float:
+    if kind == "offline":
         return raw
-    return _clip(_scale["shift"] + _scale["gain"] * raw)
+    scale = _local_scale if kind == "local" else _scale
+    return _clip(scale["shift"] + scale["gain"] * raw)
 
 
 def _interest_names(pairs: list[InterestPair]) -> list[str]:
@@ -336,8 +344,8 @@ def _draft_offline(
     rng.shuffle(closings)
     drafts: list[_Draft] = []
     for index, pair in enumerate(pairs):
-        requests = lexicon.sample(pair.patient_interest, pair.helper_interest, rng, skip)
-        for fmt, text in requests:
+        requests = lexicon.sample_levels(pair.patient_interest, pair.helper_interest, rng, skip)
+        for level, fmt, text in requests:
             n = len(drafts)
             dressed = _dress(
                 text,
@@ -346,31 +354,52 @@ def _draft_offline(
                 greetings[n % len(greetings)],
                 closings[n % len(closings)],
             )
-            drafts.append(_Draft(index, fmt, dressed))
+            aim = 1.0 - level / (lexicon.LEVELS - 1)
+            drafts.append(_Draft(index, fmt, dressed, aim=aim))
     return drafts
+
+
+def _vectors(
+    texts: list[str], pairs: list[InterestPair], provider: Provider
+) -> tuple[list[list[float]], dict[str, list[float]], Measure]:
+    """Vecteurs des textes et des centres d'intérêt, tous par la même mesure.
+
+    `provider` est le générateur : Gemini mesure avec ses embeddings ; sinon le modèle local, et
+    la mesure lexicale s'il fait défaut.
+    """
+    interests = _interest_names(pairs)
+    kind = measure_kind(provider)
+    try:
+        vectors = embed_texts(texts + interests, kind, _dimensions(pairs))
+    except RuntimeError as exc:  # modèle local tombé en cours de route
+        logger.warning("Mesure locale indisponible, mesure lexicale : %s", exc)
+        kind = "offline"
+        vectors = embed_texts(texts + interests, kind, _dimensions(pairs))
+    by_interest = dict(zip(interests, vectors[len(texts) :], strict=True))
+    return vectors[: len(texts)], by_interest, kind
 
 
 def _measure(
     drafts: list[_Draft], pairs: list[InterestPair], provider: Provider
 ) -> list[Candidate]:
-    dims = _dimensions(pairs)
-    interests = _interest_names(pairs)
-    vectors = embed_texts([draft.text for draft in drafts] + interests, provider, dims)
-    by_interest = dict(zip(interests, vectors[len(drafts) :], strict=True))
+    vectors, by_interest, kind = _vectors([draft.text for draft in drafts], pairs, provider)
     measured = [
         lambda_position(
             vector,
             by_interest[pairs[draft.pair_index].patient_interest],
             by_interest[pairs[draft.pair_index].helper_interest],
-            provider,
+            kind,
         )
-        for draft, vector in zip(drafts, vectors, strict=False)
+        for draft, vector in zip(drafts, vectors, strict=True)
     ]
-    if provider == "gemini":
-        _calibrate([raw for raw, _ in measured], [draft.intended for draft in drafts])
+    raws = [raw for raw, _ in measured]
+    if kind == "gemini":
+        _calibrate(raws, [draft.intended for draft in drafts])
+    elif kind == "local":  # la banque annonce un niveau de mélange : même recalage que Gemini
+        _calibrate(raws, [draft.aim for draft in drafts], _local_scale)
     candidates = []
     for draft, (raw, off_topic) in zip(drafts, measured, strict=True):
-        lam = 0.0 if off_topic else round(_rescaled(raw, provider), 3)
+        lam = 0.0 if off_topic else round(_rescaled(raw, kind), 3)
         candidates.append(
             Candidate(
                 id=uuid.uuid4().hex[:8],
@@ -479,10 +508,7 @@ def review_text(text: str) -> Review:
 def _measure_free_text(
     text: str, pairs: list[InterestPair], preferred: InterestPair | None, provider: Provider
 ) -> tuple[InterestPair, float, bool]:
-    dims = _dimensions(pairs)
-    interests = _interest_names(pairs)
-    vectors = embed_texts([text, *interests], provider, dims)
-    by_interest = dict(zip(interests, vectors[1:], strict=True))
+    vectors, by_interest, kind = _vectors([text], pairs, provider)
 
     def relevance(pair: InterestPair) -> float:
         to_patient = cosine(vectors[0], by_interest[pair.patient_interest])
@@ -494,9 +520,9 @@ def _measure_free_text(
             vectors[0],
             by_interest[pair.patient_interest],
             by_interest[pair.helper_interest],
-            provider,
+            kind,
         )
-        return (0.0, True) if off_topic else (_rescaled(raw, provider), False)
+        return (0.0, True) if off_topic else (_rescaled(raw, kind), False)
 
     if preferred is not None and not position(preferred)[1]:
         return preferred, *position(preferred)

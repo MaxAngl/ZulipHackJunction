@@ -8,6 +8,7 @@ dependencies = [
     "garminconnect>=0.3.20",
     "numpy>=2.5.4",
     "torch>=2.15.0",
+    "transformers>=4.50",
     "uvicorn[standard]>=0.54.0",
 ]
 

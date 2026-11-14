@@ -38,6 +38,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 18:30] **Contrat d'API changé** (issue #53) : les besoins publiés par les patients sont retirés. Routes `/api/app/patient/needs` et `/api/app/helper/needs/{id}/take` supprimées, `HelperHome.needs` et `OpenNeed` aussi ; `Thread` et `AdminExchange` perdent `kind` (un fil est toujours une demande). La table `needs` n'est plus créée ; relancer `uv run python -m backend.seed` pour une base propre.
 - [14/11 18:55] **Quota Gemini** : la clé de l'équipe a épuisé son quota gratuit d'embeddings du jour (1 000 requêtes, erreur 429). La génération marche toujours. Depuis #56, les demandes écrites par Gemini sont gardées et placées à la position qu'il dit viser ; l'appariement des nouveaux comptes passe hors ligne jusqu'à la remise à zéro du quota.
 - [14/11 18:55] Demandes plus chaleureuses (#56) : bonjour au prénom, demande, mot de fin, signature, sur quatre lignes, avec des formules qui varient. Gemini et banque hors ligne.
+- [14/11 21:00] **Nouvelle dépendance `transformers`** (issue #69) : relancer `uv sync` après le prochain `git pull`. Sans clé Gemini (ou quota épuisé), λ et l'appariement passent par un modèle d'embeddings local, téléchargé une fois (~120 Mo) au premier usage dans le cache Hugging Face ; la première suggestion attend quelques secondes de chargement. `NEEDED_LOCAL_EMBEDDINGS=off` revient aux mots-clés. Avec Gemini, rien ne change. `pyproject.toml`, `uv.lock`, `conftest.py` et `AGENTS.md` sont modifiés ; aucun contrat touché.
 
 ## Max (Claude Code)
 
@@ -75,6 +76,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Le bonus d'attente (`WAIT_WEIGHT`, `WAIT_FULL_DAYS` dans `ml/matching.py`) est un premier réglage, à ajuster avec l'équipe.
   - Le repli hors ligne (trigrammes de lettres) ne comprend pas le sens : « ski » et « montagne » n'y sont pas proches. Il ne sert qu'à ne jamais casser sans clé Gemini.
   - Un profil enregistré n'est pas recalculé si les intérêts changent : supprimer sa ligne dans la table `profiles` pour le recalculer.
+  - [14/11 21:00] #69 : sans Gemini, le modèle local remplace les trigrammes et les mots-clés. Sur 12 scénarios d'intérêts × 3 états : 100 propositions au lieu de 78, un seul cas vide au lieu de 6. Reste à corriger : un intérêt commun (gardening × gardening) donne toujours λ = 0,5, et c'est justement le couple que le matching préfère ; et la banque hors ligne colle encore des phrases sans lien entre elles (seule une vraie génération, Gemini ou Claude, règle ça).
 
 ## Rami (Antigravity)
 
