@@ -23,6 +23,7 @@ from pathlib import Path
 from ml.brain import COMPONENT_LABELS, Brain, Outcome, Reading, brain
 from ml.formats import FORMATS, RequestFormat, request_axes
 from ml.formats import label_of as format_label
+from ml.matching import InterestProfile, build_profile, stable_match
 from ml.pipeline import generate_candidates, measure_message, provider_info, select_three
 from ml.simulation.spec import SIGNALS
 from ml.types import (
@@ -49,6 +50,7 @@ __all__ = [
     "Brain",
     "Candidate",
     "InterestPair",
+    "InterestProfile",
     "Outcome",
     "Provider",
     "ProviderInfo",
@@ -61,6 +63,7 @@ __all__ = [
     "ZoneBox",
     "ZoneParams",
     "brain",
+    "build_profile",
     "common_center",
     "effort_cap",
     "format_label",
@@ -71,6 +74,7 @@ __all__ = [
     "provider_info",
     "request_axes",
     "select_three",
+    "stable_match",
     "zone_for",
 ]
 

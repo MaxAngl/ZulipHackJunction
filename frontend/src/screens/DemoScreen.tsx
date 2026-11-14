@@ -116,9 +116,9 @@ function DemoScreen() {
     <div className={`app view-${view}`}>
       <header className="topbar">
         <a className="brand" href="#/">
-          <Logo />
+          <Logo size={42} />
           <div className="brand-text">
-            <span className="brand-name">needed</span>
+            <span className="brand-name">Needed</span>
             {(showAll || view === 'console') && (
               <span className="brand-tagline">
                 A community where recovering patients are the ones who help.

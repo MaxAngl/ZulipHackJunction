@@ -26,6 +26,8 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 16:30] `frontend/vite.config.ts` lit `NEEDED_API_URL` (par défaut `http://localhost:8000`) : utile pour lancer deux copies de l'app côte à côte.
 - [14/11 15:30] **Nouvelle dépendance `torch`, en version CPU** (issue #22) : relancer `uv sync` après le prochain `git pull` (120 Mo à télécharger). Les trois réseaux sont dans `ml/nets`, leurs poids dans `ml/weights` (versionnés : pas besoin de réentraîner). `.gitignore`, `pyproject.toml`, `uv.lock` et `AGENTS.md` sont modifiés. Aucun contrat touché : l'app n'utilise pas encore les réseaux.
 - [14/11 13:30] **Nouvelle dépendance `numpy`** (issue #15) : relancer `uv sync` après le prochain `git pull`. Nouveau paquet `ml/simulation` qui génère les données d'entraînement. `pyproject.toml`, `uv.lock` et `AGENTS.md` sont modifiés. Aucun contrat touché, rien n'est branché sur l'app.
+- [14/11 12:51] `.pre-commit-config.yaml` : les hooks de `pre-commit-hooks` passent par `python -m` (Smart App Control de Windows 11 bloquait leurs .exe, WinError 4551). Mêmes vérifications, aucune dépendance ajoutée.
+- [14/11 13:46] **Contrat ML étendu** (issue #19) : `ml.model` exporte `InterestProfile`, `build_profile` et `stable_match` (`ml/matching.py`). Dans la vraie app, l'aidant reçoit le patient qui lui est apparié par centres d'intérêt et temps d'attente. Nouvelle table SQLite `profiles`, créée toute seule. Rien n'est retiré, contrat d'API inchangé, aucune dépendance ajoutée.
 
 ## Max (Claude Code)
 
@@ -47,11 +49,15 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Vraie app sur deux téléphones : `npm --prefix frontend run dev -- --host`, puis `#/helper` sur l'un et `#/patient` sur l'autre. Sur une seule machine, les deux comptes cohabitent dans le même navigateur.
   - La vraie app n'a ni mot de passe ni chiffrement : pas de vrais patients en l'état.
 
-## _<prénom B>_
+## Adel (Claude Code)
 
-- **En cours :** —
+- **En cours :** #19, l'appariement patient–aidant par centres d'intérêt (PR ouverte). #5 et #23 sont mergées.
 - **Bloqué :** —
-- **Notes pour la suite :** —
+- **Notes pour la suite :**
+  - Le commentaire libre de l'inscription n'est pas encore dans l'API. Quand il arrive, le passer à `build_profile(tags, comment)` : chaque phrase devient un élément d'intérêt, comparé à tous ceux de l'autre personne.
+  - Le bonus d'attente (`WAIT_WEIGHT`, `WAIT_FULL_DAYS` dans `ml/matching.py`) est un premier réglage, à ajuster avec l'équipe.
+  - Le repli hors ligne (trigrammes de lettres) ne comprend pas le sens : « ski » et « montagne » n'y sont pas proches. Il ne sert qu'à ne jamais casser sans clé Gemini.
+  - Un profil enregistré n'est pas recalculé si les intérêts changent : supprimer sa ligne dans la table `profiles` pour le recalculer.
 
 ## _<prénom C>_
 

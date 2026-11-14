@@ -109,6 +109,7 @@ ml/
   brain.py           # les réseaux vus par l'app : lire L(θ), sortir la zone, noter, régler le vecteur
   virtual.py         # patient virtuel SIMULÉ : tient lieu de montre tant qu'aucune n'est branchée
   pipeline.py        # générer -> mesurer λ -> filtrer -> choisir trois demandes
+  matching.py        # appariement patient–aidant : profils d'intérêts, couverture, mariages stables
   gemini.py          # client REST Gemini (génération JSON, embeddings)
   lexicon.py         # mode hors ligne : banque de demandes et mesure par mots-clés
   formats.py         # grille fixe des formats et de leur effort
@@ -201,6 +202,8 @@ Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 - 2026-11-14 — Les poids entraînés sont versionnés dans `ml/weights` — moins d'1 Mo ; l'app et les coéquipiers les utilisent sans réentraîner. Les réentraîner si les signaux de θ changent (un test le signale).
 - 2026-11-14 — Le réseau A est un comité de cinq petits réseaux, qui prédit aussi si le patient répondra, et B s'entraîne sur son avis prudent. **Cela dépasse les 45 000 paramètres décidés plus bas (82 000)** — un seul A, seul, laissait B aller chercher de bonnes notes là où A n'avait pas de données ; mesures en section 14 de `docs/modele.md`.
 - 2026-11-14 — θ passe à 25 signaux, rangés par modalité (montre, app, frappe) : taux de correction, délai d'ouverture, délai avant la première touche — demandé par l'équipe ; l'autoencodeur a un encodeur par modalité, pour en ajouter sans toucher à A ni à B.
+- 2026-11-14 — Appariement patient–aidant : un vecteur par élément d'intérêt (chaque tag, chaque phrase du commentaire libre), tout comparé à tout ; score = moyenne, sur les éléments du patient, de leur meilleur cosinus chez l'aidant ; puis mariages stables où les patients proposent et où les aidants ajoutent un bonus d'attente — un intérêt écrit en tag chez l'un et en commentaire chez l'autre doit se retrouver, seule compte la couverture des intérêts du patient, et ceux qui attendent depuis longtemps passent devant.
+- 2026-11-14 — Hooks `pre-commit-hooks` lancés via `python -m` (champ `entry`) — Smart App Control de Windows 11 bloque les .exe non signés que pip génère, ce qui rendait tout commit impossible.
 - 2026-11-14 — La partie personnelle se réduit à un vecteur de 8 nombres par patient, lu par A et par B. **Cela remplace la dernière couche par patient décidée plus bas** — 715 nombres pour B, c'était trop pour une trentaine de réactions par mois.
 - 2026-11-14 — B ne reçoit pas le texte des centres d'intérêt — sa sortie sur cet axe est une position entre les deux sujets, quels qu'ils soient ; le texte sert au choix de la paire, à Gemini et à la mesure.
 - 2026-11-14 — Les réseaux restent petits, environ 45 000 paramètres au total, et la taille de B se choisit par un essai de capacité — peu d'entrées, un générateur simple ; un petit modèle s'explique et tourne sur un téléphone.

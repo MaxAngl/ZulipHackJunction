@@ -156,6 +156,34 @@ def test_a_waiting_request_is_released_only_if_it_still_fits(released: bool):
     assert len(inbox) == (1 if released else 0)
 
 
+def test_a_never_asked_patient_waits_from_their_sign_up(monkeypatch: pytest.MonkeyPatch):
+    """Aino attend depuis sa dernière demande (t=150), Bob depuis son inscription (t=300).
+
+    Mêmes intérêts pour les deux : seul le temps d'attente les départage.
+    """
+    now = {"t": 100.0}
+    monkeypatch.setattr("backend.store.time.time", lambda: now["t"])
+    community = Community(Store(":memory:"))
+    aino = community.store.add_user("patient", "Aino", ["gardening"], 0.6)
+    helper = community.store.add_user("helper", "Mikko", ["cooking"], 0.6)
+    now["t"] = 150.0
+    _waiting_request(community.store, helper.id, aino.id, 0.64, "answered")
+    now["t"] = 300.0
+    community.store.add_user("patient", "Bob", ["gardening"], 0.6)
+
+    assert community.suggest(helper).patient_name == "Aino"
+
+
+def test_each_helper_is_offered_the_patient_sharing_their_interests():
+    _join("patient", "Aino", ["gardening"])
+    _join("patient", "Bob", ["chess"])
+    mikko = _join("helper", "Mikko", ["chess"])
+    sara = _join("helper", "Sara", ["gardening"])
+
+    assert _helper("/api/app/helper/suggest", mikko).patient_name == "Bob"
+    assert _helper("/api/app/helper/suggest", sara).patient_name == "Aino"
+
+
 def test_an_unrelated_real_need_is_held_and_the_helper_cannot_tell():
     patient = _join("patient", "Aino", ["gardening"])
     helper = _join("helper", "Mikko", ["cooking"])
