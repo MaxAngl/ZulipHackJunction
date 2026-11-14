@@ -1,6 +1,6 @@
 # Le modèle : objets, réseaux, entraînement
 
-Ce document fixe le modèle cible, tel que l'équipe l'a arrêté le 14 novembre. **Les réseaux ne sont pas encore codés** : l'app tourne avec la version précédente, où l'état du patient est un seul nombre et la zone une règle écrite à la main. Les écarts sont listés en section 8.
+Ce document fixe le modèle, tel que l'équipe l'a arrêté le 14 novembre. **Les trois réseaux sont codés et entraînés** sur des données simulées (`ml/nets`, poids dans `ml/weights`) : architectures en section 13, résultats en section 14. Tant que leur branchement n'est pas mergé, l'app tourne avec la version précédente, où l'état du patient est un seul nombre et la zone une règle écrite à la main. Les écarts sont listés en section 8.
 
 Chaque élément porte un statut :
 
@@ -9,7 +9,7 @@ Chaque élément porte un statut :
 - **Proposé** : suggestion qui n'a pas été confirmée.
 - **À définir** : question ouverte.
 
-Seule la génération des données simulées est codée (`ml/simulation/`, sections 11 et 12).
+Ce qui est codé : la génération des données simulées (`ml/simulation/`, sections 11 et 12) et les trois réseaux avec leur entraînement et leur évaluation (`ml/nets/`, sections 13 et 14).
 
 ## 1. Le processus, en neuf étapes
 
@@ -74,6 +74,8 @@ L'ancien « effort » était un seul nombre qui mélangeait la durée, l'échang
 | Activation physique | Rester assis, se lever, sortir de chez soi | Intervalle | 2 |
 | Compétence exigée | Le niveau de savoir-faire que la tâche demande | Plafond seul | 2 |
 
+**Plafonds de sécurité** (délégués) : des valeurs fixes, écrites dans le code (`ml/nets/models.py`) et que rien n'apprend. Quoi que sorte le réseau B, la borne haute d'un axe de coût ne les dépasse jamais : 0,85 pour la durée et l'échange, 0,75 pour l'exposition personnelle, 0,80 pour le coût de démarrage. C'est un garde-fou contre un réseau qui se tromperait : même dans ce cas, aucun patient ne reçoit une demande au maximum de l'axe. La demi-largeur d'un intervalle reste entre 0,08 et 0,25 : la zone n'est jamais un point, jamais tout l'axe.
+
 Toutes ces lignes sont **décidées**. Trois règles les accompagnent, décidées elles aussi :
 
 - **La borne haute est une sécurité.** Elle n'est jamais dépassée.
@@ -90,13 +92,21 @@ Le réseau B sort donc 11 nombres en phase 1 (cinq intervalles et un plafond), e
 |---|---|---|---|
 | **Autoencodeur** | Dire comment va le patient | θ → L(θ) | La décision et l'entraînement |
 | **B**, un Transformer | Dire quel genre de demande convient maintenant | Contexte → zone | La décision |
-| **A**, un petit réseau dense | Dire ce qu'une demande précise va apporter | (contexte, positions de la demande) → récompense attendue | L'entraînement seulement |
+| **A**, un comité de petits réseaux denses | Dire ce qu'une demande précise va apporter | (contexte, positions de la demande) → récompense attendue, et chance que le patient réponde | L'entraînement seulement |
 
 **A n'intervient jamais dans la décision.** B décide seul. A reste en coulisses : il apprend de la réalité, et B apprend de lui.
 
 Pourquoi B a besoin de A : B sort onze nombres, et le patient renvoie une seule note. Avec cette note seule, B ne sait pas lequel de ses nombres corriger. Sans A, il faudrait essayer des zones au hasard sur des centaines de demandes. Au rythme supposé d'une demande par jour, cela prendrait des mois, en envoyant exprès de mauvaises demandes à un patient fragile.
 
 Décidé pour l'autoencodeur : θ est pris à un instant ; une partie de θ est masquée à l'entraînement ; θ est normalisé par personne ; une tête supervisée oriente le code latent.
+
+Ce que le code ajoute à ces décisions (délégué, `ml/nets`) :
+
+- **Un encodeur par modalité** (montre, app, frappe), dont les sorties s'additionnent. Une modalité absente est remplacée par un vecteur appris. Une modalité nouvelle part de zéro : L ne change pas tant qu'elle n'est pas entraînée, et A et B, qui ne lisent que L, ne bougent pas (`StateAutoencoder.add_modality`, vérifié par un test).
+- **Deux vues de chaque signal** : par rapport à tout le monde, ce qui garde le niveau de la personne, et par rapport à sa propre normale, ce qui efface ses habitudes. Sa normale est calculée sur ses quatorze premiers jours, puis figée.
+- **A est un comité de cinq petits réseaux**, et il prédit aussi si le patient répondra. La réponse est un signal bien plus net que la récompense. Là où les cinq ne sont pas d'accord, A ne sait pas.
+- **B s'entraîne sur l'avis prudent de A** : la moyenne du comité, moins son désaccord. Cela l'empêche d'aller chercher de bonnes notes là où A n'a jamais vu de données.
+- **A reçoit la position d'une demande sous forme de « bosses »** le long de chaque axe. Sans cela, il n'apprend que des tendances droites, et B pousse tout au bout des axes (section 14).
 
 Décidé pour B : il reçoit un nombre fixe de L(θ), relevés à des moments différents de la journée et de la semaine, le comportement en direct du patient, que L contient déjà mais de façon brouillée, et le vecteur personnel du patient.
 
@@ -147,12 +157,18 @@ On normalise θ par personne et on en masque une partie. L'encodeur produit L(θ
 Pour chaque patient simulé, on choisit des zones au hasard, on tire une demande dedans, le patient simulé réagit, et on calcule la récompense. On enregistre le contexte, les positions de la demande et la note.
 
 **3. Le réseau A, et les vecteurs des patients.**
-Régression sur ce journal : contexte, demande et vecteur du patient en entrée, note en sortie. Les poids de A et le vecteur de chaque patient simulé s'apprennent ensemble.
+Régression sur ce journal : contexte, demande et vecteur du patient en entrée ; en sortie, la note, et si le patient a répondu. Les poids de A et le vecteur de chaque patient simulé s'apprennent ensemble. La note que A apprend est calculée sur L(θ), comme elle le sera dans la vraie vie, et non sur l'état caché.
 
 **4. Le réseau B.**
-Pour chaque contexte, B lit le vecteur du patient et propose une zone. On tire des demandes dedans, A les note, et on ajuste B pour faire monter la note moyenne. Les plafonds de sécurité restent fixes.
+Pour chaque contexte, B lit le vecteur du patient et propose une zone. On tire huit demandes dedans, A les note, et on ajuste B pour faire monter la note prudente. Les plafonds de sécurité restent fixes. Trois fois sur dix, B est entraîné sans vecteur : c'est le cas d'un nouveau patient.
 
-**5. On recommence les étapes 2 à 4** quelques fois, en laissant B choisir une partie des zones, pour que A voie les régions où B va réellement.
+**5. On recommence les étapes 2 à 4**, en laissant B choisir sept zones sur dix, pour que A voie les régions où B va réellement. Le code fait deux passages.
+
+```bash
+uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big
+uv run python -m ml.nets.train       # écrit ml/weights
+uv run python -m ml.nets.evaluate    # boucle fermée sur les patients de test
+```
 
 **6. Sur les patients réels.**
 
@@ -209,12 +225,15 @@ Passer à la cible changera les deux contrats, API et ML : `theta` et `ZoneState
 ## 9. Proposé, à confirmer
 
 - Un autoencodeur variationnel, pour que la distance à L_ref ait un sens.
-- Une récompense qui compare L après à l'état attendu sans la demande, plutôt qu'à L avant. Les données simulées contiennent les deux (`reward` et `reward_counterfactual`), pour pouvoir comparer.
+- Une récompense qui compare L après à l'état attendu sans la demande, plutôt qu'à L avant. Les données simulées contiennent les deux (`reward` et `reward_counterfactual`), pour pouvoir comparer. L'équipe a gardé la première pour l'entraînement ; la seconde sert à mesurer les résultats, parce qu'elle isole l'effet de la demande.
 - Les demandes passées et leurs notes ajoutées aux entrées de B.
 - Un encodeur commun à A et B.
-- Pour A : prédire aussi l'acceptation et le délai de réponse, et fournir une incertitude.
-- Figer la normale de chaque patient sur une période de référence, pour qu'une dégradation lente ne devienne pas sa nouvelle normale.
 - À grande échelle : un Transformer sur l'historique du patient en entrée de A.
+
+Deux propositions de cette liste sont désormais dans le code, parce que l'entraînement en avait besoin (section 14) :
+
+- Pour A : prédire aussi si le patient répond, et fournir une incertitude (le désaccord du comité). Le délai de réponse n'est pas prédit.
+- Figer la normale de chaque patient sur une période de référence : ses quatorze premiers jours.
 
 ## 10. À définir
 
@@ -222,7 +241,7 @@ Passer à la cible changera les deux contrats, API et ML : `theta` et `ZoneState
 - La règle de choix de la paire de centres d'intérêt.
 - Le cas d'un vrai besoin sans lien avec les centres d'intérêt du patient.
 - Le branchement d'une vraie montre : quelle voie d'accès aux données Garmin, et à quelle cadence.
-- Les architectures exactes des trois réseaux : tailles, nombre de couches.
+- L'essai de capacité de B (largeur 16, 32, 64, 128) n'a pas été fait : B est en largeur 32.
 
 ## 11. θ, L et la récompense, en détail
 
@@ -397,20 +416,26 @@ L'écart-type de 14,8 est du même ordre que ces différences : l'état d'un pat
 
 ## 13. Tailles des réseaux et quantité de données
 
-Ces tailles sont des points de départ, **décidés** dans leur principe (rester petit) et **délégués** dans le détail. Aucun réseau n'est encore construit.
+Rester petit est **décidé** ; le détail est **délégué**. Voici les réseaux tels qu'ils sont codés dans `ml/nets/models.py`.
 
-| Réseau | Architecture de départ | Paramètres |
+| Réseau | Architecture | Paramètres |
 |---|---|---|
-| Autoencodeur | 48 → 64 → 32 → 6, puis 6 → 32 → 64 → 22, plus la tête supervisée | Environ 9 200 |
-| B, le Transformer | 28 relevés, largeur 32, 2 couches, 4 têtes, puis une tête dense vers 11 sorties | Environ 30 000 |
-| A | Réseau dense à deux couches de 64 | Environ 6 000 |
-| **Total général** | | **Environ 45 000** |
+| Autoencodeur | Un encodeur par modalité (montre : 57 → 48 → 32 ; app et frappe : 9 → 16 → 32), somme, puis 36 → 32 → 6. Décodeur : 10 → 32 → 64, puis une tête par modalité | 11 327 |
+| B, le Transformer | 28 relevés de 10 valeurs, largeur 32, 2 couches, 4 têtes, puis une tête dense 84 → 48 → 11 | 23 019 |
+| A | Comité de 5 réseaux denses, 82 → 64 → 64 → 2 chacun | 48 010 |
+| **Total général** | | **82 356** |
 
-L'entrée de l'autoencodeur fait 48 valeurs : les 22 signaux, leurs 22 indicateurs de présence, et 4 valeurs pour l'heure et le jour. Au moment de décider, seuls l'encodeur et B tournent, soit environ 35 000 paramètres : cela tient sur un téléphone.
+- **Entrée d'un encodeur** : pour chaque signal de sa modalité, sa valeur par rapport à tout le monde, sa valeur par rapport à la normale de la personne, et un indicateur de présence. L'heure et le jour (4 valeurs) entrent à la fusion.
+- **Entrée de B** : pour chacun des 28 relevés, L (6) et l'heure (4) ; puis le comportement en direct (les 6 signaux de l'app et de la frappe et leur présence, 12 valeurs) et le vecteur du patient (8).
+- **Entrée de A** : le contexte (32 valeurs : L maintenant, sa moyenne et sa dispersion sur sept jours, le comportement en direct, l'heure), la demande (6 positions et 36 bosses) et le vecteur du patient (8).
+- **Sortie de B** : 11 nombres, transformés en zone par `to_zone`, qui applique les plafonds de sécurité.
+- Au moment de décider, seuls l'encodeur et B tournent, soit environ 28 000 paramètres : cela tient sur un téléphone.
+
+Le total dépasse les 45 000 paramètres visés au départ, à cause du comité : un seul réseau A pèse 9 600 paramètres, et il y en a cinq. Ce choix est expliqué en section 14.
 
 Pourquoi rester petit : les entrées sont peu nombreuses et le générateur est simple. Un réseau dix fois plus gros atteindrait la même erreur de validation, le reste étant du bruit.
 
-**Essai de capacité**, à faire avant de fixer une taille : entraîner B en largeur 16, 32, 64 et 128, tracer l'erreur sur des patients jamais vus, et garder le plus petit réseau à partir duquel la courbe ne descend plus.
+**Essai de capacité**, pas encore fait : entraîner B en largeur 16, 32, 64 et 128 (`--width`), tracer la récompense obtenue en boucle fermée sur des patients jamais vus, et garder le plus petit réseau à partir duquel elle ne monte plus.
 
 Il faudra grossir si les entrées s'enrichissent : le flux brut de la montre minute par minute, le texte des demandes et des réponses, ou des milliers de patients réels suivis pendant des mois.
 
@@ -428,3 +453,106 @@ uv run python -m ml.simulation --people 5000 --days 84
 
 - **Le plancher de bruit de A** : l'état bouge tout seul, et cette part pèse environ 14 points d'écart-type sur la récompense (mesuré sur le jeu de 5 000 personnes). Même un réseau parfait garde donc une erreur de cet ordre. Un réseau qui descend nettement en dessous sur l'entraînement mémorise du bruit.
 - **Plus de données ne règle pas tout** : un réseau peut surapprendre le simulateur lui-même, sa forme et ses liens simples. La parade est de garder un jeu de test produit avec des règles différentes.
+
+## 14. Résultats de l'entraînement
+
+Tout ce qui suit est mesuré **en simulation**, sur des personnes que les réseaux n'ont pas vues à l'entraînement. Ces chiffres disent que la machinerie apprend ce que le simulateur contient. Ils ne disent rien sur de vrais patients.
+
+Le jeu : 5 000 personnes sur 84 jours (graine 0), séparées par personne en 70 % pour entraîner, 15 % pour régler et 15 % pour tester. L'entraînement complet prend 7 minutes sur un portable sans carte graphique. Les mesures brutes sont dans `ml/weights/meta.json`, `evaluation.json` et `evaluation_fresh.json`.
+
+### L'autoencodeur
+
+Écart entre L(θ) et l'état caché, sur les 750 personnes de réglage. Les deux vont de 0 à 1.
+
+| Composante | Erreur |
+|---|---|
+| Sommeil | 0,062 |
+| Rythme | 0,102 |
+| Énergie | 0,073 |
+| Calme | 0,062 |
+| Activité | 0,063 |
+| Engagement | 0,059 |
+| **Moyenne** | **0,070** |
+
+Une réponse au hasard donnerait 0,199, la dispersion de l'état caché. Le rythme est le plus mal lu : il ne s'exprime que par la régularité du coucher, qu'un seul relevé montre mal.
+
+Ce que chaque modalité apporte, en erreur moyenne :
+
+| Ce que l'autoencodeur voit | Erreur |
+|---|---|
+| Tout | 0,070 |
+| Tout sauf la frappe | 0,070 |
+| Tout sauf les réponses dans l'app | 0,080 |
+| La montre seule | 0,081 |
+| Tout sauf la montre | 0,113 |
+| Les réponses dans l'app seules | 0,118 |
+| La frappe seule | 0,159 |
+
+- **Quand la montre est là, la frappe n'ajoute presque rien.** Elle ne sert que si le reste manque, et alors elle lit l'état à peine mieux que le hasard.
+- **Sans montre, l'état reste lisible** (0,113), surtout grâce aux réponses dans l'app.
+- Un signal caché à l'entraînement est reconstruit avec 38 % d'erreur en moins que si l'on supposait la valeur habituelle de la personne.
+
+### La récompense mesurée sur L
+
+Dans la vraie vie, la récompense se calcule sur L(θ), pas sur l'état caché. Le réseau A est donc entraîné sur cette récompense-là.
+
+| Récompense | Écart-type | Corrélation avec la récompense sur l'état caché |
+|---|---|---|
+| Sur l'état caché | 14,6 | 1 |
+| Sur L, au même relevé 24 h après (retenue) | 23,2 | 0,59 |
+| Sur L, en moyenne sur la journée | 22,1 | 0,63 |
+
+La mesure sur L est nettement plus bruitée. Elle suffit pourtant à A, qui moyenne sur plus de cent mille demandes.
+
+### Le réseau A
+
+Sur les patients de réglage. L'« avantage » d'une demande est ce que A en attend de plus que d'une demande au hasard dans le même contexte : c'est ce qui guide B.
+
+| Mesure | Valeur |
+|---|---|
+| Corrélation entre l'avantage prédit et la vraie récompense | 0,49 |
+| Vraie récompense des demandes que A préfère (le meilleur cinquième) | 55,4 |
+| Vraie récompense de celles qu'il déconseille (le pire cinquième) | 45,5 |
+| Erreur sur la récompense : valeur constante, A général, A avec vecteur | 22,8 / 21,7 / 21,4 |
+
+La « vraie récompense » est ici celle qui compare l'état du lendemain à l'état attendu sans la demande : elle isole l'effet de la demande.
+
+### Le réseau B, en boucle fermée
+
+Chaque politique fait vivre les mêmes patients pendant 84 jours, avec les mêmes tirages. Seules les zones changent. Les réseaux ne voient que θ.
+
+Sur 927 patients **entièrement nouveaux**, tirés avec une autre graine et regardés une seule fois, tous réglages arrêtés :
+
+| Politique | Récompense de la demande | Réponses | Demandes trop lourdes | Gain d'état |
+|---|---|---|---|---|
+| Zone au hasard | 49,8 | 54 % | 55 % | −1,1 |
+| Règle fixe du code actuel | 54,5 | 74 % | 47 % | 4,2 |
+| **Réseau B, sans vecteur personnel** | **60,1** | **92 %** | **35 %** | **11,5** |
+| Réseau B, avec vecteur personnel | 60,1 | 92 % | 31 % | 11,4 |
+| Oracle, qui lit la vérité cachée | 59,8 | 96 % | 0 % | 15,8 |
+
+- **Récompense de la demande** : contre l'état attendu sans elle. 50 veut dire qu'elle n'a rien changé.
+- **Gain d'état** : ce que les demandes ont ajouté à l'état des patients sur les quatre dernières semaines, en centièmes. C'est la mesure la plus parlante.
+- Sur les 452 patients de test du jeu d'origine, les chiffres sont les mêmes à 0,7 point près. Ce groupe a été consulté plusieurs fois pendant la mise au point : il ne compte plus comme un test.
+
+Ce qu'on peut en dire :
+
+- **B fait nettement mieux que la règle fixe** : presque trois fois son gain d'état, et 92 % de réponses au lieu de 74 %.
+- **B atteint les trois quarts du gain de l'oracle** sans rien voir de caché.
+- **Le vecteur personnel n'apporte pas de gain mesurable ici.** Avec une soixantaine de réactions bruitées par patient, il ne dégrade rien, mais il n'améliore ni la récompense ni la prédiction des réponses. Il réduit seulement la part des demandes trop lourdes, de 35 à 31 %.
+- **L'oracle n'est pas un maximum.** Il vise ce qui convient au patient sans jamais le surcharger. Ses patients vont mieux, donc chaque demande a moins de chemin à leur faire parcourir : sa récompense par demande plafonne.
+
+### Ce qui n'a pas marché, et pourquoi le code a changé
+
+La première version suivait la section 13 d'origine : un seul réseau A, qui recevait la position brute de la demande. En boucle fermée, B faisait alors **moins bien que la règle fixe** (50,9 contre 54,2 sur les patients de test).
+
+1. **A n'apprenait que des tendances droites.** Les données montrent un optimum au milieu des axes ; A en retenait « plus c'est proche des intérêts du patient, mieux c'est », et B poussait tout au bout de l'axe. Remède : les bosses. La corrélation entre l'avantage prédit et la vérité passe de 0,39 à 0,49.
+2. **B allait là où A n'avait pas de données.** Remède : le comité, l'avis prudent, et un second passage où B choisit sept zones sur dix.
+3. **Les vecteurs personnels apprenaient du bruit** et dégradaient B. Remède : A prédit aussi la réponse, signal plus net, et les vecteurs sont retenus bien plus fort près de zéro.
+
+### Limites
+
+- **Tout est simulé.** Les réseaux retrouvent les règles de `ml/simulation`, écrites à la main. La règle fixe et le simulateur partagent la même hypothèse sur l'axe des intérêts (plus le patient va mal, plus la demande se rapproche de ses intérêts) : l'avance de B sur cet axe ne prouve donc rien, et son gain vient surtout des axes de coût et d'une zone plus étroite.
+- **Un seul entraînement, une seule graine.** L'écart entre deux entraînements n'est pas mesuré.
+- **L'essai de capacité n'est pas fait**, ni le test sur des règles de simulateur différentes (section 13).
+- **Les axes d'une vraie demande ne sont pas encore notés par un modèle.** Dans l'app, cinq des six positions viennent du format de la demande (`ml/formats.py`), posées à la main.

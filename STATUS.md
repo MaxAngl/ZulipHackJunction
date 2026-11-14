@@ -20,11 +20,14 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 09:00] Relectures automatiques des PR retirées (issue #7) : faire relire sa PR par l'agent d'un coéquipier, prompt dans `ONBOARDING.md`. Ignorer les anciens jobs Claude ou Gemini rouges.
 - [14/11 07:00] La console de démo est maintenant sur `#/demo`. L'accueil `#/` mène à la vraie app. Base locale dans `data/` (ignorée par git), aucune dépendance ajoutée.
 - [14/11 12:30] **Modèle cible fixé dans `docs/modele.md`** (issue #12) : objets, axes d'une demande, trois réseaux, entraînement, évaluation. `AGENTS.md` est modifié : un lien et cinq décisions. Aucun code ni contrat touché. À lire avant tout travail dans `ml/`.
+- [14/11 15:30] **Nouvelle dépendance `torch`, en version CPU** (issue #22) : relancer `uv sync` après le prochain `git pull` (120 Mo à télécharger). Les trois réseaux sont dans `ml/nets`, leurs poids dans `ml/weights` (versionnés : pas besoin de réentraîner). `.gitignore`, `pyproject.toml`, `uv.lock` et `AGENTS.md` sont modifiés. Aucun contrat touché : l'app n'utilise pas encore les réseaux.
 - [14/11 13:30] **Nouvelle dépendance `numpy`** (issue #15) : relancer `uv sync` après le prochain `git pull`. Nouveau paquet `ml/simulation` qui génère les données d'entraînement. `pyproject.toml`, `uv.lock` et `AGENTS.md` sont modifiés. Aucun contrat touché, rien n'est branché sur l'app.
 
 ## Max (Claude Code)
 
-- **En cours :** #20, la frappe dans θ et la simulation pilotable (PR ouverte, à faire relire). Ensuite : les trois réseaux et leur entraînement, puis leur branchement dans l'app, pour minuit.
+- **En cours :** #22, les trois réseaux entraînés (PR ouverte, à faire relire ; elle part de la branche de #20, à merger d'abord). Ensuite : leur branchement dans l'app, pour minuit.
+- [14/11 15:30] Résultat en boucle fermée sur des patients jamais vus : le réseau B fait nettement mieux que la règle fixe actuelle. Chiffres et limites : `docs/modele.md`, section 14. Tout est simulé.
+- [14/11 15:30] Pour réentraîner : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`, puis `uv run python -m ml.nets.train` et `uv run python -m ml.nets.evaluate`. Une dizaine de minutes sur CPU.
 - [14/11 15:00] θ passe de 22 à 25 signaux (frappe et réactivité), rangés par modalité. **Régénérer les données** après le prochain `git pull` : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`. Les 22 anciens signaux et le journal sont identiques pour une même graine.
 - [14/11 15:00] Je travaille dans une copie séparée, `C:\dev\hackaton-max` (`git worktree`), pour ne pas changer de branche sous les pieds de quelqu'un dans `C:\dev\hackaton`.
 - **Bloqué :** pas de clé Gemini sur la machine, donc la connexion à Gemini n'est pas testée en réel. Mettre la clé dans `.env`, puis `uv run python -m ml.check_gemini`.

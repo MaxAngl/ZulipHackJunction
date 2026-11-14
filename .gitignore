@@ -21,6 +21,9 @@ ml/models/
 *.pth
 *.ckpt
 *.safetensors
+# Exception : les poids des trois réseaux de ml/nets, moins d'1 Mo, versionnés pour que l'app
+# et toute l'équipe les utilisent sans réentraîner.
+!ml/weights/*.pt
 *.onnx
 
 # OS / éditeurs

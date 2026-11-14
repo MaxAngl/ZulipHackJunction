@@ -1,0 +1,229 @@
+{
+  "signals": [
+    "heart_rate",
+    "stress",
+    "body_battery",
+    "respiration",
+    "steps_last_hour",
+    "steps_today",
+    "intensity_minutes_today",
+    "floors_today",
+    "outdoor_minutes_today",
+    "sleep_hours",
+    "sleep_score",
+    "deep_sleep_minutes",
+    "rem_sleep_minutes",
+    "awake_minutes",
+    "bedtime_hour",
+    "wake_hour",
+    "hrv_overnight_ms",
+    "spo2_sleep",
+    "resting_hr",
+    "reply_rate_7d",
+    "reply_delay_hours_7d",
+    "reply_length_7d",
+    "typing_correction_rate",
+    "open_delay_minutes",
+    "first_key_delay_seconds"
+  ],
+  "modalities": {
+    "watch": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18
+    ],
+    "app": [
+      19,
+      20,
+      21
+    ],
+    "touch": [
+      22,
+      23,
+      24
+    ]
+  },
+  "zone_width": 32,
+  "global_mean": [
+    70.16848754882812,
+    37.95909881591797,
+    46.791481018066406,
+    14.648841857910156,
+    6.087611198425293,
+    8.070838928222656,
+    20.254579544067383,
+    5.594851016998291,
+    19.14472770690918,
+    7.28652286529541,
+    64.74512481689453,
+    76.21508026123047,
+    101.20338439941406,
+    28.855506896972656,
+    11.030088424682617,
+    6.79684591293335,
+    50.840293884277344,
+    95.83307647705078,
+    58.501468658447266,
+    0.6473352909088135,
+    4.920386791229248,
+    131.7324981689453,
+    2.114330291748047,
+    2.7212576866149902,
+    2.0159976482391357
+  ],
+  "global_spread": [
+    10.321187973022461,
+    14.762922286987305,
+    22.90678596496582,
+    1.105991005897522,
+    0.6636804938316345,
+    1.079487919807434,
+    18.054794311523438,
+    4.510867595672607,
+    22.093027114868164,
+    0.808195173740387,
+    13.15239143371582,
+    16.076820373535156,
+    18.43631935119629,
+    13.93422794342041,
+    1.2090930938720703,
+    1.4323683977127075,
+    19.336870193481445,
+    0.8162519335746765,
+    7.878777980804443,
+    0.20416724681854248,
+    2.4461638927459717,
+    51.642364501953125,
+    0.5115890502929688,
+    0.8553348183631897,
+    0.5680500864982605
+  ],
+  "reference_mean": [
+    0.7803855538368225,
+    0.7742244601249695,
+    0.773344099521637,
+    0.7729896306991577,
+    0.7804996371269226,
+    0.7755871415138245
+  ],
+  "reference_spread": [
+    0.07293567806482315,
+    0.06633634865283966,
+    0.08122976869344711,
+    0.08101058006286621,
+    0.07351983338594437,
+    0.0875893384218216
+  ],
+  "trained_on": {
+    "data": "ml/data/sim_big",
+    "seed": 0,
+    "people": 5000,
+    "epochs": [
+      12,
+      30,
+      3
+    ],
+    "rounds": 2,
+    "reward_measure": "slot",
+    "prior": 5.0,
+    "minutes": 6.7
+  },
+  "parameters": {
+    "autoencoder": 11327,
+    "reward_net": 48010,
+    "zone_net": 23019,
+    "total": 82356
+  },
+  "metrics": {
+    "autoencoder": {
+      "state_rmse": {
+        "sleep": 0.0618,
+        "rhythm": 0.1015,
+        "energy": 0.0732,
+        "calm": 0.0617,
+        "activity": 0.0625,
+        "engagement": 0.0587
+      },
+      "state_rmse_mean": 0.0699,
+      "state_spread_mean": 0.1989,
+      "state_rmse_by_view": {
+        "all": 0.0699,
+        "without_watch": 0.1134,
+        "only_watch": 0.0811,
+        "without_app": 0.0795,
+        "only_app": 0.118,
+        "without_touch": 0.0703,
+        "only_touch": 0.159
+      },
+      "masked_reconstruction_mse": 0.9812,
+      "masked_reconstruction_baseline": 1.5875
+    },
+    "reward": {
+      "measure": "slot",
+      "episodes_train": 127515,
+      "episodes_val": 26879,
+      "std_on_hidden_state": 14.62,
+      "std_on_L_slot": 23.24,
+      "correlation_with_hidden_slot": 0.589,
+      "std_on_L_day": 22.05,
+      "correlation_with_hidden_day": 0.634,
+      "episodes_train_final": 255240
+    },
+    "reward_net": {
+      "rmse_constant": 22.83,
+      "rmse_general": 21.74,
+      "rmse_personal": 21.43,
+      "reply_error_general": 0.5141,
+      "reply_error_personal": 0.5332,
+      "advantage_correlation_general": 0.49,
+      "true_reward_top_fifth_general": 55.37,
+      "true_reward_bottom_fifth_general": 45.49,
+      "advantage_correlation_personal": 0.484,
+      "true_reward_top_fifth_personal": 55.36,
+      "true_reward_bottom_fifth_personal": 45.61
+    },
+    "zone_net": {
+      "predicted_reward_learned": 59.53,
+      "predicted_reward_random": 47.24,
+      "half_width_by_axis": [
+        0.08,
+        0.08,
+        0.08,
+        0.08,
+        0.08
+      ],
+      "center_by_axis": [
+        0.735,
+        0.735,
+        0.42,
+        0.427,
+        0.433
+      ],
+      "center_spread_by_axis": [
+        0.081,
+        0.072,
+        0.123,
+        0.068,
+        0.09
+      ],
+      "startup_cap": 0.305
+    }
+  },
+  "warning": "Entraîné sur des données simulées : ces réseaux ne savent que ce que ml/simulation contient."
+}
