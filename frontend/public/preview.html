@@ -242,8 +242,25 @@
         height: var(--screen-h);
         border-radius: 46px;
         overflow: hidden;
-        background: #fefaef; /* couleur crème de Needed */
+        background: #fefaef; /* couleur crème de Needed en mode clair */
         border: 1px solid rgba(0, 0, 0, 0.5);
+        transition:
+          background-color 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      /* Synchronisation parfaite du fond de l'écran en mode nuit */
+      .screen-container.dark-theme {
+        background: #16181b; /* Même teinte sombre que le thème nuit de Needed */
+        border-color: rgba(255, 255, 255, 0.15);
+      }
+
+      .screen-container.dark-theme .status-bar {
+        color: #f0f3f6;
+      }
+
+      .screen-container.dark-theme .home-indicator {
+        background: rgba(255, 255, 255, 0.75);
       }
 
       /* Dynamic Island */
@@ -589,6 +606,53 @@
           phone2Wrap.style.transform = `scale(${scale})`
         })
       })
+
+      // Synchronisation du thème sombre entre l'application et le cadre du téléphone
+      function syncThemeWithApp() {
+        let isDark = false
+        try {
+          const doc1 = frame1.contentDocument || frame1.contentWindow?.document
+          if (
+            doc1 &&
+            doc1.documentElement.getAttribute('data-theme') === 'dark'
+          ) {
+            isDark = true
+          } else if (
+            doc1 &&
+            doc1.documentElement.getAttribute('data-theme') === 'light'
+          ) {
+            isDark = false
+          } else {
+            const pref = localStorage.getItem('needed.theme') || 'auto'
+            isDark =
+              pref === 'dark' ||
+              (pref === 'auto' &&
+                window.matchMedia &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches)
+          }
+        } catch {
+          const pref = localStorage.getItem('needed.theme') || 'auto'
+          isDark =
+            pref === 'dark' ||
+            (pref === 'auto' &&
+              window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+        }
+
+        document.querySelectorAll('.screen-container').forEach((el) => {
+          if (isDark) {
+            el.classList.add('dark-theme')
+          } else {
+            el.classList.remove('dark-theme')
+          }
+        })
+      }
+
+      window.addEventListener('storage', syncThemeWithApp)
+      frame1.addEventListener('load', syncThemeWithApp)
+      if (frame2) frame2.addEventListener('load', syncThemeWithApp)
+      setInterval(syncThemeWithApp, 250)
+      syncThemeWithApp()
     </script>
   </body>
 </html>

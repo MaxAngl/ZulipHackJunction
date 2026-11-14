@@ -561,10 +561,10 @@ function AdminScreen() {
                                 : '#6a1b9a',
                         }}
                       >
-                        {msg.category === 'bug' && '🐛 Bug'}
-                        {msg.category === 'question' && '❓ Question'}
-                        {msg.category === 'suggestion' && '💡 Suggestion'}
-                        {msg.category === 'other' && '💬 Remarque'}
+                        {msg.category === 'bug' && 'Bug'}
+                        {msg.category === 'question' && 'Question'}
+                        {msg.category === 'suggestion' && 'Suggestion'}
+                        {msg.category === 'other' && 'Remarque'}
                       </span>
                       <strong>{msg.senderName}</strong>
                       {msg.senderRole && (
@@ -592,7 +592,7 @@ function AdminScreen() {
                           handleToggleMessageResolved(msg.id, msg.resolved)
                         }
                       >
-                        {msg.resolved ? 'Rouvrir' : '✓ Marquer traité'}
+                        {msg.resolved ? 'Rouvrir' : 'Marquer traité'}
                       </button>
                     </div>
                   </div>

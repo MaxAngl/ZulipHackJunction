@@ -12,16 +12,10 @@ import {
 function SettingsScreen() {
   const [theme, setTheme] = useState<ThemePreference>(readThemePreference)
 
-  // Utilisateur connecté pour pré-remplir le nom
   const helperProfile = readUserProfile('helper')
   const patientProfile = readUserProfile('patient')
   const activeProfile = helperProfile || patientProfile
 
-  const [senderName, setSenderName] = useState(
-    activeProfile
-      ? `${activeProfile.firstName} ${activeProfile.lastName}`.trim()
-      : '',
-  )
   const [category, setCategory] = useState<
     'bug' | 'question' | 'suggestion' | 'other'
   >('bug')
@@ -46,7 +40,9 @@ function SettingsScreen() {
 
     const newMessage: AdminContactMessage = {
       id: `admin-msg-${Date.now()}`,
-      senderName: senderName.trim() || 'Utilisateur anonyme',
+      senderName: activeProfile
+        ? `${activeProfile.firstName} ${activeProfile.lastName}`.trim()
+        : 'Utilisateur',
       senderRole: helperProfile
         ? 'helper'
         : patientProfile
@@ -118,7 +114,6 @@ function SettingsScreen() {
 
       <main className="stack settings-main">
         <section className="settings-hero">
-          <p className="eyebrow">Préférences &amp; Assistance</p>
           <h1>Paramètres</h1>
         </section>
 
@@ -198,30 +193,11 @@ function SettingsScreen() {
                 className="select-field"
                 style={{ width: '100%' }}
               >
-                <option value="bug">🐛 Signaler un bug</option>
-                <option value="question">❓ Poser une question</option>
-                <option value="suggestion">💡 Suggestion d'amélioration</option>
-                <option value="other">💬 Autre remarque</option>
+                <option value="bug">Signaler un bug</option>
+                <option value="question">Poser une question</option>
+                <option value="suggestion">Suggestion d'amélioration</option>
+                <option value="other">Autre remarque</option>
               </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="admin-msg-sender"
-                className="field-label block font-small"
-                style={{ marginBottom: '6px' }}
-              >
-                Votre nom
-              </label>
-              <input
-                id="admin-msg-sender"
-                type="text"
-                value={senderName}
-                placeholder="Votre nom ou pseudonyme"
-                className="input-field"
-                style={{ width: '100%' }}
-                onChange={(e) => setSenderName(e.target.value)}
-              />
             </div>
 
             <div>
@@ -270,7 +246,7 @@ function SettingsScreen() {
                   fontWeight: 600,
                 }}
               >
-                ✓ Votre message a bien été transmis à l'administrateur !
+                Votre message a bien été transmis à l'administrateur.
               </div>
             )}
           </form>
