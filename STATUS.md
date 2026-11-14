@@ -20,27 +20,27 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 09:00] Relectures automatiques des PR retirées (issue #7) : faire relire sa PR par l'agent d'un coéquipier, prompt dans `ONBOARDING.md`. Ignorer les anciens jobs Claude ou Gemini rouges.
 - [14/11 07:00] La console de démo est maintenant sur `#/demo`. L'accueil `#/` mène à la vraie app. Base locale dans `data/` (ignorée par git), aucune dépendance ajoutée.
 - [14/11 12:30] **Modèle cible fixé dans `docs/modele.md`** (issue #12) : objets, axes d'une demande, trois réseaux, entraînement, évaluation. `AGENTS.md` est modifié : un lien et cinq décisions. Aucun code ni contrat touché. À lire avant tout travail dans `ml/`.
+- [14/11 16:30] **Contrat d'API étendu** (issue #29), sans rien retirer : `LoopState` gagne `state` (L(θ), six composantes), `signals` (θ, 25 signaux), `distance` et `level` ; `ZoneState.axes` donne la zone sur six axes ; `CandidateState.axes`, `MessageState.axes` ; `ModelState.kind` vaut `networks`, avec `parameters` et `vector` ; `HistoryEntry.reward` va maintenant **de 0 à 100** (50 = rien n'a changé). `ReplyRequest` et `RespondRequest` acceptent un champ facultatif `typing`. `contract/openapi.json` et `schema.d.ts` sont régénérés.
+- [14/11 16:30] **Contrat ML étendu** (issue #29) : `ml.model` exporte `brain`, `Brain`, `Reading`, `Outcome`, `VirtualPatient`, `ZoneBox`, `request_axes`, `AXIS_KEYS`. `zone_for` et `learn` restent mais ne servent plus à l'app. `backend/sensor.py` est supprimé.
+- [14/11 16:30] **Pour relever la frappe dans un écran patient** : `useTypingSignals` dans `frontend/src/typing.ts`, à brancher sur la zone de texte (`onInput`), puis passer `collect()` à `replyToRequest`. Exemple dans `components/PatientPhone.tsx`. Les écrans de la vraie app ne sont pas touchés, pour ne pas gêner #11.
+- [14/11 16:30] `frontend/vite.config.ts` lit `NEEDED_API_URL` (par défaut `http://localhost:8000`) : utile pour lancer deux copies de l'app côte à côte.
 - [14/11 15:30] **Nouvelle dépendance `torch`, en version CPU** (issue #22) : relancer `uv sync` après le prochain `git pull` (120 Mo à télécharger). Les trois réseaux sont dans `ml/nets`, leurs poids dans `ml/weights` (versionnés : pas besoin de réentraîner). `.gitignore`, `pyproject.toml`, `uv.lock` et `AGENTS.md` sont modifiés. Aucun contrat touché : l'app n'utilise pas encore les réseaux.
 - [14/11 13:30] **Nouvelle dépendance `numpy`** (issue #15) : relancer `uv sync` après le prochain `git pull`. Nouveau paquet `ml/simulation` qui génère les données d'entraînement. `pyproject.toml`, `uv.lock` et `AGENTS.md` sont modifiés. Aucun contrat touché, rien n'est branché sur l'app.
 
 ## Max (Claude Code)
 
-- **En cours :** #22, les trois réseaux entraînés (PR ouverte, à faire relire ; elle part de la branche de #20, à merger d'abord). Ensuite : leur branchement dans l'app, pour minuit.
-- [14/11 15:30] Résultat en boucle fermée sur des patients jamais vus : le réseau B fait nettement mieux que la règle fixe actuelle. Chiffres et limites : `docs/modele.md`, section 14. Tout est simulé.
+- **En cours :** #29, les réseaux branchés dans l'app (PR ouverte, à faire relire). Trois PR à merger dans l'ordre : #20 (θ), #22 (réseaux), #29 (branchement) ; chacune part de la précédente.
+- [14/11 16:30] L'app tourne sur les réseaux, console et vraie app. Seul le patient reste simulé (`ml/virtual.py`). Ce qui reste à faire pour sortir de la simulation : `docs/modele.md`, section 8.
+- [14/11 15:30] Résultat en boucle fermée sur des patients jamais vus : le réseau B fait nettement mieux que la règle fixe. Chiffres et limites : `docs/modele.md`, section 14. Tout est simulé.
 - [14/11 15:30] Pour réentraîner : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`, puis `uv run python -m ml.nets.train` et `uv run python -m ml.nets.evaluate`. Une dizaine de minutes sur CPU.
-- [14/11 15:00] θ passe de 22 à 25 signaux (frappe et réactivité), rangés par modalité. **Régénérer les données** après le prochain `git pull` : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`. Les 22 anciens signaux et le journal sont identiques pour une même graine.
-- [14/11 15:00] Je travaille dans une copie séparée, `C:\dev\hackaton-max` (`git worktree`), pour ne pas changer de branche sous les pieds de quelqu'un dans `C:\dev\hackaton`.
 - **Bloqué :** pas de clé Gemini sur la machine, donc la connexion à Gemini n'est pas testée en réel. Mettre la clé dans `.env`, puis `uv run python -m ml.check_gemini`.
 - **Notes pour la suite :**
   - Données simulées : `uv run python -m ml.simulation` écrit `ml/data/sim` (hors git). Le sens de chaque colonne est dans `meta.json`, les règles dans `docs/modele.md`, section 12.
-  - Prochaine étape : l'autoencodeur (section 6, étape 1). Il lit `people.npz` : `theta` et `mask` en entrée, `state` comme cible de la tête supervisée. Il demandera une nouvelle dépendance pour les réseaux, à annoncer.
   - Les choix de θ, de L et de la récompense sont délégués à Claude et attendent une relecture de l'équipe (section 11).
   - Changement décidé le 14/11 : la partie personnelle est un vecteur de 8 nombres par patient, lu par A et par B, et non plus une dernière couche par patient. B ne reçoit pas le texte des centres d'intérêt. Tailles et quantité de données : section 13.
   - Pour entraîner, générer plus gros que le réglage par défaut : `uv run python -m ml.simulation --people 5000 --days 84`, puis séparer par personne.
   - La récompense simulée est bruitée (écart-type 14,8 pour des écarts de quelques points) : c'est voulu, l'état bouge tout seul d'un jour à l'autre. Le journal contient aussi `reward_counterfactual`, plus net, pour comparer.
-  - Le modèle cible n'est pas codé. Le code actuel est décrit par `HYPOTHESES.md` ; les écarts sont en section 8 de `docs/modele.md`. Le coder changera les deux contrats (API et ML).
   - #13 reste ouverte : `docs/modele.md` en couvre l'essentiel, sauf les définitions encore ouvertes de la section 10.
-  - Le modèle de zone (`ml/model.py`) et le capteur θ (`backend/sensor.py`) sont simulés. Garder leurs signatures en les remplaçant.
   - Si Gemini donne des λ tassés ou incohérents, regarder `lambda_position` dans `ml/pipeline.py` et les trois phrases de référence de `ml/check_gemini.py`.
   - Démo sur deux téléphones : `?view=helper` et `?view=patient`, avec `npm --prefix frontend run dev -- --host`.
   - La console de démo garde son état en mémoire : un redémarrage la remet à zéro. La vraie app, elle, garde tout dans `data/needed.db` ; supprimer ce fichier repart de zéro.

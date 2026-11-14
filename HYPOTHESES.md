@@ -3,7 +3,14 @@
 Ce que Claude a décidé seul pour faire tourner la boucle, sans validation de l'équipe.
 Chaque ligne dit où le changer. Ce qui avait été validé en discussion n'est pas repris ici.
 
-> Ce fichier décrit **le code tel qu'il tourne aujourd'hui**. Le modèle que l'équipe a arrêté depuis (données brutes θ, vecteur d'état L(θ), zone sur plusieurs axes, trois réseaux) est dans [docs/modele.md](docs/modele.md). Les sections « Zone et mesure » et « Ce qui est faux ou simulé » ci-dessous seront remplacées quand ce modèle sera codé.
+> **Mise à jour du 14 novembre, après-midi.** Le modèle que l'équipe a arrêté (données brutes θ, vecteur d'état L(θ), zone sur six axes, trois réseaux) est codé, entraîné et branché dans l'app : voir [docs/modele.md](docs/modele.md), dont la section 8 dit ce qui reste simulé. Dans ce fichier, tout ce qui parle de la règle `zone_for`, de `learn`, du capteur `backend/sensor.py` ou d'un état θ à un seul nombre décrit **l'ancienne version** : ces morceaux ne servent plus à l'app. Le reste (produit, génération des demandes, vraie app) est toujours vrai.
+>
+> Hypothèses nouvelles, prises par Claude en branchant les réseaux :
+>
+> - **La position d'un format sur les axes** (concret, durée, échange, exposition, démarrage) est posée à la main, format par format, dans `ml/formats.py`. Aucun modèle ne note encore une vraie demande axe par axe.
+> - **Le patient virtuel** (`ml/virtual.py`) tient lieu de montre : même simulateur que les données d'entraînement, une graine par patient. Dans la console, le curseur règle son niveau caché.
+> - **La frappe relevée par l'app** remplace les signaux simulés correspondants dans le relevé du lendemain. Le délai d'ouverture n'est pas encore mesuré par les écrans.
+> - **Rien du corps virtuel n'est enregistré** : au redémarrage, il se reconstruit en rejouant les demandes traitées. Un niveau poussé par `/api/app/patient/state` est donc perdu au redémarrage.
 
 ## À faire en premier
 

@@ -1,6 +1,6 @@
 # Le modèle : objets, réseaux, entraînement
 
-Ce document fixe le modèle, tel que l'équipe l'a arrêté le 14 novembre. **Les trois réseaux sont codés et entraînés** sur des données simulées (`ml/nets`, poids dans `ml/weights`) : architectures en section 13, résultats en section 14. Tant que leur branchement n'est pas mergé, l'app tourne avec la version précédente, où l'état du patient est un seul nombre et la zone une règle écrite à la main. Les écarts sont listés en section 8.
+Ce document fixe le modèle, tel que l'équipe l'a arrêté le 14 novembre. **Les trois réseaux sont codés, entraînés** sur des données simulées (`ml/nets`, poids dans `ml/weights`) **et branchés dans l'app** : architectures en section 13, résultats en section 14. Ce qui reste simulé ou posé à la main est listé en section 8.
 
 Chaque élément porte un statut :
 
@@ -205,22 +205,32 @@ Sur patients réels, dans une étude pilote :
 
 Les points 1 à 4 montrent que la machinerie apprend. Seuls les points 6 et 7 disent quelque chose sur de vrais patients. **Les réseaux entraînés sur des données générées apprennent ce que les générateurs contiennent, rien de plus.**
 
-## 8. Écarts avec le code actuel
+## 8. Ce qui est branché, ce qui reste simulé
 
-| Dans la cible | Dans le code aujourd'hui | Où |
+L'app tourne sur les réseaux, dans la console de démo (`#/demo`) comme dans la vraie app (`/api/app/*`).
+
+| Étape de la boucle | Dans l'app | Où |
 |---|---|---|
-| θ brut, puis L(θ) vecteur | Un seul nombre, appelé `theta`, qui joue le rôle de L | `backend/loop.py`, `backend/community.py`, `backend/store.py` |
-| L appris par un autoencodeur | Un curseur et une simulation (console), une règle sur le comportement (vraie app) | `backend/sensor.py`, `backend/community.py` |
-| Zone sur 6 à 8 axes | Zone sur 2 axes : un intervalle sur λ, un plafond d'effort | `ml/types.py`, `ml/model.py` |
-| Axes mesurés séparément | Une grille de formats avec un seul effort | `ml/formats.py` |
-| Zone sortie par le réseau B | Règle `1 − 0,6·θ` et `0,25 + 0,75·θ` | `ml/model.py`, `zone_for` |
-| A et B appris, avec un vecteur de 8 nombres par patient | `learn`, une règle écrite à la main, avec un seul décalage par patient | `ml/model.py` |
-| Récompense de 0 à 100 sur des vecteurs | Différence signée de deux nombres | `backend/loop.py`, `backend/community.py` |
-| Journal avec les positions sur tous les axes | Table `requests` avec `lam` et `effort` | `backend/store.py` |
+| θ, les 25 signaux | **Simulés** par un patient virtuel, un par patient, tiré du même simulateur que les données d'entraînement. Les signaux de frappe relevés par l'app remplacent les siens | `ml/virtual.py`, `frontend/src/typing.ts` |
+| L(θ), six composantes | Lu par l'autoencodeur sur les 28 derniers relevés | `ml/brain.py`, `Brain.reading` |
+| Zone sur six axes | Sortie par le réseau B, seul | `Brain.zone`, `ZoneBox` dans `ml/types.py` |
+| Écrire les demandes | Gemini si une clé est configurée, sinon une banque de secours | `ml/pipeline.py` |
+| Position entre les intérêts | Mesurée sur le texte | `ml/pipeline.py`, `lambda_position` |
+| Position sur les cinq autres axes | **Posée à la main**, format par format | `ml/formats.py` |
+| Tri et trois propositions | Les bornes hautes des axes de coût et l'intervalle sur les intérêts filtrent ; les bornes basses servent à classer | `ZoneBox.allows`, `ZoneBox.shortfall`, `select_three` |
+| Réaction du patient | Réelle dans la vraie app (il répond ou met de côté) ; un bouton dans la console | `backend/community.py`, `backend/loop.py` |
+| Effet de la demande sur son état | **Simulé** par les règles cachées du patient virtuel, puis une journée passe | `VirtualPatient.receive` |
+| Récompense de 0 à 100 | Calculée sur L avant et L un jour après | `Brain.reward` |
+| Vecteur du patient | Réglé après chaque réaction, à travers le réseau A | `Brain.learn` |
 
-Ce qui ne change pas : Gemini génère, chaque demande est mesurée puis filtrée, l'aidant choisit parmi trois, modifie ou écrit la sienne, et une demande hors zone est retenue. La mesure de λ (`lambda_position`, `ml/pipeline.py`) reste celle de l'axe λ.
+Ce qui manque pour sortir de la simulation :
 
-Passer à la cible changera les deux contrats, API et ML : `theta` et `ZoneState` dans `backend/schemas.py`, `zone_for` et `learn` dans `ml/model.py`.
+- **Une vraie montre.** Le patient virtuel a la forme de ce qu'elle fournirait : 25 signaux, quatre relevés par jour. Le remplacer par de vrais relevés ne touche ni aux réseaux ni au reste de la boucle. Mais les réseaux devront être réentraînés sur de vraies données : ils ne connaissent que le simulateur.
+- **Noter une demande axe par axe.** Tant que cinq positions viennent du format, la zone agit surtout comme un choix de formats permis. C'est la « grille de notation » de la section 10.
+- **Le temps réel.** Dans l'app, une réaction fait passer une journée au patient virtuel, pour que la récompense existe tout de suite. Avec de vrais relevés, elle se calculerait vingt-quatre heures plus tard.
+- **L'ancienne règle** (`zone_for`, `learn` dans `ml/model.py`) ne sert plus à l'app. Elle reste comme point de comparaison (`ml.nets.policy.FixedRule`).
+
+Les deux contrats ont changé, par ajout : `backend/schemas.py` (état, signaux, axes de la zone, vecteur, frappe) et `ml/model.py` (`brain`, `VirtualPatient`, `request_axes`).
 
 ## 9. Proposé, à confirmer
 

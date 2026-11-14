@@ -1,35 +1,50 @@
 """La boucle IA, pour un patient de démonstration. État en mémoire, remis à zéro au redémarrage.
 
 Les douze étapes :
-  Mesurer   1 mesurer θ
+  Mesurer   1 mesurer θ, lire L(θ)
   Répondre  2 zone · 3 aidant et paires · 4 générer · 5 mesurer et filtrer · 6 proposer trois
             7 l'aidant décide · 8 vérifier le message final · 9 le patient reçoit la demande
-  Apprendre 10 mesurer θ à nouveau · 11 récompense · 12 mettre à jour le modèle
+  Apprendre 10 mesurer θ à nouveau · 11 récompense · 12 régler le vecteur du patient
+
+Ce qui est appris : l'état L(θ) (autoencodeur), la zone (réseau B) et le vecteur du patient (à
+travers le réseau A). Ce qui est simulé : le patient lui-même, c'est-à-dire sa montre et la
+façon dont une demande agit sur lui (`ml.model.VirtualPatient`).
 """
 
 import threading
 from dataclasses import dataclass, replace
 from typing import Literal
 
-from backend import schemas, sensor
+import numpy as np
+
+from backend import schemas
 from backend.errors import ApiError
+from backend.readout import (
+    component_states,
+    hold_reason,
+    measured_typing,
+    signal_states,
+    zone_state,
+)
 from ml.model import (
     FORMATS,
     Candidate,
     InterestPair,
+    Outcome,
+    Reading,
     Slot,
+    VirtualPatient,
     Zone,
-    ZoneParams,
+    brain,
     format_label,
     generate_candidates,
-    learn,
     measure_message,
     provider_info,
     select_three,
-    zone_for,
 )
 
-INITIAL_THETA = 0.55
+INITIAL_THETA = 0.55  # niveau de fond du patient virtuel au départ
+PATIENT_SEED = 11  # la même graine redonne le même patient virtuel, donc la même démo
 PROPOSALS_WANTED = 3
 STEP_BY_STAGE: dict[schemas.Stage, int] = {
     "idle": 1,
@@ -64,23 +79,18 @@ class Message:
     hold_reason: str | None = None
 
 
-def _hold_reason(candidate: Candidate, zone: Zone) -> str:
-    if candidate.off_topic:
-        return "Not linked to the patient's interests."
-    if candidate.effort > zone.effort_max:
-        return f"Effort {candidate.effort:.2f} is above the ceiling {zone.effort_max:.2f}."
-    side = "below" if candidate.lam < zone.low else "above"
-    return f"Position {candidate.lam:.2f} is {side} the zone ({zone.low:.2f} to {zone.high:.2f})."
-
-
 class LoopService:
     def __init__(self) -> None:
         self._lock = threading.Lock()
+        self.brain = brain()
         self._init_state()
 
     def _init_state(self) -> None:
-        self.theta = INITIAL_THETA
-        self.params = ZoneParams()
+        self.body = VirtualPatient(PATIENT_SEED, INITIAL_THETA)
+        self.normal = self.brain.normal(self.body.theta)  # ses quatorze jours de référence
+        self.vector = np.zeros(8, dtype=np.float32)
+        self.outcomes: list[Outcome] = []
+        self._read()
         self.round_number = 0
         self.stage: schemas.Stage = "idle"
         self.helper: Persona | None = None
@@ -92,6 +102,11 @@ class LoopService:
         self.history: list[schemas.HistoryEntry] = []
         self.tried_formats: set[str] = set()
 
+    def _read(self) -> None:
+        """Étapes 1 et 2 : lire L(θ) sur les 28 derniers relevés, puis sortir la zone."""
+        self.reading: Reading = self.brain.reading(self.body.theta, self.normal)
+        self.zone: Zone = self.brain.zone(self.reading, self.vector)
+
     # --- Lecture -------------------------------------------------------------------------
 
     def state(self) -> schemas.LoopState:
@@ -99,7 +114,7 @@ class LoopService:
             return self._snapshot()
 
     def _zone(self) -> Zone:
-        return zone_for(self.theta, self.params)
+        return self.zone
 
     def _snapshot(self) -> schemas.LoopState:
         zone = self._zone()
@@ -107,19 +122,16 @@ class LoopService:
         return schemas.LoopState(
             patient=_person(PATIENT),
             helpers=[_person(helper) for helper in HELPERS],
-            theta=round(self.theta, 3),
+            theta=round(self.reading.wellbeing, 3),
+            level=round(self.body.level, 3),
+            state=component_states(self.brain, self.reading),
+            distance=round(self.brain.distance(self.reading.state), 2),
+            signals=signal_states(self.body.theta[-1]),
             formats=[
                 schemas.FormatState(key=fmt.key, label=fmt.label, effort=fmt.effort)
                 for fmt in FORMATS.values()
             ],
-            zone=schemas.ZoneState(
-                center=round(zone.center, 3),
-                low=round(zone.low, 3),
-                high=round(zone.high, 3),
-                half_width=round(zone.half_width, 3),
-                effort_max=round(zone.effort_max, 3),
-                common_center=round(zone.common_center, 3),
-            ),
+            zone=zone_state(zone),
             round=schemas.RoundState(
                 number=self.round_number,
                 stage=self.stage,
@@ -138,16 +150,22 @@ class LoopService:
                 provider=info.provider, model=info.model, note=info.note
             ),
             model=schemas.ModelState(
-                offset=round(self.params.offset, 3), observations=self.params.n_obs
+                kind="networks",
+                offset=round(zone.center - zone.common_center, 3),
+                observations=len(self.outcomes),
+                parameters=self.brain.parameters,
+                vector=[round(float(value), 3) for value in self.vector],
             ),
         )
 
     # --- Étape 1 : mesurer ---------------------------------------------------------------
 
     def set_theta(self, theta: float) -> schemas.LoopState:
-        """Nouvelle mesure de θ. La zone bouge : on refiltre les demandes déjà mesurées."""
+        """Le curseur de la démo change l'état caché du patient virtuel. Ses relevés suivent,
+        l'autoencodeur relit L(θ), et la zone bouge : on refiltre les demandes déjà mesurées."""
         with self._lock:
-            self.theta = theta
+            self.body.set_level(theta)
+            self._read()
             if self.stage == "proposed":
                 self._pick()
             self._deliver_held()
@@ -233,14 +251,13 @@ class LoopService:
                     )
                 source = "edited" if proposal else "real_need"
 
-            if zone.contains(candidate.lam, candidate.effort) and not candidate.off_topic:
+            if _fits(candidate, zone):
                 self.message = Message(candidate, self.helper, source, "delivered")
                 self.stage = "sent"
             else:
                 # Hors zone : retenu, jamais refusé. L'aidant voit le même message d'envoi.
-                held = Message(
-                    candidate, self.helper, source, "held", _hold_reason(candidate, zone)
-                )
+                reason = hold_reason(candidate.lam, candidate.axes, candidate.off_topic, zone)
+                held = Message(candidate, self.helper, source, "held", reason)
                 self.held.append(held)
                 self.message = held
                 self.stage = "held"
@@ -268,7 +285,7 @@ class LoopService:
             return False
         zone = self._zone()
         for held in self.held:
-            if zone.contains(held.candidate.lam, held.candidate.effort):
+            if _fits(held.candidate, zone):
                 self.held.remove(held)
                 self.message = replace(held, status="delivered", hold_reason=None)
                 self.helper = held.helper
@@ -279,21 +296,26 @@ class LoopService:
 
     # --- Étapes 9 à 12 : réponse du patient, nouvelle mesure, récompense, apprentissage ---
 
-    def respond(self, action: schemas.PatientAction) -> schemas.LoopState:
+    def respond(
+        self, action: schemas.PatientAction, typing: schemas.TypingSignals | None = None
+    ) -> schemas.LoopState:
         with self._lock:
             if self.stage != "sent" or self.message is None:
                 raise ApiError(409, "no_message", "There is no delivered request to answer.")
             sent = self.message.candidate
-            theta_before = self.theta
-            theta_expected = sensor.expected_theta(theta_before)
-            theta_after = sensor.theta_after(
-                theta_before, sent.lam, sent.effort, helped=action == "helped"
-            )
-            reward = theta_after - theta_expected
-            center_before = zone_for(theta_before, self.params).center
-            self.params = learn(self.params, theta_before, sent.lam, reward)
-            center_after = zone_for(theta_before, self.params).center
-            self.theta = theta_after
+            before, zone_before = self.reading, self.zone
+            replied = action == "helped"
+            axes = sent.axes or (sent.lam, *FORMATS[sent.format].axes)
+            # Étape 10 : la demande agit sur le patient virtuel, une journée passe, on relit θ.
+            fit, overload = self.body.receive(np.array(axes), replied, measured_typing(typing))
+            after = self.brain.reading(self.body.theta, self.normal)
+            # Étape 11 : la récompense, de 0 à 100, calculée sur L avant et L après.
+            reward = self.brain.reward(before, after)
+            # Étape 12 : le vecteur du patient se règle sur toutes ses réactions. B ne change pas.
+            self.outcomes.append(Outcome(before.context, tuple(axes), reward, replied))
+            self.vector = self.brain.learn(self.outcomes, self.vector)
+            center_after = self.brain.zone(before, self.vector).center
+            self._read()
             self.tried_formats.add(sent.format)
             self.history.append(
                 schemas.HistoryEntry(
@@ -305,12 +327,14 @@ class LoopService:
                     format_label=format_label(sent.format),
                     source=self.message.source,
                     action=action,
-                    theta_before=round(theta_before, 3),
-                    theta_expected=round(theta_expected, 3),
-                    theta_after=round(theta_after, 3),
-                    reward=round(reward, 3),
-                    center_before=round(center_before, 3),
+                    theta_before=round(before.wellbeing, 3),
+                    theta_expected=round(before.wellbeing, 3),
+                    theta_after=round(after.wellbeing, 3),
+                    reward=round(reward, 1),
+                    center_before=round(zone_before.center, 3),
                     center_after=round(center_after, 3),
+                    fit=round(fit, 2),
+                    overload=round(overload, 2),
                 )
             )
             self.stage = "answered"
@@ -321,6 +345,12 @@ class LoopService:
         with self._lock:
             self._init_state()
             return self._snapshot()
+
+
+def _fits(candidate: Candidate, zone: Zone) -> bool:
+    if candidate.off_topic:
+        return False
+    return zone.contains(candidate.lam, candidate.effort, candidate.axes)
 
 
 def _person(persona: Persona) -> schemas.Person:
@@ -343,10 +373,11 @@ def _candidate(candidate: Candidate, zone: Zone, slot: Slot | None) -> schemas.C
         format=candidate.format,
         format_label=format_label(candidate.format),
         effort=candidate.effort,
-        in_zone=not candidate.off_topic and zone.contains(candidate.lam, candidate.effort),
+        in_zone=_fits(candidate, zone),
         off_topic=candidate.off_topic,
         slot=slot,
         provider=candidate.provider,
+        axes=list(candidate.axes or ()),
     )
 
 
@@ -364,6 +395,7 @@ def _message(message: Message) -> schemas.MessageState:
         source=message.source,
         status=message.status,
         hold_reason=message.hold_reason,
+        axes=list(candidate.axes or ()),
     )
 
 

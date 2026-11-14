@@ -163,7 +163,7 @@ function DemoScreen() {
         {(showAll || view === 'console') && (
           <LoopConsole
             state={state}
-            theta={draftTheta ?? state.theta}
+            theta={draftTheta ?? state.level ?? state.theta}
             busy={busy}
             onTheta={slideTheta}
             onRun={() => void run(propose)}
@@ -173,7 +173,9 @@ function DemoScreen() {
           <PatientPhone
             state={state}
             busy={busy}
-            onRespond={(action) => void run(() => respond(action))}
+            onRespond={(action, typing) =>
+              void run(() => respond(action, typing))
+            }
           />
         )}
       </main>
@@ -182,9 +184,10 @@ function DemoScreen() {
         <>
           <HistoryPanel history={state.history} />
           <footer className="disclaimer">
-            Demo with simulated data: the patient state comes from a simulated
-            sensor and the zone model is a hand-written stand-in. Not a medical
-            device.
+            Demo with a virtual patient: the watch signals and the way a request
+            affects them are simulated. The state, the zone and the personal
+            vector come from networks trained on simulated patients, so they
+            know only what the simulator contains. Not a medical device.
           </footer>
         </>
       )}

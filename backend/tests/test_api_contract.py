@@ -51,12 +51,31 @@ def test_loop_starts_idle():
     assert state.zone.low <= state.zone.center <= state.zone.high
 
 
+def test_the_state_and_the_zone_come_from_the_networks():
+    state = LoopState.model_validate(client.get("/api/loop").json())
+    assert [component.key for component in state.state] == [
+        "sleep",
+        "rhythm",
+        "energy",
+        "calm",
+        "activity",
+        "engagement",
+    ]
+    assert len(state.signals) == 25
+    assert {signal.modality for signal in state.signals} == {"watch", "app", "touch"}
+    assert [axis.kind for axis in state.zone.axes] == ["interval"] * 5 + ["ceiling"]
+    assert state.model.kind == "networks" and state.model.parameters > 0
+    assert state.model.vector == [0.0] * 8  # aucun vécu : le modèle général
+    assert state.distance > 1.0  # un patient est loin de la référence saine
+
+
 def test_full_round_from_proposals_to_learning():
     state = _post("/api/loop/propose")
     proposals = _proposals(state)
     assert state.round.stage == "proposed"
     assert 1 <= len(proposals) <= 3
     assert all(candidate.in_zone for candidate in proposals)
+    assert all(len(candidate.axes) == 6 for candidate in proposals)
     assert len({candidate.slot for candidate in proposals}) == len(proposals)
 
     state = _post("/api/loop/send", {"proposal_id": proposals[0].id})
@@ -65,18 +84,32 @@ def test_full_round_from_proposals_to_learning():
     assert state.round.message.status == "delivered"
     assert state.round.message.source == "suggested"
 
-    state = _post("/api/loop/respond", {"action": "helped"})
+    typing = {"characters": 120, "corrections": 30, "first_key_delay_seconds": 12.0}
+    state = _post("/api/loop/respond", {"action": "helped", "typing": typing})
     assert state.round.stage == "answered"
     assert state.model.observations == 1
+    assert len(state.model.vector) == 8
     entry = state.history[-1]
-    assert entry.reward == pytest.approx(entry.theta_after - entry.theta_expected, abs=1e-3)
+    assert 0.0 <= entry.reward <= 100.0  # 50 = l'état n'a pas bougé
     assert state.theta == entry.theta_after
+    # La frappe relevée pendant la réponse est entrée dans θ : 30 corrections sur 120 caractères.
+    measured = {signal.name: signal.value for signal in state.signals}
+    assert measured["typing_correction_rate"] == pytest.approx(25.0)
+    assert measured["first_key_delay_seconds"] == pytest.approx(12.0)
+
+
+def test_moving_the_hidden_level_moves_the_state_and_the_zone():
+    low = _post("/api/loop/theta", {"theta": 0.2})
+    high = _post("/api/loop/theta", {"theta": 0.85})
+    assert low.level == pytest.approx(0.2) and high.level == pytest.approx(0.85)
+    assert low.theta < high.theta  # les réseaux retrouvent le niveau à partir des signaux
+    assert low.zone.center > high.zone.center + 0.1  # plus mal : plus près de ses intérêts
+    assert low.zone.effort_max < high.zone.effort_max  # plus mal : demande plus légère
 
 
 def test_moving_theta_refilters_the_measured_requests():
     _post("/api/loop/propose")
     state = _post("/api/loop/theta", {"theta": 0.1})
-    assert state.zone.center > 0.9
     assert all(candidate.in_zone for candidate in _proposals(state))
 
 
