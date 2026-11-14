@@ -15,8 +15,8 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 API_ROOT = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_MODEL = "gemini-flash-latest"
-DEFAULT_EMBED_MODEL = "gemini-embedding-001"
+DEFAULT_MODEL = "gemini-1.5-flash"
+DEFAULT_EMBED_MODEL = "text-embedding-004"
 TIMEOUT_SECONDS = 25
 
 
@@ -45,12 +45,20 @@ def embedding_model() -> str:
     return os.environ.get("GEMINI_EMBED_MODEL") or DEFAULT_EMBED_MODEL
 
 
+def api_root() -> str:
+    return (
+        os.environ.get("GEMINI_API_ROOT") or os.environ.get("GEMINI_BASE_URL") or API_ROOT
+    ).rstrip("/")
+
+
 def _post(path: str, body: dict[str, Any]) -> dict[str, Any]:
     key = api_key()
     if key is None:
         raise GeminiError(0, "GEMINI_API_KEY absente")
+    clean_path = path.lstrip("/")
+    url = f"{api_root()}/{clean_path}"
     request = urllib.request.Request(
-        f"{API_ROOT}/{path}",
+        url,
         data=json.dumps(body).encode("utf-8"),
         headers={"Content-Type": "application/json", "x-goog-api-key": key},
         method="POST",
@@ -94,6 +102,7 @@ def generate_json(system: str, prompt: str, schema: dict[str, Any]) -> Any:
 
     Les noms de champs de configuration changent d'une version de l'API à l'autre : en cas de
     refus (400), on réessaie avec une configuration plus simple avant d'abandonner.
+    Si le modèle configuré est introuvable (404), on essaie les modèles standards de secours.
     """
     body = {
         "systemInstruction": {"parts": [{"text": system}]},
@@ -105,42 +114,70 @@ def generate_json(system: str, prompt: str, schema: dict[str, Any]) -> Any:
         {**json_mode, "responseJsonSchema": schema},
         json_mode,
     ]
+    model = generation_model()
+    candidates = list(
+        dict.fromkeys([model, "gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-latest"])
+    )
     last_error = GeminiError(0, "aucune tentative")
-    for config in configs:
-        try:
-            path = f"models/{generation_model()}:generateContent"
-            data = _post(path, {**body, "generationConfig": config})
-            return _parse_json_text(_first_text(data))
-        except GeminiError as exc:
-            last_error = exc
-            if exc.status != 400:
-                raise
-            logger.warning("Gemini a refusé la configuration, nouvel essai plus simple : %s", exc)
+    for m in candidates:
+        for config in configs:
+            try:
+                path = f"models/{m}:generateContent"
+                data = _post(path, {**body, "generationConfig": config})
+                return _parse_json_text(_first_text(data))
+            except GeminiError as exc:
+                last_error = exc
+                if exc.status == 404:
+                    # Modèle non supporté ou introuvable sur cet endpoint, essayer le modèle suivant
+                    break
+                if exc.status != 400:
+                    raise
+                logger.warning(
+                    "Gemini a refusé la configuration, nouvel essai plus simple : %s", exc
+                )
     raise last_error
 
 
-def embed(texts: list[str]) -> list[list[float]]:
-    """Un vecteur par texte, dans l'ordre."""
+def _embed_batch(texts: list[str]) -> list[list[float]]:
+    """Calcul d'embedding pour un lot de textes."""
     model = embedding_model()
     variants: list[dict[str, Any]] = [
         {"taskType": "SEMANTIC_SIMILARITY", "outputDimensionality": 768},
         {},
     ]
+    candidates = list(
+        dict.fromkeys([model, "text-embedding-004", "embedding-001", "gemini-embedding-001"])
+    )
     last_error = GeminiError(0, "aucune tentative")
-    for extra in variants:
-        requests = [
-            {"model": f"models/{model}", "content": {"parts": [{"text": text}]}, **extra}
-            for text in texts
-        ]
-        try:
-            data = _post(f"models/{model}:batchEmbedContents", {"requests": requests})
-        except GeminiError as exc:
-            last_error = exc
-            if exc.status != 400:
-                raise
-            continue
-        vectors = [item.get("values", []) for item in data.get("embeddings", [])]
-        if len(vectors) != len(texts) or not all(vectors):
-            raise GeminiError(0, "réponse d'embedding inattendue")
-        return vectors
+    for m in candidates:
+        for extra in variants:
+            requests = [
+                {"model": f"models/{m}", "content": {"parts": [{"text": text}]}, **extra}
+                for text in texts
+            ]
+            try:
+                data = _post(f"models/{m}:batchEmbedContents", {"requests": requests})
+            except GeminiError as exc:
+                last_error = exc
+                if exc.status == 404:
+                    break
+                if exc.status != 400:
+                    raise
+                continue
+            vectors = [item.get("values", []) for item in data.get("embeddings", [])]
+            if len(vectors) != len(texts) or not all(vectors):
+                raise GeminiError(0, "réponse d'embedding inattendue")
+            return vectors
     raise last_error
+
+
+def embed(texts: list[str]) -> list[list[float]]:
+    """Un vecteur par texte, dans l'ordre (découpé par lots pour ne pas dépasser la limite)."""
+    if not texts:
+        return []
+    chunk_size = 50
+    all_vectors: list[list[float]] = []
+    for i in range(0, len(texts), chunk_size):
+        chunk = texts[i : i + chunk_size]
+        all_vectors.extend(_embed_batch(chunk))
+    return all_vectors

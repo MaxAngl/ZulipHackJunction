@@ -3730,6 +3730,257 @@ button.chip {
   margin-top: 10px;
 }
 
+/* --- Helper Request Redesign (Profile & AI suggestions) ------------------------- */
+
+.helper-screen-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.helper-screen-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.helper-screen-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.helper-patient-selector {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 2px 8px 2px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.helper-patient-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  background: var(--surface-soft);
+  border: 1.5px solid var(--line);
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  font-weight: 500;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.helper-patient-pill:hover {
+  border-color: var(--accent);
+  background: var(--surface-subtle);
+}
+
+.helper-patient-pill.active {
+  border-color: var(--accent);
+  background: rgba(0, 216, 255, 0.12);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.helper-pill-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.card-helper-patient {
+  background: var(--surface-soft);
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.helper-patient-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.helper-patient-avatar-large {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+.helper-patient-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.helper-patient-name {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+.helper-patient-city {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.helper-patient-bio {
+  font-size: 0.88rem;
+  color: var(--text);
+  font-style: italic;
+  line-height: 1.45;
+  margin: 0;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-radius: 10px;
+  border-left: 3px solid var(--accent);
+}
+
+.helper-hobbies-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.helper-hobbies-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.helper-hobbies-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.helper-hobby-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: rgba(0, 216, 255, 0.1);
+  color: var(--text);
+  border: 1px solid rgba(0, 216, 255, 0.4);
+}
+
+.helper-ai-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.helper-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.helper-ai-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
+.badge-ai-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: rgba(0, 216, 255, 0.15);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.helper-proposal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.helper-proposal-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-1px);
+}
+
+.helper-proposal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.helper-proposal-topic {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  background: var(--surface);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.helper-proposal-text {
+  font-size: 0.98rem;
+  line-height: 1.45;
+  margin: 0;
+  color: var(--text);
+}
+
+.helper-own-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+
+.helper-own-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text);
+}
+
 /* --- Petits écrans ----------------------------------------------------------------- */
 
 @media (max-width: 1080px) {
