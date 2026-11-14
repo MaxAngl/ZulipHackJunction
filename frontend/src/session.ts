@@ -726,3 +726,167 @@ export function updateAdminContactMessageStatus(
     // ignore
   }
 }
+
+export type NotificationType =
+  'new_request' | 'new_message' | 'pending_24h' | 'declined_limit'
+
+export type AppNotification = {
+  id: string
+  type: NotificationType
+  title: string
+  body: string
+  timestamp: string
+  read?: boolean
+  linkHash?: string
+}
+
+export function readNotifications(): AppNotification[] {
+  try {
+    const raw = window.localStorage.getItem('needed.notifications')
+    if (raw) return JSON.parse(raw) as AppNotification[]
+  } catch {
+    // ignore
+  }
+  return [
+    {
+      id: 'notif-req-1',
+      type: 'new_request',
+      title: 'Nouvelle demande reçue',
+      body: 'Julien Mercier vous sollicite pour des astuces de jardinage d’automne.',
+      timestamp: 'Il y a 10 min',
+      read: false,
+      linkHash: '#/helper',
+    },
+    {
+      id: 'notif-pending-1',
+      type: 'pending_24h',
+      title: 'Demande en attente (24h)',
+      body: 'Une demande de Thomas Lindqvist attend votre réponse depuis 24h (accepter ou refuser).',
+      timestamp: 'Il y a 1h',
+      read: false,
+      linkHash: '#/patient',
+    },
+    {
+      id: 'notif-declined-1',
+      type: 'declined_limit',
+      title: 'Alerte bien-être & rythme',
+      body: 'Vous avez refusé plus de 3 demandes. Prenez du temps pour vous, votre réserve d’énergie est prioritaire.',
+      timestamp: 'Il y a 3h',
+      read: false,
+      linkHash: '#/patient',
+    },
+  ]
+}
+
+export function saveNotification(notif: AppNotification): void {
+  try {
+    const list = readNotifications()
+    const updated = [notif, ...list.filter((n) => n.id !== notif.id)]
+    window.localStorage.setItem('needed.notifications', JSON.stringify(updated))
+    window.dispatchEvent(
+      new CustomEvent('needed:notification', { detail: notif }),
+    )
+  } catch {
+    // ignore
+  }
+}
+
+export function dismissNotification(id: string): void {
+  try {
+    const list = readNotifications()
+    const updated = list.filter((n) => n.id !== id)
+    window.localStorage.setItem('needed.notifications', JSON.stringify(updated))
+    window.dispatchEvent(
+      new CustomEvent('needed:notification:dismiss', { detail: id }),
+    )
+  } catch {
+    // ignore
+  }
+}
+
+export function readDeclinedRequestsCount(): number {
+  try {
+    const raw = window.localStorage.getItem('needed.declined_count')
+    return raw ? parseInt(raw, 10) : 3
+  } catch {
+    return 3
+  }
+}
+
+export function incrementDeclinedRequestsCount(): number {
+  try {
+    const count = readDeclinedRequestsCount() + 1
+    window.localStorage.setItem('needed.declined_count', count.toString())
+    if (count >= 3) {
+      saveNotification({
+        id: `notif-declined-${Date.now()}`,
+        type: 'declined_limit',
+        title: 'Alerte bien-être & rythme',
+        body: 'Vous avez refusé plus de 3 demandes. Prenez du temps pour vous, votre réserve d’énergie est prioritaire.',
+        timestamp: 'Maintenant',
+        read: false,
+        linkHash: '#/patient',
+      })
+    }
+    return count
+  } catch {
+    return 1
+  }
+}
+
+export function triggerSimulatedNotification(
+  type: NotificationType,
+): AppNotification {
+  const timeStr = 'Maintenant'
+  let notif: AppNotification
+
+  switch (type) {
+    case 'new_request':
+      notif = {
+        id: `notif-req-${Date.now()}`,
+        type: 'new_request',
+        title: 'Nouvelle demande reçue',
+        body: 'Julien Mercier : « Auriez-vous des conseils de jardinage pour des plantes d’intérieur ? »',
+        timestamp: timeStr,
+        read: false,
+        linkHash: '#/helper',
+      }
+      break
+    case 'new_message':
+      notif = {
+        id: `notif-msg-${Date.now()}`,
+        type: 'new_message',
+        title: 'Nouveau message de Clara Fontaine',
+        body: '« Bonjour ! Avez-vous pu essayer la recette de brioches ? »',
+        timestamp: timeStr,
+        read: false,
+        linkHash: '#/patient',
+      }
+      break
+    case 'pending_24h':
+      notif = {
+        id: `notif-24h-${Date.now()}`,
+        type: 'pending_24h',
+        title: 'Demande en attente (24h)',
+        body: 'Une demande de Thomas Lindqvist attend votre réponse (accepter ou refuser).',
+        timestamp: timeStr,
+        read: false,
+        linkHash: '#/patient',
+      }
+      break
+    case 'declined_limit':
+      notif = {
+        id: `notif-limit-${Date.now()}`,
+        type: 'declined_limit',
+        title: 'Alerte bien-être & rythme',
+        body: 'Vous avez refusé plus de 3 demandes. Prenez du temps pour vous, votre récupération passe avant tout.',
+        timestamp: timeStr,
+        read: false,
+        linkHash: '#/patient',
+      }
+      break
+  }
+
+  saveNotification(notif)
+  return notif
+}

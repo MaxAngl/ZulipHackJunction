@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Role } from './api/client'
+import InAppNotificationBanner from './components/InAppNotificationBanner'
 import AdminScreen from './screens/AdminScreen'
 import ClinicianScreen from './screens/ClinicianScreen'
 import DemoScreen from './screens/DemoScreen'
@@ -51,30 +52,47 @@ function App() {
   const leaveHelper = useCallback(() => leave('helper'), [leave])
   const leavePatient = useCallback(() => leave('patient'), [leave])
 
-  if (route === 'demo') return <DemoScreen />
-  if (route === 'home') return <Landing />
-  if (route === 'clinician') return <ClinicianScreen />
-  if (route === 'settings') return <SettingsScreen />
-  if (route === 'admin') return <AdminScreen />
+  let content: React.ReactNode
 
-  const token = tokens[route]
-  if (!token) {
-    return (
-      <ScreenFrame showSettings={false}>
-        <JoinForm
-          key={route}
-          role={route}
-          onJoined={(joined) =>
-            setTokens((current) => ({ ...current, [route]: joined }))
-          }
-        />
-      </ScreenFrame>
-    )
+  if (route === 'demo') {
+    content = <DemoScreen />
+  } else if (route === 'home') {
+    content = <Landing />
+  } else if (route === 'clinician') {
+    content = <ClinicianScreen />
+  } else if (route === 'settings') {
+    content = <SettingsScreen />
+  } else if (route === 'admin') {
+    content = <AdminScreen />
+  } else {
+    const token = tokens[route]
+    if (!token) {
+      content = (
+        <ScreenFrame showSettings={false}>
+          <JoinForm
+            key={route}
+            role={route}
+            onJoined={(joined) =>
+              setTokens((current) => ({ ...current, [route]: joined }))
+            }
+          />
+        </ScreenFrame>
+      )
+    } else {
+      content =
+        route === 'helper' ? (
+          <HelperScreen token={token} onLeave={leaveHelper} />
+        ) : (
+          <PatientScreen token={token} onLeave={leavePatient} />
+        )
+    }
   }
-  return route === 'helper' ? (
-    <HelperScreen token={token} onLeave={leaveHelper} />
-  ) : (
-    <PatientScreen token={token} onLeave={leavePatient} />
+
+  return (
+    <>
+      <InAppNotificationBanner />
+      {content}
+    </>
   )
 }
 
