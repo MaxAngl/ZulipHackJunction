@@ -10,17 +10,25 @@ Trois parties, dans le même tirage de personnes :
 2. Convergence : les patients vivent `--days` jours avec le réseau B. Pour chaque demande, on
    compare ce que A prédit (récompense, réponse) à ce qui s'est passé, et L(θ) à l'état caché.
 3. Bien-être dans le temps : trois patients (sévère, moyen, léger), quatre rythmes d'aide, les
-   mêmes tirages. La courbe est la distance à la zone saine, d, réelle (état caché) et mesurée
-   (L(θ), ce que l'app voit). Plus d est bas, mieux le patient va.
+   mêmes tirages. Sans aide, le patient suit sa trajectoire naturelle générée. Avec aide, chaque
+   demande est écrite comme dans l'app : zone du réseau B, textes du générateur (Gemini avec
+   `--gemini`, sinon la banque hors ligne), mesure sur les six axes, choix par `select_three`.
+   Le patient simulé réagit aux positions mesurées du texte envoyé. Entre deux demandes, l'état
+   suit la trajectoire naturelle, et l'effet des demandes passées s'estompe (un quart par jour).
+   La courbe est la distance à la zone saine, d, réelle (état caché) et mesurée (L(θ), ce que
+   l'app voit). Plus d est bas, mieux le patient va.
 
 Tout est simulé : ces chiffres disent si la machinerie fait ce qu'on attend d'elle sur le
 simulateur, pas ce qu'elle ferait avec de vrais patients. Les poids viennent de `ml/weights`,
 entraînés avec la graine 0 : la graine par défaut ici en est différente.
+
+Sans `--gemini`, la clé Gemini est retirée de l'environnement du script : aucun appel payant.
 """
 
 import argparse
 import math
-from dataclasses import dataclass
+import os
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import matplotlib
@@ -30,10 +38,14 @@ matplotlib.use("Agg")  # aucun écran : on écrit des fichiers PNG
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
+from ml import gemini  # noqa: E402
+from ml.formats import FORMATS, request_axes  # noqa: E402
 from ml.matching import coverage, interest_items, offline_profile, stable_match  # noqa: E402
+from ml.model import load_env_file  # noqa: E402
 from ml.nets.features import SLOTS  # noqa: E402
 from ml.nets.policy import LearnedPolicy  # noqa: E402
 from ml.nets.runtime import Networks  # noqa: E402
+from ml.pipeline import generate_candidates, select_three  # noqa: E402
 from ml.simulation import patient, population, subset  # noqa: E402
 from ml.simulation.episodes import Moment, simulate_policy  # noqa: E402
 from ml.simulation.people import PATIENT, People, observe  # noqa: E402
@@ -46,6 +58,7 @@ from ml.simulation.spec import (  # noqa: E402
     REWARD_DELAY_DAYS,
     SIGNALS,
 )
+from ml.types import InterestPair, Zone, ZoneBox  # noqa: E402
 
 FAMILIES = {
     "outdoors": ["hiking", "cycling", "gardening", "birdwatching", "fishing"],
@@ -104,7 +117,12 @@ def quartile_couples(couples: list[Couple]) -> dict[str, Couple]:
     return picks
 
 
-def matching_part(rng: np.random.Generator, n: int, out: Path) -> tuple[dict, list[str]]:
+Pairing = tuple[list[str], list[str]]  # intérêts du patient, intérêts de son aidant
+
+
+def matching_part(
+    rng: np.random.Generator, n: int, out: Path
+) -> tuple[dict, list[str], dict[int, Pairing]]:
     patients_tags, helpers_tags = draw_interests(rng, n), draw_interests(rng, n)
     patients = {f"p{i}": offline_profile(interest_items(t)) for i, t in enumerate(patients_tags)}
     helpers = {f"h{i}": offline_profile(interest_items(t)) for i, t in enumerate(helpers_tags)}
@@ -161,7 +179,11 @@ def matching_part(rng: np.random.Generator, n: int, out: Path) -> tuple[dict, li
             f"| {label} | {c.score:.2f} | {', '.join(c.patient)} | {', '.join(c.helper)} |"
         )
     lines += ["", "![Appariement](1_appariement.png)", ""]
-    return summary, lines
+    partners = {
+        int(p[1:]): (patients_tags[int(p[1:])], helpers_tags[int(h[1:])])
+        for p, h in matched.items()
+    }
+    return summary, lines, partners
 
 
 # --- 2. Convergence ----------------------------------------------------------------------------
@@ -308,20 +330,95 @@ def schedule(n_days: int, every: int | None) -> np.ndarray:
     return (days >= CONTEXT_DAYS) & ((days - CONTEXT_DAYS) % every == 0)
 
 
+@dataclass(frozen=True)
+class Sent:
+    day: int
+    text: str
+    provider: str
+    format: str
+    axes: tuple[float, ...]
+
+
+def _heaviest_format(box: ZoneBox) -> float:
+    """L'effort du format le plus lourd que la zone laisse passer, comme `ml.brain`."""
+    allowed = [fmt.effort for fmt in FORMATS.values() if box.allows_costs(fmt.axes)]
+    return max(allowed, default=min(fmt.effort for fmt in FORMATS.values()))
+
+
+@dataclass
+class RequestWriter:
+    """Écrit la demande du jour comme l'app (`backend/community.py`, `suggest` puis `send`).
+
+    Zone de B → textes du générateur pour les paires d'intérêts du couple → mesure sur les six
+    axes → `select_three` → on envoie la « best ». Sans demande dans la zone, rien n'est envoyé.
+    """
+
+    couples: list[Pairing]
+    seed: int
+    tried: list[set[str]] = field(default_factory=list)
+    sent: list[list[Sent]] = field(default_factory=list)
+    empty_days: int = 0
+
+    def __post_init__(self) -> None:
+        self.tried = [set() for _ in self.couples]
+        self.sent = [[] for _ in self.couples]
+
+    def write(
+        self, i: int, day: int, low: np.ndarray, high: np.ndarray, startup: float
+    ) -> tuple[float, ...] | None:
+        box = ZoneBox(tuple(map(float, low)), tuple(map(float, high)), float(startup))
+        center, half = (box.low[0] + box.high[0]) / 2.0, (box.high[0] - box.low[0]) / 2.0
+        zone = Zone(center, half, _heaviest_format(box), center, box)
+        mine, theirs = self.couples[i]
+        pairs = [InterestPair(p, h) for p in mine for h in theirs]
+        candidates, chosen = [], []
+        for attempt in range(2):  # une seconde génération si la zone est peu fournie, comme l'app
+            candidates += generate_candidates(
+                pairs=pairs,
+                zone=zone,
+                helper_name="Sam",
+                patient_name="Alex",
+                avoid=[c.text for c in candidates],  # comme l'app : pas de doublon dans un lot
+                seed=self.seed * 100_000 + day * 10 + attempt,
+            )
+            chosen = select_three(candidates, zone, self.tried[i])
+            if chosen:
+                break
+        if not chosen:
+            self.empty_days += 1
+            return None
+        best = chosen[0][1]
+        axes = best.axes or request_axes(best.lam, best.format)
+        self.tried[i].add(best.format)
+        self.sent[i].append(Sent(day, best.text, best.provider, best.format, tuple(axes)))
+        return tuple(axes)
+
+
 def live_with_rhythm(
-    networks: Networks, people: People, rules: patient.Rules, every: int | None, seed: int
+    networks: Networks,
+    people: People,
+    rules: patient.Rules,
+    every: int | None,
+    seed: int,
+    writer: RequestWriter | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """La boucle de `simulate_policy`, mais les demandes suivent un rythme fixe.
 
+    Sans aide, l'état est la trajectoire naturelle générée. Avec aide, il vaut la trajectoire
+    naturelle plus l'effet des demandes passées, qui s'estompe d'un quart par jour
+    (`patient.EFFECT_DECAY`). Avec `writer`, chaque demande est un vrai texte de l'app ; sans,
+    un point tiré au hasard dans la zone de B.
+
     Les tirages aléatoires sont consommés exactement de la même façon quel que soit le rythme :
     seul le rythme change d'un scénario à l'autre. Renvoie l'état caché [n, jours, 6], les
-    relevés θ et les jours de demande.
+    relevés θ et les demandes réellement envoyées [n, jours].
     """
     rng = np.random.default_rng([seed, 3])
     policy = LearnedPolicy(networks, personal=True)
     natural = people.natural
     n_people, n_days, _ = natural.shape
-    asked_days = schedule(n_days, every)
+    planned = schedule(n_days, every)
+    sent = np.zeros((n_people, n_days), dtype=bool)
     state = natural.copy()
     boost = np.zeros((n_people, natural.shape[2]))
     theta = np.full((n_people, n_days * SLOTS, len(SIGNALS)), np.nan, dtype=np.float32)
@@ -331,57 +428,89 @@ def live_with_rhythm(
         if day >= n_days - REWARD_DELAY_DAYS:
             break
         rng.random(n_people)  # le tirage « demande ou pas » de simulate_policy, ici ignoré
-        asked = np.full(n_people, asked_days[day])
+        asked = np.full(n_people, planned[day])
         slot = rng.integers(0, SLOTS, n_people)
         moment = Moment(day, slot, theta, asked, state[:, day], rules)
         low, high, startup = (np.clip(v, 0.0, 1.0) for v in policy.zones(moment))
         axes = np.empty((n_people, len(AXES)))
         axes[:, :INTERVAL_AXES] = low + rng.random(low.shape) * (high - low)
         axes[:, INTERVAL_AXES] = rng.random(n_people) * startup
+        if writer is not None:
+            for i in np.flatnonzero(asked):
+                written = writer.write(int(i), day, low[i], high[i], float(startup[i]))
+                if written is None:
+                    asked[i] = False
+                else:
+                    axes[i] = written
+        sent[:, day] = asked
+        moment = Moment(day, slot, theta, asked, state[:, day], rules)
         reaction = patient.react(rng, rules, state[:, day], axes, people.traits["chattiness"])
         policy.feedback(moment, axes, reaction)
         boost = patient.EFFECT_DECAY * boost + np.where(asked[:, None], reaction.effect, 0.0)
-    return state, theta, asked_days
+    return state, theta, sent
 
 
 def wellbeing_part(
-    networks: Networks, people: People, rules: patient.Rules, l_ref, seed: int, out: Path
+    networks: Networks,
+    people: People,
+    rules: patient.Rules,
+    l_ref,
+    seed: int,
+    out: Path,
+    partners: dict[int, Pairing],
 ) -> tuple[dict, list[str]]:
     severity = distance(people.natural, *l_ref).mean(axis=1)
     order = np.argsort(severity)
     chosen = {
-        "Patient sévère": order[int(0.9 * (len(order) - 1))],
-        "Patient moyen": order[len(order) // 2],
-        "Patient léger": order[int(0.1 * (len(order) - 1))],
+        "Patient sévère": int(order[int(0.9 * (len(order) - 1))]),
+        "Patient moyen": int(order[len(order) // 2]),
+        "Patient léger": int(order[int(0.1 * (len(order) - 1))]),
     }
     trio_people, trio_rules = subset(people, rules, np.array(list(chosen.values())))
+    couples = [partners[index] for index in chosen.values()]
     days = np.arange(people.natural.shape[1])
 
-    curves = {}
+    curves, writers = {}, {}
     for rhythm, every in RHYTHMS.items():
-        state, theta, asked_days = live_with_rhythm(networks, trio_people, trio_rules, every, seed)
+        writer = RequestWriter(couples, seed)
+        state, theta, sent = live_with_rhythm(
+            networks, trio_people, trio_rules, every, seed, writer
+        )
         latent = measured_states(networks, theta).reshape(len(chosen), len(days), SLOTS, -1)
         real = distance(state, *l_ref)
         seen = networks.distance(np.nanmean(latent, axis=2))
-        curves[rhythm] = (real, seen, asked_days)
+        curves[rhythm], writers[rhythm] = (real, seen, sent), writer
 
-    summary: dict[str, dict] = {}
+    providers = {s.provider for w in writers.values() for texts in w.sent for s in texts}
+    empty = sum(w.empty_days for w in writers.values())
+    summary: dict[str, dict] = {"generateur": sorted(providers), "jours_sans_demande": empty}
     lines = [
         "## 3. Bien-être dans le temps",
+        "",
+        "Sans aide, le patient suit sa trajectoire naturelle générée. Avec aide, chaque demande "
+        "est écrite comme dans l'app : zone du réseau B, textes du générateur pour les intérêts "
+        "du couple formé en partie 1, mesure sur les six axes, choix par `select_three`. Le "
+        "patient simulé réagit au texte envoyé. Entre deux demandes, l'état suit la trajectoire "
+        "naturelle, et l'effet des demandes passées s'estompe d'un quart par jour.",
+        "",
+        f"Générateur utilisé : **{', '.join(sorted(providers)) or 'aucun'}**. Jours prévus où "
+        f"aucune demande générée n'entrait dans la zone (rien n'est alors envoyé) : {empty}.",
         "",
         "Ordonnée : la distance à la zone saine, d. Une personne saine typique est autour de 1. "
         "**L'axe est retourné : plus la courbe monte, mieux le patient va.** En haut, l'état "
         "réel (caché, la vérité du simulateur) ; en bas, l'état mesuré L(θ), ce que l'app voit. "
-        "Chaque trait vertical en bas d'un graphe est une demande. Mêmes tirages pour les "
+        "Chaque trait vertical sous un graphe est une demande envoyée. Mêmes tirages pour les "
         "quatre rythmes : seule l'aide change.",
         "",
-        "| Patient | Rythme | d réel, 4 dernières semaines | d mesuré, 4 dernières semaines |",
-        "|---|---|---|---|",
+        "| Patient | Intérêts du patient / de son aidant | Rythme | Demandes envoyées "
+        "| d réel, 4 dernières semaines | d mesuré, 4 dernières semaines |",
+        "|---|---|---|---|---|---|",
     ]
     for k, (name, _) in enumerate(chosen.items()):
         figure, (top, bottom) = plt.subplots(2, 1, figsize=(10, 7), sharex=True)
         summary[name] = {}
-        for rhythm, (real, seen, asked_days) in curves.items():
+        mine, theirs = couples[k]
+        for rhythm, (real, seen, sent) in curves.items():
             color = COLORS[rhythm]
             top.plot(days, real[k], color=color, label=rhythm, linewidth=1.8)
             bottom.plot(days, seen[k], color=color, label=rhythm, linewidth=1.4)
@@ -390,7 +519,7 @@ def wellbeing_part(
                 level = list(RHYTHMS).index(rhythm)
                 for axis in (top, bottom):
                     axis.eventplot(
-                        days[asked_days],
+                        days[sent[k]],
                         lineoffsets=-0.03 - 0.035 * level,
                         linelengths=0.03,
                         colors=color,
@@ -398,9 +527,16 @@ def wellbeing_part(
                         clip_on=False,
                     )
             last = slice(-28, None)
-            row = {"reel": float(real[k, last].mean()), "mesure": float(np.nanmean(seen[k, last]))}
+            row = {
+                "demandes": int(sent[k].sum()),
+                "reel": float(real[k, last].mean()),
+                "mesure": float(np.nanmean(seen[k, last])),
+            }
             summary[name][rhythm] = row
-            lines.append(f"| {name} | {rhythm} | {row['reel']:.2f} | {row['mesure']:.2f} |")
+            lines.append(
+                f"| {name} | {', '.join(mine)} / {', '.join(theirs)} | {rhythm} "
+                f"| {row['demandes']} | {row['reel']:.2f} | {row['mesure']:.2f} |"
+            )
         for axis, title in (
             (top, "État réel (caché)"),
             (bottom, "État mesuré L(θ), ce que l'app voit"),
@@ -424,13 +560,67 @@ def wellbeing_part(
         figure.savefig(out / file, dpi=130, bbox_inches="tight")
         plt.close(figure)
         lines += ["", f"![{name}]({file})", ""]
+
+    examples = writers["Tous les 3 jours"].sent[list(chosen).index("Patient moyen")][:6]
+    lines += [
+        "### Les premières demandes envoyées au patient moyen, tous les 3 jours",
+        "",
+        "| Jour | Format | Positions (intérêts, concret, durée, échange, exposition, "
+        "démarrage) | Texte |",
+        "|---|---|---|---|",
+    ]
+    for item in examples:
+        positions = ", ".join(f"{value:.2f}" for value in item.axes)
+        lines.append(f"| {item.day} | {item.format} | {positions} | {item.text} |")
+    lines.append("")
     return summary, lines
 
 
 # --- Tout enchaîner ----------------------------------------------------------------------------
 
 
-def run(n_patients: int, n_days: int, seed: int, weights: Path, out: Path) -> dict:
+@dataclass
+class GeminiMeter:
+    """Compte les appels à Gemini et les tokens facturés, pour estimer la dépense."""
+
+    calls: int = 0
+    embedded_texts: int = 0
+    embedded_chars: int = 0
+    prompt_tokens: int = 0
+    output_tokens: int = 0
+
+    def install(self) -> None:
+        original = gemini._post
+
+        def counted(path: str, body: dict) -> dict:
+            data = original(path, body)
+            self.calls += 1
+            if path.endswith(":batchEmbedContents"):
+                texts = [part["text"] for r in body["requests"] for part in r["content"]["parts"]]
+                self.embedded_texts += len(texts)
+                self.embedded_chars += sum(len(text) for text in texts)
+            usage = data.get("usageMetadata", {})
+            self.prompt_tokens += int(usage.get("promptTokenCount", 0))
+            self.output_tokens += int(usage.get("candidatesTokenCount", 0))
+            self.output_tokens += int(usage.get("thoughtsTokenCount", 0))
+            return data
+
+        gemini._post = counted
+
+    def lines(self) -> list[str]:
+        return [
+            "## Consommation Gemini",
+            "",
+            f"- {self.calls} appels ; génération : {self.prompt_tokens} tokens en entrée, "
+            f"{self.output_tokens} en sortie (réflexion comprise) ; embeddings : "
+            f"{self.embedded_texts} textes, environ {self.embedded_chars // 4} tokens.",
+            "",
+        ]
+
+
+def run(
+    n_patients: int, n_days: int, seed: int, weights: Path, out: Path, meter: GeminiMeter | None
+) -> dict:
     out.mkdir(parents=True, exist_ok=True)
     networks = Networks.load(weights)
     healthy_share = 0.4
@@ -450,10 +640,11 @@ def run(n_patients: int, n_days: int, seed: int, weights: Path, out: Path) -> di
         "",
     ]
     rng = np.random.default_rng([seed, 4])
-    matching, part1 = matching_part(rng, n_patients, out)
+    matching, part1, partners = matching_part(rng, n_patients, out)
     convergence, part2 = convergence_part(networks, people, rules, l_ref, seed, out)
-    wellbeing, part3 = wellbeing_part(networks, people, rules, l_ref, seed, out)
-    text = "\n".join(header + part1 + part2 + part3) + "\n"
+    wellbeing, part3 = wellbeing_part(networks, people, rules, l_ref, seed, out, partners)
+    part4 = meter.lines() if meter is not None else []
+    text = "\n".join(header + part1 + part2 + part3 + part4).rstrip("\n") + "\n"
     (out / "rapport.md").write_text(text, encoding="utf-8", newline="\n")
     return {"appariement": matching, "convergence": convergence, "bien_etre": wellbeing}
 
@@ -465,9 +656,26 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=2026)
     parser.add_argument("--weights", type=Path, default=Path("ml/weights"))
     parser.add_argument("--out", type=Path, default=Path("ml/data/e2e"))
+    parser.add_argument(
+        "--gemini",
+        action="store_true",
+        help="écrire les demandes avec Gemini (payant, clé dans .env) ; sinon banque hors ligne",
+    )
     args = parser.parse_args()
-    run(args.patients, args.days, args.seed, args.weights, args.out)
+    meter = None
+    if args.gemini:
+        load_env_file()
+        if not gemini.is_configured():
+            raise SystemExit("--gemini demandé, mais aucune clé GEMINI_API_KEY dans .env.")
+        meter = GeminiMeter()
+        meter.install()
+    else:
+        for name in ("GEMINI_API_KEY", "GOOGLE_API_KEY"):
+            os.environ.pop(name, None)  # aucun appel payant par accident
+    run(args.patients, args.days, args.seed, args.weights, args.out, meter)
     print(f"Rapport écrit dans {args.out / 'rapport.md'}")
+    if meter is not None:
+        print("\n".join(meter.lines()))
 
 
 if __name__ == "__main__":
