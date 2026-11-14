@@ -102,6 +102,7 @@ backend/
 ml/
   model.py           # CONTRAT : zone_for, learn (modèle de zone SIMULÉ) et tout ce que le backend importe
   pipeline.py        # générer -> mesurer λ -> filtrer -> choisir trois demandes
+  matching.py        # appariement patient–aidant : profils d'intérêts, couverture, mariages stables
   gemini.py          # client REST Gemini (génération JSON, embeddings)
   lexicon.py         # mode hors ligne : banque de demandes et mesure par mots-clés
   formats.py         # grille fixe des formats et de leur effort
@@ -185,6 +186,7 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Appariement patient–aidant : un vecteur par élément d'intérêt (chaque tag, chaque phrase du commentaire libre), tout comparé à tout ; score = moyenne, sur les éléments du patient, de leur meilleur cosinus chez l'aidant ; puis mariages stables où les patients proposent et où les aidants ajoutent un bonus d'attente — un intérêt écrit en tag chez l'un et en commentaire chez l'autre doit se retrouver, seule compte la couverture des intérêts du patient, et ceux qui attendent depuis longtemps passent devant.
 - 2026-11-14 — Hooks `pre-commit-hooks` lancés via `python -m` (champ `entry`) — Smart App Control de Windows 11 bloque les .exe non signés que pip génère, ce qui rendait tout commit impossible.
 - 2026-11-14 — La partie personnelle se réduit à un vecteur de 8 nombres par patient, lu par A et par B. **Cela remplace la dernière couche par patient décidée plus bas** — 715 nombres pour B, c'était trop pour une trentaine de réactions par mois.
 - 2026-11-14 — B ne reçoit pas le texte des centres d'intérêt — sa sortie sur cet axe est une position entre les deux sujets, quels qu'ils soient ; le texte sert au choix de la paire, à Gemini et à la mesure.
