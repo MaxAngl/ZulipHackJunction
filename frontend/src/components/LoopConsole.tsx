@@ -1,9 +1,12 @@
 import type { LoopState } from '../api/client'
+import AxesPanel from './AxesPanel'
+import StatePanel from './StatePanel'
 import ZoneAxis from './ZoneAxis'
 
 type LoopConsoleProps = {
   state: LoopState
-  // Valeur affichée du curseur : celle du serveur, ou celle en cours de réglage.
+  // Valeur affichée du curseur : le niveau caché du patient virtuel, celui du serveur ou
+  // celui en cours de réglage.
   theta: number
   busy: boolean
   onTheta: (value: number) => void
@@ -30,7 +33,7 @@ function LoopConsole({ state, theta, busy, onTheta, onRun }: LoopConsoleProps) {
     <section className="console" aria-label="Loop console">
       <div className="sensor">
         <label htmlFor="theta">
-          <span className="sensor-title">Patient state θ</span>
+          <span className="sensor-title">Virtual patient, hidden level</span>
           <span className="sensor-value">{theta.toFixed(2)}</span>
         </label>
         <input
@@ -44,12 +47,18 @@ function LoopConsole({ state, theta, busy, onTheta, onRun }: LoopConsoleProps) {
         />
         <div className="sensor-ends">
           <span>very low</span>
-          <span>Simulated sensor. Nothing is asked of the patient.</span>
+          <span>
+            The networks never see this. They read it back from the signals.
+          </span>
           <span>very well</span>
         </div>
       </div>
 
       <dl className="metrics">
+        <div>
+          <dt>State read</dt>
+          <dd>{state.theta.toFixed(2)}</dd>
+        </div>
         <div>
           <dt>Zone centre</dt>
           <dd>{zone.center.toFixed(2)}</dd>
@@ -59,10 +68,6 @@ function LoopConsole({ state, theta, busy, onTheta, onRun }: LoopConsoleProps) {
           <dd>± {zone.half_width.toFixed(2)}</dd>
         </div>
         <div>
-          <dt>Effort ceiling</dt>
-          <dd>{zone.effort_max.toFixed(2)}</dd>
-        </div>
-        <div>
           <dt>Personal shift</dt>
           <dd>
             {model.offset > 0 ? '+' : ''}
@@ -70,6 +75,12 @@ function LoopConsole({ state, theta, busy, onTheta, onRun }: LoopConsoleProps) {
           </dd>
         </div>
       </dl>
+
+      <StatePanel
+        components={state.state ?? []}
+        distance={state.distance ?? 0}
+        signals={state.signals ?? []}
+      />
 
       <ZoneAxis
         zone={zone}
@@ -98,6 +109,13 @@ function LoopConsole({ state, theta, busy, onTheta, onRun }: LoopConsoleProps) {
         {proposed.length} proposed
       </p>
 
+      <AxesPanel
+        zone={zone}
+        candidates={round.candidates}
+        message={round.message ?? null}
+        vector={model.vector ?? []}
+      />
+
       {round.message && (
         <p
           className={
@@ -122,11 +140,18 @@ function LoopConsole({ state, theta, busy, onTheta, onRun }: LoopConsoleProps) {
       {round.stage === 'answered' && lastEntry && (
         <p className="xray">
           <strong>Learned</strong> · state {lastEntry.theta_before.toFixed(2)} →{' '}
-          {lastEntry.theta_after.toFixed(2)} · reward{' '}
-          {lastEntry.reward > 0 ? '+' : ''}
-          {lastEntry.reward.toFixed(2)} · zone centre{' '}
+          {lastEntry.theta_after.toFixed(2)} a day later · reward{' '}
+          {lastEntry.reward.toFixed(0)} / 100 · zone centre{' '}
           {lastEntry.center_before.toFixed(2)} →{' '}
           {lastEntry.center_after.toFixed(2)}
+          {lastEntry.fit != null && (
+            <>
+              <br />
+              Hidden truth of the virtual patient: this request suited them at{' '}
+              {(lastEntry.fit * 100).toFixed(0)} %
+              {lastEntry.overload ? ', and it was too heavy' : ''}.
+            </>
+          )}
         </p>
       )}
 
@@ -152,8 +177,13 @@ function LoopConsole({ state, theta, busy, onTheta, onRun }: LoopConsoleProps) {
           : 'Requests from the built-in bank (no Gemini key)'}
         {generator.note && ` · ${generator.note}`}
         <br />
-        Zone model: simulated stand-in, {model.observations} answer
-        {model.observations === 1 ? '' : 's'} so far.
+        State, zone and personal vector: three networks trained on simulated
+        patients
+        {model.parameters
+          ? ` (${Math.round(model.parameters / 1000)}k parameters)`
+          : ''}
+        . {model.observations} answer
+        {model.observations === 1 ? '' : 's'} from this patient so far.
       </p>
     </section>
   )

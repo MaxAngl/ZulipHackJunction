@@ -13,7 +13,7 @@ from typing import Any
 
 from ml import gemini, lexicon
 from ml.embedding import cosine, embed_texts
-from ml.formats import FORMATS, effort_of, guess_format
+from ml.formats import FORMATS, effort_of, guess_format, request_axes
 from ml.types import Candidate, InterestPair, Provider, ProviderInfo, Review, Slot, Zone
 
 logger = logging.getLogger(__name__)
@@ -267,20 +267,24 @@ def _measure(
     ]
     if provider == "gemini":
         _calibrate([raw for raw, _ in measured], [draft.intended for draft in drafts])
-    return [
-        Candidate(
-            id=uuid.uuid4().hex[:8],
-            text=draft.text,
-            pair=pairs[draft.pair_index],
-            lam=0.0 if off_topic else round(_rescaled(raw, provider), 3),
-            format=draft.format,
-            effort=effort_of(draft.format),
-            off_topic=off_topic,
-            provider=provider,
-            intended=draft.intended,
+    candidates = []
+    for draft, (raw, off_topic) in zip(drafts, measured, strict=True):
+        lam = 0.0 if off_topic else round(_rescaled(raw, provider), 3)
+        candidates.append(
+            Candidate(
+                id=uuid.uuid4().hex[:8],
+                text=draft.text,
+                pair=pairs[draft.pair_index],
+                lam=lam,
+                format=draft.format,
+                effort=effort_of(draft.format),
+                off_topic=off_topic,
+                provider=provider,
+                intended=draft.intended,
+                axes=request_axes(lam, draft.format),
+            )
         )
-        for draft, (raw, off_topic) in zip(drafts, measured, strict=True)
-    ]
+    return candidates
 
 
 def generate_candidates(
@@ -391,6 +395,7 @@ def measure_message(
         effort=review.effort,
         off_topic=off_topic,
         provider=provider,
+        axes=request_axes(lam, review.format),
     )
     return candidate, review
 
@@ -400,13 +405,13 @@ def select_three(
 ) -> list[tuple[Slot, Candidate]]:
     """Étape 6 : trois demandes de la zone, volontairement différentes.
 
-    - best : la plus proche du centre de la zone ;
+    - best : la plus proche du cœur de la zone, sur tous ses axes ;
     - bridge : la meilleure d'une autre paire de centres d'intérêt ;
     - explore : un format pas encore essayé avec ce patient, sinon le bord de la zone.
     S'il y a moins de trois demandes dans la zone, on en renvoie moins : on ne triche pas.
     """
-    inside = [c for c in candidates if not c.off_topic and zone.contains(c.lam, c.effort)]
-    inside.sort(key=lambda c: abs(c.lam - zone.center))
+    inside = [c for c in candidates if not c.off_topic and zone.contains(c.lam, c.effort, c.axes)]
+    inside.sort(key=lambda c: zone.shortfall(c.lam, c.axes))
     if not inside:
         return []
 

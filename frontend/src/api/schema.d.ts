@@ -52,7 +52,7 @@ export interface paths {
         put?: never;
         /**
          * Set Theta
-         * @description Étape 1 : nouvelle mesure de l'état du patient (capteur simulé).
+         * @description Étape 1 : change l'état de fond du patient virtuel ; θ et L(θ) sont relus.
          */
         post: operations["set_theta_api_loop_theta_post"];
         delete?: never;
@@ -326,7 +326,7 @@ export interface paths {
         put?: never;
         /**
          * Patient Reply
-         * @description Étapes 9 à 12 : le patient répond, son état est réestimé, la zone s'ajuste.
+         * @description Étapes 9 à 12 : le patient répond, son état est relu, son vecteur s'ajuste.
          */
         post: operations["patient_reply_api_app_patient_reply_post"];
         delete?: never;
@@ -363,7 +363,7 @@ export interface paths {
         put?: never;
         /**
          * Patient State
-         * @description Entrée pour un capteur externe : il pousse l'état θ du patient.
+         * @description Entrée de démonstration : fixe le niveau de fond du corps virtuel du patient.
          */
         post: operations["patient_state_api_app_patient_state_post"];
         delete?: never;
@@ -431,6 +431,31 @@ export interface components {
             interests: string[];
         };
         /**
+         * AxisState
+         * @description Ce que la zone permet sur l'un des six axes d'une demande.
+         */
+        AxisState: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Low
+             * @description Borne basse : un objectif, jamais une obligation
+             */
+            low: number;
+            /**
+             * High
+             * @description Borne haute : sur un axe de coût, jamais dépassée
+             */
+            high: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "interval" | "ceiling";
+        };
+        /**
          * CandidateState
          * @description Une demande générée, puis mesurée.
          */
@@ -470,6 +495,28 @@ export interface components {
              * @enum {string}
              */
             provider: "gemini" | "offline";
+            /**
+             * Axes
+             * @description Position sur les six axes
+             */
+            axes?: number[];
+        };
+        /**
+         * ComponentState
+         * @description Une des six composantes de l'état L(θ) du patient.
+         */
+        ComponentState: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
+            /**
+             * Reference
+             * @description Moyenne des personnes saines : L_ref
+             */
+            reference: number;
         };
         /** DeclineRequest */
         DeclineRequest: {
@@ -566,24 +613,43 @@ export interface components {
              * @enum {string}
              */
             action: "helped" | "ignored";
-            /** Theta Before */
+            /**
+             * Theta Before
+             * @description Moyenne de L(θ) avant la demande
+             */
             theta_before: number;
-            /** Theta Expected */
+            /**
+             * Theta Expected
+             * @description Obsolète : égal à theta_before
+             */
             theta_expected: number;
-            /** Theta After */
+            /**
+             * Theta After
+             * @description Moyenne de L(θ) vingt-quatre heures après
+             */
             theta_after: number;
             /**
              * Reward
-             * @description θ après − θ attendu
+             * @description De 0 à 100 : le patient s'est-il rapproché de L_ref ? 50 = rien n'a changé
              */
             reward: number;
             /** Center Before */
             center_before: number;
             /**
              * Center After
-             * @description Centre de la zone au même θ, après apprentissage
+             * @description Centre de la zone au même état, après apprentissage
              */
             center_after: number;
+            /**
+             * Fit
+             * @description Vérité cachée du patient virtuel : la demande lui convenait-elle
+             */
+            fit?: number | null;
+            /**
+             * Overload
+             * @description Vérité cachée : de combien elle dépassait ce qu'il supporte
+             */
+            overload?: number | null;
         };
         /** InterestPair */
         InterestPair: {
@@ -614,9 +680,31 @@ export interface components {
             helpers: components["schemas"]["Person"][];
             /**
              * Theta
-             * @description État du patient (capteur simulé)
+             * @description Moyenne des six composantes de L(θ)
              */
             theta: number;
+            /**
+             * Level
+             * @description Niveau de fond caché du patient virtuel, réglé par le curseur de la démo
+             * @default 0.5
+             */
+            level: number;
+            /**
+             * State
+             * @description L(θ) : l'état lu par l'autoencodeur
+             */
+            state?: components["schemas"]["ComponentState"][];
+            /**
+             * Distance
+             * @description Distance de L(θ) à L_ref
+             * @default 0
+             */
+            distance: number;
+            /**
+             * Signals
+             * @description θ : les 25 signaux bruts du dernier relevé
+             */
+            signals?: components["schemas"]["SignalState"][];
             /** Formats */
             formats: components["schemas"]["FormatState"][];
             zone: components["schemas"]["ZoneState"];
@@ -663,22 +751,38 @@ export interface components {
              * @description Pourquoi le message est retenu, s'il l'est
              */
             hold_reason: string | null;
+            /**
+             * Axes
+             * @description Position sur les six axes
+             */
+            axes?: number[];
         };
         /** ModelState */
         ModelState: {
             /**
              * Kind
-             * @default simulated
-             * @constant
+             * @default networks
+             * @enum {string}
              */
-            kind: "simulated";
+            kind: "simulated" | "networks";
             /**
              * Offset
-             * @description Correction personnelle du centre de la zone
+             * @description Écart entre le centre de la zone et celui du modèle général
              */
             offset: number;
             /** Observations */
             observations: number;
+            /**
+             * Parameters
+             * @description Nombre de paramètres des trois réseaux
+             * @default 0
+             */
+            parameters: number;
+            /**
+             * Vector
+             * @description Vecteur personnel du patient : 8 nombres
+             */
+            vector?: number[];
         };
         /** PatientHome */
         PatientHome: {
@@ -703,6 +807,7 @@ export interface components {
             request_id: string;
             /** Text */
             text: string;
+            typing?: components["schemas"]["TypingSignals"] | null;
         };
         /** RespondRequest */
         RespondRequest: {
@@ -711,6 +816,7 @@ export interface components {
              * @enum {string}
              */
             action: "helped" | "ignored";
+            typing?: components["schemas"]["TypingSignals"] | null;
         };
         /** RoundState */
         RoundState: {
@@ -753,6 +859,26 @@ export interface components {
             token: string;
             user: components["schemas"]["AppUser"];
         };
+        /**
+         * SignalState
+         * @description Un des signaux bruts de θ, au dernier relevé.
+         */
+        SignalState: {
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /**
+             * Modality
+             * @description watch, app ou touch
+             */
+            modality: string;
+            /**
+             * Value
+             * @description Absente si le signal n'a pas été relevé
+             */
+            value: number | null;
+        };
         /** ThanksRequest */
         ThanksRequest: {
             /** Request Id */
@@ -764,6 +890,35 @@ export interface components {
         ThetaRequest: {
             /** Theta */
             theta: number;
+        };
+        /**
+         * TypingSignals
+         * @description Ce que l'app relève pendant que le patient écrit sa réponse.
+         *
+         *     Des durées et des comptes, jamais les caractères tapés. Ce sont les trois signaux de frappe
+         *     de θ (docs/modele.md, section 11).
+         */
+        TypingSignals: {
+            /**
+             * Characters
+             * @description Caractères tapés, effacements compris
+             */
+            characters: number;
+            /**
+             * Corrections
+             * @description Nombre d'effacements
+             */
+            corrections: number;
+            /**
+             * Open Delay Seconds
+             * @description Entre l'arrivée de la demande et son ouverture
+             */
+            open_delay_seconds?: number | null;
+            /**
+             * First Key Delay Seconds
+             * @description Entre l'ouverture et la première touche
+             */
+            first_key_delay_seconds?: number | null;
         };
         /**
          * ZoneState
@@ -781,19 +936,24 @@ export interface components {
             high: number;
             /**
              * Half Width
-             * @description Demi-largeur : l'incertitude du modèle
+             * @description Demi-largeur de l'intervalle sur l'axe λ
              */
             half_width: number;
             /**
              * Effort Max
-             * @description Effort maximal acceptable, entre 0 et 1
+             * @description Effort du format le plus lourd que la zone permet
              */
             effort_max: number;
             /**
              * Common Center
-             * @description Centre du modèle commun, avant correction
+             * @description Centre du modèle général, sans vecteur personnel
              */
             common_center: number;
+            /**
+             * Axes
+             * @description La zone sur les six axes, sortie par le réseau B
+             */
+            axes?: components["schemas"]["AxisState"][];
         };
     };
     responses: never;

@@ -45,7 +45,7 @@
     "/api/loop/theta": {
       "post": {
         "summary": "Set Theta",
-        "description": "Étape 1 : nouvelle mesure de l'état du patient (capteur simulé).",
+        "description": "Étape 1 : change l'état de fond du patient virtuel ; θ et L(θ) sont relus.",
         "operationId": "set_theta_api_loop_theta_post",
         "requestBody": {
           "content": {
@@ -1335,7 +1335,7 @@
     "/api/app/patient/reply": {
       "post": {
         "summary": "Patient Reply",
-        "description": "Étapes 9 à 12 : le patient répond, son état est réestimé, la zone s'ajuste.",
+        "description": "Étapes 9 à 12 : le patient répond, son état est relu, son vecteur s'ajuste.",
         "operationId": "patient_reply_api_app_patient_reply_post",
         "parameters": [
           {
@@ -1548,7 +1548,7 @@
     "/api/app/patient/state": {
       "post": {
         "summary": "Patient State",
-        "description": "Entrée pour un capteur externe : il pousse l'état θ du patient.",
+        "description": "Entrée de démonstration : fixe le niveau de fond du corps virtuel du patient.",
         "operationId": "patient_state_api_app_patient_state_post",
         "parameters": [
           {
@@ -1783,6 +1783,46 @@
         ],
         "title": "AppUser"
       },
+      "AxisState": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "low": {
+            "type": "number",
+            "title": "Low",
+            "description": "Borne basse : un objectif, jamais une obligation"
+          },
+          "high": {
+            "type": "number",
+            "title": "High",
+            "description": "Borne haute : sur un axe de coût, jamais dépassée"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "interval",
+              "ceiling"
+            ],
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "low",
+          "high",
+          "kind"
+        ],
+        "title": "AxisState",
+        "description": "Ce que la zone permet sur l'un des six axes d'une demande."
+      },
       "CandidateState": {
         "properties": {
           "id": {
@@ -1861,6 +1901,14 @@
               "offline"
             ],
             "title": "Provider"
+          },
+          "axes": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Axes",
+            "description": "Position sur les six axes"
           }
         },
         "type": "object",
@@ -1880,6 +1928,38 @@
         ],
         "title": "CandidateState",
         "description": "Une demande générée, puis mesurée."
+      },
+      "ComponentState": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "value": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Value"
+          },
+          "reference": {
+            "type": "number",
+            "title": "Reference",
+            "description": "Moyenne des personnes saines : L_ref"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "value",
+          "reference"
+        ],
+        "title": "ComponentState",
+        "description": "Une des six composantes de l'état L(θ) du patient."
       },
       "DeclineRequest": {
         "properties": {
@@ -2085,20 +2165,23 @@
           },
           "theta_before": {
             "type": "number",
-            "title": "Theta Before"
+            "title": "Theta Before",
+            "description": "Moyenne de L(θ) avant la demande"
           },
           "theta_expected": {
             "type": "number",
-            "title": "Theta Expected"
+            "title": "Theta Expected",
+            "description": "Obsolète : égal à theta_before"
           },
           "theta_after": {
             "type": "number",
-            "title": "Theta After"
+            "title": "Theta After",
+            "description": "Moyenne de L(θ) vingt-quatre heures après"
           },
           "reward": {
             "type": "number",
             "title": "Reward",
-            "description": "θ après − θ attendu"
+            "description": "De 0 à 100 : le patient s'est-il rapproché de L_ref ? 50 = rien n'a changé"
           },
           "center_before": {
             "type": "number",
@@ -2107,7 +2190,31 @@
           "center_after": {
             "type": "number",
             "title": "Center After",
-            "description": "Centre de la zone au même θ, après apprentissage"
+            "description": "Centre de la zone au même état, après apprentissage"
+          },
+          "fit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fit",
+            "description": "Vérité cachée du patient virtuel : la demande lui convenait-elle"
+          },
+          "overload": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overload",
+            "description": "Vérité cachée : de combien elle dépassait ce qu'il supporte"
           }
         },
         "type": "object",
@@ -2200,7 +2307,37 @@
             "maximum": 1.0,
             "minimum": 0.0,
             "title": "Theta",
-            "description": "État du patient (capteur simulé)"
+            "description": "Moyenne des six composantes de L(θ)"
+          },
+          "level": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Level",
+            "description": "Niveau de fond caché du patient virtuel, réglé par le curseur de la démo",
+            "default": 0.5
+          },
+          "state": {
+            "items": {
+              "$ref": "#/components/schemas/ComponentState"
+            },
+            "type": "array",
+            "title": "State",
+            "description": "L(θ) : l'état lu par l'autoencodeur"
+          },
+          "distance": {
+            "type": "number",
+            "title": "Distance",
+            "description": "Distance de L(θ) à L_ref",
+            "default": 0.0
+          },
+          "signals": {
+            "items": {
+              "$ref": "#/components/schemas/SignalState"
+            },
+            "type": "array",
+            "title": "Signals",
+            "description": "θ : les 25 signaux bruts du dernier relevé"
           },
           "formats": {
             "items": {
@@ -2317,6 +2454,14 @@
             ],
             "title": "Hold Reason",
             "description": "Pourquoi le message est retenu, s'il l'est"
+          },
+          "axes": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Axes",
+            "description": "Position sur les six axes"
           }
         },
         "type": "object",
@@ -2340,18 +2485,35 @@
         "properties": {
           "kind": {
             "type": "string",
-            "const": "simulated",
+            "enum": [
+              "simulated",
+              "networks"
+            ],
             "title": "Kind",
-            "default": "simulated"
+            "default": "networks"
           },
           "offset": {
             "type": "number",
             "title": "Offset",
-            "description": "Correction personnelle du centre de la zone"
+            "description": "Écart entre le centre de la zone et celui du modèle général"
           },
           "observations": {
             "type": "integer",
             "title": "Observations"
+          },
+          "parameters": {
+            "type": "integer",
+            "title": "Parameters",
+            "description": "Nombre de paramètres des trois réseaux",
+            "default": 0
+          },
+          "vector": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Vector",
+            "description": "Vecteur personnel du patient : 8 nombres"
           }
         },
         "type": "object",
@@ -2426,6 +2588,16 @@
             "maxLength": 1000,
             "minLength": 1,
             "title": "Text"
+          },
+          "typing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TypingSignals"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -2444,6 +2616,16 @@
               "ignored"
             ],
             "title": "Action"
+          },
+          "typing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TypingSignals"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -2572,6 +2754,44 @@
         "title": "SessionResponse",
         "description": "Le jeton identifie l'appareil. Il est renvoyé dans l'en-tête `X-Needed-Token`."
       },
+      "SignalState": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "modality": {
+            "type": "string",
+            "title": "Modality",
+            "description": "watch, app ou touch"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value",
+            "description": "Absente si le signal n'a pas été relevé"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "unit",
+          "modality",
+          "value"
+        ],
+        "title": "SignalState",
+        "description": "Un des signaux bruts de θ, au dernier relevé."
+      },
       "ThanksRequest": {
         "properties": {
           "request_id": {
@@ -2607,6 +2827,55 @@
         ],
         "title": "ThetaRequest"
       },
+      "TypingSignals": {
+        "properties": {
+          "characters": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Characters",
+            "description": "Caractères tapés, effacements compris"
+          },
+          "corrections": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Corrections",
+            "description": "Nombre d'effacements"
+          },
+          "open_delay_seconds": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Delay Seconds",
+            "description": "Entre l'arrivée de la demande et son ouverture"
+          },
+          "first_key_delay_seconds": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Key Delay Seconds",
+            "description": "Entre l'ouverture et la première touche"
+          }
+        },
+        "type": "object",
+        "required": [
+          "characters",
+          "corrections"
+        ],
+        "title": "TypingSignals",
+        "description": "Ce que l'app relève pendant que le patient écrit sa réponse.\n\nDes durées et des comptes, jamais les caractères tapés. Ce sont les trois signaux de frappe\nde θ (docs/modele.md, section 11)."
+      },
       "ZoneState": {
         "properties": {
           "center": {
@@ -2625,17 +2894,25 @@
           "half_width": {
             "type": "number",
             "title": "Half Width",
-            "description": "Demi-largeur : l'incertitude du modèle"
+            "description": "Demi-largeur de l'intervalle sur l'axe λ"
           },
           "effort_max": {
             "type": "number",
             "title": "Effort Max",
-            "description": "Effort maximal acceptable, entre 0 et 1"
+            "description": "Effort du format le plus lourd que la zone permet"
           },
           "common_center": {
             "type": "number",
             "title": "Common Center",
-            "description": "Centre du modèle commun, avant correction"
+            "description": "Centre du modèle général, sans vecteur personnel"
+          },
+          "axes": {
+            "items": {
+              "$ref": "#/components/schemas/AxisState"
+            },
+            "type": "array",
+            "title": "Axes",
+            "description": "La zone sur les six axes, sortie par le réseau B"
           }
         },
         "type": "object",

@@ -1,0 +1,188 @@
+/* Panneaux du modèle dans la console : l'état L(θ), la zone sur six axes, les signaux bruts.
+   Dans un fichier à part pour ne pas toucher à index.css. */
+
+.model-panel {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.model-panel h3 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.model-panel .model-note {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.model-rows {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.model-row {
+  display: grid;
+  grid-template-columns: 124px 1fr 76px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.model-row .model-label {
+  color: var(--ink);
+}
+
+.model-row .model-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.model-track {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+  background: var(--surface-soft);
+}
+
+/* État : une barre pleine jusqu'à la valeur, et un trait à la référence des personnes saines. */
+.model-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 5px;
+  background: var(--ink);
+}
+
+.model-reference {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--cyan-deep);
+}
+
+/* Zone : la bande permise sur l'axe, et les demandes proposées posées dessus. */
+.model-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 5px;
+  background: var(--cyan-wash);
+  border: 1px solid var(--cyan);
+}
+
+.model-band-ceiling {
+  border-style: dashed;
+}
+
+.model-mark {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--cyan);
+  color: var(--on-cyan);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
+
+.model-mark-sent {
+  border-radius: 2px;
+  background: var(--ink);
+  transform: rotate(45deg);
+}
+
+.model-mark-out {
+  background: var(--neutral-dot);
+}
+
+.signals {
+  margin-top: 14px;
+  font-size: 12px;
+}
+
+.signals summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.signals-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.signals-group h4 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.signals-group dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  margin: 0;
+}
+
+.signals-group dt {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signals-group dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.signals-group .signal-missing {
+  color: var(--neutral-dot);
+}
+
+.vector {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  height: 22px;
+}
+
+.vector-cell {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  background: var(--surface-soft);
+  border-radius: 2px;
+}
+
+.vector-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--ink);
+}
+
+@media (max-width: 720px) {
+  .model-row {
+    grid-template-columns: 96px 1fr 64px;
+  }
+
+  .signals-groups {
+    grid-template-columns: 1fr;
+  }
+}

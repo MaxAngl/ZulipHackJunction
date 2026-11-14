@@ -82,6 +82,39 @@ def sweet_spots(rules: Rules, state: np.ndarray) -> tuple[np.ndarray, np.ndarray
     return interest, concrete
 
 
+def _judge(
+    rules: Rules, state: np.ndarray, axes: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Ce que vaut une demande pour chaque patient, sans aucun tirage.
+
+    Renvoie à quel point elle lui convient, de combien elle dépasse ce qu'il supporte, et ce
+    qu'elle change à son état s'il y répond ou s'il la laisse sans réponse.
+    """
+    costs, cap = axes[:, 2:6], capacities(rules, state)
+    interest, concrete = sweet_spots(rules, state)
+    gap = (axes[:, 0] - interest) ** 2 + (axes[:, 1] - concrete) ** 2
+    fit = np.exp(-gap / (2.0 * SWEET_SPOT_WIDTH**2))
+    overload = np.clip(costs - cap, 0.0, None).sum(axis=1)
+    # La dose : à quel point la demande mobilise le patient, dans la limite de ce qu'il supporte.
+    dose = (np.minimum(costs[:, :3], cap[:, :3]) / cap[:, :3]).mean(axis=1)
+    helped = rules.gain * fit * (0.3 + 0.7 * dose) - OVERLOAD_COST * overload
+    ignored = -IGNORED_COST * (1.0 + 3.0 * overload)
+    return fit, overload, helped, ignored
+
+
+def effect_of(
+    rules: Rules, state: np.ndarray, axes: np.ndarray, replied: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Effet d'une demande sur l'état quand on sait déjà si le patient a répondu.
+
+    Sert quand la réponse vient d'une vraie personne, ou d'un bouton de démonstration, et non
+    d'un tirage. Renvoie l'effet [n, 6], l'adéquation [n] et la surcharge [n].
+    """
+    fit, overload, helped, ignored = _judge(rules, state, axes)
+    size = np.where(replied, helped, ignored)
+    return size[:, None] * EFFECT_BY_COMPONENT, fit, overload
+
+
 def react(
     rng: np.random.Generator,
     rules: Rules,
@@ -91,13 +124,7 @@ def react(
 ) -> Reaction:
     """Réaction de chaque patient à la demande placée en `axes` : [n, 6] dans l'ordre de AXES."""
     n_people = len(state)
-    costs, cap = axes[:, 2:6], capacities(rules, state)
-    interest, concrete = sweet_spots(rules, state)
-    gap = (axes[:, 0] - interest) ** 2 + (axes[:, 1] - concrete) ** 2
-    fit = np.exp(-gap / (2.0 * SWEET_SPOT_WIDTH**2))
-    overload = np.clip(costs - cap, 0.0, None).sum(axis=1)
-    # La dose : à quel point la demande mobilise le patient, dans la limite de ce qu'il supporte.
-    dose = (np.minimum(costs[:, :3], cap[:, :3]) / cap[:, :3]).mean(axis=1)
+    fit, overload, helped, ignored = _judge(rules, state, axes)
 
     engagement, energy = state[:, _ENGAGEMENT], state[:, _ENERGY]
     urge = (
@@ -115,8 +142,6 @@ def react(
         0.0, 12.0, n_people
     )
 
-    helped = rules.gain * fit * (0.3 + 0.7 * dose) - OVERLOAD_COST * overload
-    ignored = -IGNORED_COST * (1.0 + 3.0 * overload)
     size = np.where(replied, helped, ignored)
     return Reaction(
         replied=replied,
