@@ -15,6 +15,7 @@ from pathlib import Path
 
 from ml.formats import FORMATS, RequestFormat
 from ml.formats import label_of as format_label
+from ml.matching import InterestProfile, build_profile, stable_match
 from ml.pipeline import generate_candidates, measure_message, provider_info, select_three
 from ml.types import (
     Candidate,
@@ -31,6 +32,7 @@ __all__ = [
     "FORMATS",
     "Candidate",
     "InterestPair",
+    "InterestProfile",
     "Provider",
     "ProviderInfo",
     "RequestFormat",
@@ -38,6 +40,7 @@ __all__ = [
     "Slot",
     "Zone",
     "ZoneParams",
+    "build_profile",
     "common_center",
     "effort_cap",
     "format_label",
@@ -47,6 +50,7 @@ __all__ = [
     "measure_message",
     "provider_info",
     "select_three",
+    "stable_match",
     "zone_for",
 ]
 

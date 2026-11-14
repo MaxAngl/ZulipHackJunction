@@ -17,12 +17,15 @@ from backend.store import Store, StoredRequest, User
 from ml.model import (
     Candidate,
     InterestPair,
+    InterestProfile,
     Zone,
     ZoneParams,
+    build_profile,
     generate_candidates,
     learn,
     measure_message,
     select_three,
+    stable_match,
     zone_for,
 )
 
@@ -67,6 +70,7 @@ class Community:
         if not name.strip() or not cleaned:
             raise ApiError(422, "missing_profile", "Give a first name and at least one interest.")
         user = self.store.add_user(role, name.strip(), cleaned, INITIAL_THETA)
+        self._profile(user)  # vecteurs d'intérêts calculés une fois, ici
         return schemas.SessionResponse(token=user.token, user=_user(user))
 
     def signed_in(self, token: str | None, role: schemas.Role | None = None) -> User:
@@ -263,18 +267,38 @@ class Community:
         return next((item for item in requests if item.status == "delivered"), None)
 
     def _pick_patient(self, helper: User) -> User | None:
-        """Étape 3, sans apprentissage : le patient libre sollicité depuis le plus longtemps."""
+        """Étape 3 : le patient apparié à cet aidant par centres d'intérêt et temps d'attente.
+
+        Mariages stables entre les patients libres et tous les aidants (`ml/matching.py`). Un
+        aidant resté sans patient reçoit le patient libre qui attend depuis le plus longtemps.
+        """
         patients = [patient for patient in self.store.patients() if patient.id != helper.id]
         if not patients:
             return None
+        free = [patient for patient in patients if self._pending(patient) is None] or patients
 
-        def last_asked(patient: User) -> float:
-            # Jamais sollicité : il attend depuis son inscription.
-            requests = self.store.requests_of("patient", patient.id)
-            return requests[-1].created_at if requests else patient.created_at
+        now = time.time()
+        matched = stable_match(
+            {patient.id: self._profile(patient) for patient in free},
+            {other.id: self._profile(other) for other in self.store.helpers()},
+            {patient.id: now - self._last_asked(patient) for patient in free},
+        )
+        partner = next((patient for patient in free if matched.get(patient.id) == helper.id), None)
+        return partner or min(free, key=self._last_asked)
 
-        free = [patient for patient in patients if self._pending(patient) is None]
-        return min(free or patients, key=last_asked)
+    def _last_asked(self, patient: User) -> float:
+        """Date de la dernière demande ; jamais sollicité : il attend depuis son inscription."""
+        requests = self.store.requests_of("patient", patient.id)
+        return requests[-1].created_at if requests else patient.created_at
+
+    def _profile(self, user: User) -> InterestProfile:
+        """Profil d'intérêts enregistré, ou calculé et enregistré (comptes plus anciens)."""
+        saved = self.store.profile(user.id)
+        if saved is not None:
+            return InterestProfile.from_dict(saved)
+        profile = build_profile(user.interests)
+        self.store.save_profile(user.id, profile.to_dict())
+        return profile
 
     def _pairs(self, helper: User, patient: User) -> list[InterestPair]:
         turn = len(self.store.requests_of("patient", patient.id))

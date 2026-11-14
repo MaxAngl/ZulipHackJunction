@@ -1,6 +1,7 @@
 """Stockage de la vraie app : un fichier SQLite, avec la bibliothèque standard.
 
-Trois tables : les personnes, les demandes, et les propositions en attente de chaque aidant.
+Quatre tables : les personnes, les demandes, les propositions en attente de chaque aidant, et le
+profil d'intérêts de chaque personne (ses vecteurs, calculés une fois à l'inscription).
 Le journal des demandes (état avant et après, position, effort, réponse) est ce qui servira
 plus tard à entraîner le vrai modèle de zone.
 """
@@ -58,6 +59,10 @@ CREATE TABLE IF NOT EXISTS suggestions (
     patient_id TEXT NOT NULL,
     payload TEXT NOT NULL,
     created_at REAL NOT NULL
+);
+CREATE TABLE IF NOT EXISTS profiles (
+    user_id TEXT PRIMARY KEY,
+    payload TEXT NOT NULL
 );
 """
 
@@ -149,6 +154,20 @@ class Store:
     def patients(self) -> list[User]:
         rows = self._run("SELECT * FROM users WHERE role = 'patient' ORDER BY created_at")
         return [_user(row) for row in rows]
+
+    def helpers(self) -> list[User]:
+        rows = self._run("SELECT * FROM users WHERE role = 'helper' ORDER BY created_at")
+        return [_user(row) for row in rows]
+
+    def save_profile(self, user_id: str, payload: dict[str, Any]) -> None:
+        self._run(
+            "INSERT OR REPLACE INTO profiles (user_id, payload) VALUES (?, ?)",
+            (user_id, json.dumps(payload)),
+        )
+
+    def profile(self, user_id: str) -> dict[str, Any] | None:
+        rows = self._run("SELECT payload FROM profiles WHERE user_id = ?", (user_id,))
+        return json.loads(rows[0]["payload"]) if rows else None
 
     def save_patient_model(
         self,
