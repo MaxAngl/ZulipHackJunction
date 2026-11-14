@@ -1,85 +1,103 @@
 import { type ReactNode, useState } from 'react'
-import type { Role } from '../api/client'
-import { readUserProfile, saveUserProfile, type UserProfile } from '../session'
+import { ApiError, type AppUser, type Thread, updateMe } from '../api/client'
+import { pickedImage } from '../images'
 
 type ProfileViewProps = {
-  role: Role
-  name: string
+  user: AppUser
+  token: string
+  // Les fils de la personne : ses échanges des sept derniers jours en sont tirés.
+  threads: Thread[]
+  onUpdated: (user: AppUser) => void
   onLeave?: () => void
   // Cartes en plus, affichées avant les réglages (ex. la montre Garmin du patient).
   children?: ReactNode
 }
 
-function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
-  const [profile, setProfile] = useState<UserProfile | null>(() =>
-    readUserProfile(role),
+const DAY_MS = 24 * 60 * 60 * 1000
+
+// Les réponses données (patient) ou reçues (aidant), jour par jour sur la dernière semaine.
+function lastSevenDays(threads: Thread[]) {
+  const replies = threads.flatMap((thread) =>
+    thread.messages.filter((message) => message.kind === 'reply'),
   )
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Array.from({ length: 7 }, (_, index) => {
+    const start = today.getTime() - (6 - index) * DAY_MS
+    const count = replies.filter((message) => {
+      const at = message.created_at * 1000
+      return at >= start && at < start + DAY_MS
+    }).length
+    const day = new Date(start).toLocaleDateString('en-GB', {
+      weekday: 'short',
+    })
+    return { day, count }
+  })
+}
+
+function ProfileView({
+  user,
+  token,
+  threads,
+  onUpdated,
+  onLeave,
+  children,
+}: ProfileViewProps) {
+  const role = user.role
+  const name = `${user.first_name} ${user.last_name}`.trim()
   const [isEditing, setIsEditing] = useState(false)
-  const [bioInput, setBioInput] = useState(() => profile?.bio ?? '')
+  const [bioInput, setBioInput] = useState(user.bio)
   const [passionPhotos, setPassionPhotos] = useState<string[]>(
-    () => profile?.passionPhotos ?? [],
+    user.passion_photos,
   )
-  const [allowProfileView, setAllowProfileView] = useState<boolean>(
-    () => profile?.allowProfileView ?? true,
+  const [allowProfileView, setAllowProfileView] = useState(
+    user.allow_profile_view,
   )
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const avatarUrl =
-    profile?.avatarUrl ??
-    (role === 'patient' ? '/moomins/Muumipeikko2.jpg' : undefined)
-
-  function handleSaveProfileExtras() {
-    if (!profile) return
-    const updated: UserProfile = {
-      ...profile,
-      bio: bioInput.trim(),
-      passionPhotos,
-      allowProfileView,
+  async function handleSaveProfileExtras() {
+    setSaving(true)
+    setError(null)
+    try {
+      const updated = await updateMe(token, {
+        bio: bioInput.trim(),
+        passion_photos: passionPhotos,
+        allow_profile_view: allowProfileView,
+      })
+      onUpdated(updated)
+      setIsEditing(false)
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : 'The server is not responding.',
+      )
+    } finally {
+      setSaving(false)
     }
-    saveUserProfile(role, updated)
-    setProfile(updated)
-    setIsEditing(false)
   }
 
-  function handleAddPassionPhoto(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-    const remainingSlots = 3 - passionPhotos.length
-    if (remainingSlots <= 0) return
-
-    const toProcess = Math.min(files.length, remainingSlots)
-    for (let i = 0; i < toProcess; i++) {
-      const file = files[i]
-      if (!file.type.startsWith('image/')) continue
-      const reader = new FileReader()
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setPassionPhotos((prev) => {
-            if (prev.length >= 3) return prev
-            return [...prev, reader.result as string]
-          })
-        }
-      }
-      reader.readAsDataURL(file)
-    }
+  async function handleAddPassionPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
+    const room = 3 - passionPhotos.length
+    for (const file of files.slice(0, Math.max(0, room))) {
+      if (!file.type.startsWith('image/')) continue
+      const photo = await pickedImage(file)
+      setPassionPhotos((prev) => (prev.length >= 3 ? prev : [...prev, photo]))
+    }
   }
 
   function handleRemovePassionPhoto(idx: number) {
     setPassionPhotos((prev) => prev.filter((_, i) => i !== idx))
   }
 
-  // Realistic support statistics
-  const servicesCount = role === 'patient' ? 7 : 4
-  const historyData = [
-    { day: 'Mon', count: 1 },
-    { day: 'Tue', count: 2 },
-    { day: 'Wed', count: 1 },
-    { day: 'Thu', count: 3 },
-    { day: 'Fri', count: 5 },
-    { day: 'Sat', count: 6 },
-    { day: 'Sun', count: 7 },
-  ]
+  // Services rendus (patient) ou reçus (aidant) : les demandes qui ont une réponse.
+  const servicesCount = threads.filter(
+    (thread) => thread.kind === 'request' && thread.status === 'answered',
+  ).length
+  const historyData = lastSevenDays(threads)
   const maxVal = Math.max(...historyData.map((d) => d.count), 1)
+  const avatarUrl = user.avatar_url
 
   return (
     <section className="stack profile-view">
@@ -94,9 +112,7 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
             </div>
           )}
         </div>
-        <h2 className="profile-display-name">
-          {profile ? `${profile.firstName} ${profile.lastName}`.trim() : name}
-        </h2>
+        <h2 className="profile-display-name">{name}</h2>
         <span className="profile-role-pill">
           {role === 'helper'
             ? 'Volunteer Helper · Community Helper'
@@ -120,7 +136,8 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
         {/* Support evolution chart */}
         <div className="achievements-graph-wrap">
           <span className="quiet font-small block mb-1">
-            Support exchanges over the last 7 days:
+            Answers {role === 'patient' ? 'you gave' : 'you received'} over the
+            last 7 days:
           </span>
           <div className="achievements-chart">
             {historyData.map((d, idx) => {
@@ -246,9 +263,9 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
               type="button"
               className="button button-ghost button-small"
               onClick={() => {
-                setBioInput(profile?.bio ?? '')
-                setPassionPhotos(profile?.passionPhotos ?? [])
-                setAllowProfileView(profile?.allowProfileView ?? true)
+                setBioInput(user.bio)
+                setPassionPhotos(user.passion_photos)
+                setAllowProfileView(user.allow_profile_view)
                 setIsEditing(true)
               }}
             >
@@ -266,9 +283,10 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
               <button
                 type="button"
                 className="button button-primary button-small"
-                onClick={handleSaveProfileExtras}
+                disabled={saving}
+                onClick={() => void handleSaveProfileExtras()}
               >
-                Save
+                {saving ? 'Saving…' : 'Save'}
               </button>
             </div>
           )}
@@ -276,8 +294,8 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
 
         {!isEditing ? (
           <div className="stack-compact">
-            {profile?.bio ? (
-              <p className="profile-bio-text">{profile.bio}</p>
+            {user.bio ? (
+              <p className="profile-bio-text">{user.bio}</p>
             ) : (
               <p className="quiet font-small italic">No bio provided yet.</p>
             )}
@@ -285,11 +303,11 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
             {/* Passion photos */}
             <div className="profile-passion-photos-section">
               <span className="font-small quiet block mb-1">
-                Passion photos ({profile?.passionPhotos?.length ?? 0}/3):
+                Passion photos ({user.passion_photos.length}/3):
               </span>
-              {(profile?.passionPhotos?.length ?? 0) > 0 ? (
+              {user.passion_photos.length > 0 ? (
                 <div className="passion-photos-grid">
-                  {profile?.passionPhotos?.map((pic, i) => (
+                  {user.passion_photos.map((pic, i) => (
                     <div key={i} className="passion-photo-card">
                       <img
                         src={pic}
@@ -310,7 +328,7 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
             <div className="profile-privacy-status-pill">
               <span className="status-dot-indicator" />
               <span className="font-small">
-                {profile?.allowProfileView !== false
+                {user.allow_profile_view
                   ? 'Profile visible in your conversations'
                   : 'Private profile (peers cannot view details)'}
               </span>
@@ -363,7 +381,7 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
                       accept="image/*"
                       multiple
                       className="visually-hidden"
-                      onChange={handleAddPassionPhoto}
+                      onChange={(event) => void handleAddPassionPhoto(event)}
                     />
                     <span className="passion-add-icon">+</span>
                     <span className="font-small quiet">Add</span>
@@ -390,26 +408,42 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
         )}
       </div>
 
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+
       {/* Personal information */}
       <div className="profile-details-card stack-compact">
         <span className="eyebrow">Personal Information</span>
-        {profile?.birthDate && (
+        <div className="profile-info-row">
+          <span className="profile-info-label">Email</span>
+          <strong className="profile-info-value">{user.email}</strong>
+        </div>
+        {user.birth_date && (
           <div className="profile-info-row">
             <span className="profile-info-label">Date of birth</span>
-            <strong className="profile-info-value">{profile.birthDate}</strong>
+            <strong className="profile-info-value">{user.birth_date}</strong>
           </div>
         )}
-        {profile?.city && (
+        {user.city && (
           <div className="profile-info-row">
             <span className="profile-info-label">Location</span>
-            <strong className="profile-info-value">{profile.city}</strong>
+            <strong className="profile-info-value">{user.city}</strong>
           </div>
         )}
-        {role === 'patient' && profile?.clinicianEmail && (
+        <div className="profile-info-row">
+          <span className="profile-info-label">Interests</span>
+          <strong className="profile-info-value">
+            {user.interests.join(', ')}
+          </strong>
+        </div>
+        {role === 'patient' && user.clinician_email && (
           <div className="profile-info-row">
             <span className="profile-info-label">Referring clinician</span>
             <strong className="profile-info-value">
-              {profile.clinicianEmail}
+              {user.clinician_email}
             </strong>
           </div>
         )}
@@ -427,7 +461,7 @@ function ProfileView({ role, name, onLeave, children }: ProfileViewProps) {
             className="button button-wide"
             onClick={onLeave}
           >
-            Sign out / Switch account
+            Sign out
           </button>
         )}
       </div>

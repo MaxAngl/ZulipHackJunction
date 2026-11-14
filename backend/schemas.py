@@ -9,7 +9,12 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 
 Role = Literal["helper", "patient"]
+AccountRole = Literal["helper", "patient", "clinician", "admin"]
 Interest = Annotated[str, Field(min_length=1, max_length=40)]
+Email = Annotated[str, Field(min_length=3, max_length=120, pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+# Une image est une adresse du site (`/moomins/…`) ou une image encodée (`data:image/…`),
+# réduite par le front avant l'envoi.
+ImageUrl = Annotated[str, Field(max_length=400_000)]
 Stage = Literal["idle", "proposed", "held", "sent", "answered"]
 Slot = Literal["best", "bridge", "explore"]
 Provider = Literal["gemini", "offline"]
@@ -232,21 +237,85 @@ class RespondRequest(BaseModel):
 # --- La vraie app : comptes, demandes et réponses entre de vraies personnes ---------------
 
 
-class JoinRequest(BaseModel):
+class Ack(BaseModel):
+    status: Literal["ok"] = "ok"
+
+
+class SignupRequest(BaseModel):
+    """Inscription d'un aidant ou d'un patient. Cliniciens et admins sont créés par l'équipe."""
+
     role: Role
-    name: str = Field(min_length=1, max_length=40)
+    email: Email
+    password: str = Field(min_length=6, max_length=128)
+    first_name: str = Field(min_length=1, max_length=40)
+    last_name: str = Field(default="", max_length=40)
+    city: str = Field(default="", max_length=60)
+    birth_date: str = Field(default="", max_length=10, description="AAAA-MM-JJ")
     interests: list[Interest] = Field(min_length=1, max_length=8)
+    bio: str = Field(default="", max_length=300, description="Compte dans l'appariement")
+    avatar_url: ImageUrl | None = None
+    passion_photos: list[ImageUrl] = Field(default_factory=list, max_length=3)
+    clinician_email: Email | None = None
+    allow_profile_view: bool = True
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=1, max_length=128)
+
+
+class ProfileUpdate(BaseModel):
+    """Champs du profil à changer ; ceux qui manquent restent tels quels."""
+
+    first_name: str | None = Field(default=None, min_length=1, max_length=40)
+    last_name: str | None = Field(default=None, max_length=40)
+    city: str | None = Field(default=None, max_length=60)
+    birth_date: str | None = Field(default=None, max_length=10)
+    interests: list[Interest] | None = Field(default=None, min_length=1, max_length=8)
+    bio: str | None = Field(default=None, max_length=300)
+    avatar_url: ImageUrl | None = None
+    passion_photos: list[ImageUrl] | None = Field(default=None, max_length=3)
+    clinician_email: Email | None = None
+    allow_profile_view: bool | None = None
 
 
 class AppUser(BaseModel):
+    """Le compte connecté, tel que son propriétaire le voit."""
+
+    id: str
+    role: AccountRole
+    email: str
+    name: str = Field(description="Prénom")
+    first_name: str
+    last_name: str
+    city: str
+    birth_date: str
+    bio: str
+    avatar_url: str | None
+    passion_photos: list[str]
+    clinician_email: str | None
+    allow_profile_view: bool
+    interests: list[str]
+    created_at: float
+
+
+class PublicProfile(BaseModel):
+    """Ce qu'un autre membre voit. Profil privé : seulement le prénom, le rôle et l'avatar."""
+
     id: str
     role: Role
-    name: str
+    name: str = Field(description="Prénom")
+    last_name: str
+    city: str
+    avatar_url: str | None
+    bio: str
     interests: list[str]
+    passion_photos: list[str]
+    visible: bool = Field(description="Faux si la personne garde son profil privé")
 
 
 class SessionResponse(BaseModel):
-    """Le jeton identifie l'appareil. Il est renvoyé dans l'en-tête `X-Needed-Token`."""
+    """Le jeton identifie la session. Il est renvoyé dans l'en-tête `X-Needed-Token`."""
 
     token: str
     user: AppUser
@@ -273,11 +342,24 @@ class AppRequest(BaseModel):
     created_at: float
 
 
+class OpenNeed(BaseModel):
+    """Un besoin publié par un patient, que personne n'a encore pris."""
+
+    id: str
+    text: str
+    created_at: float
+    patient: PublicProfile
+
+
 class HelperHome(BaseModel):
     user: AppUser
     patient_name: str | None = Field(description="La personne à qui s'adressent les propositions")
+    patient: PublicProfile | None = Field(
+        default=None, description="Son profil, tel qu'elle accepte de le montrer"
+    )
     proposals: list[AppProposal]
     requests: list[AppRequest]
+    needs: list[OpenNeed] = Field(default_factory=list)
 
 
 class PatientHome(BaseModel):
@@ -299,6 +381,156 @@ class DeclineRequest(BaseModel):
 class ThanksRequest(BaseModel):
     request_id: str
     text: str = Field(min_length=1, max_length=300)
+
+
+# --- Fils de discussion : une demande d'aidant, ou un besoin publié par un patient ------------
+
+
+class Attachment(BaseModel):
+    type: Literal["image", "video", "file"]
+    name: str = Field(max_length=120)
+    url: str = Field(max_length=3_000_000, description="Fichier encodé (data URL)")
+    size: str | None = Field(default=None, max_length=20)
+
+
+ThreadStatus = Literal["to_answer", "on_its_way", "answered", "declined", "open", "taken"]
+MessageKind = Literal["request", "reply", "thanks", "need", "message"]
+
+
+class ThreadMessage(BaseModel):
+    id: str
+    mine: bool
+    sender_name: str
+    kind: MessageKind
+    text: str
+    attachments: list[Attachment]
+    created_at: float
+
+
+class Thread(BaseModel):
+    """Un fil vu par l'un des deux. `id` est celui de la demande ou du besoin."""
+
+    id: str
+    kind: Literal["request", "need"]
+    status: ThreadStatus
+    peer: PublicProfile | None = Field(description="Vide tant qu'aucun aidant n'a pris le besoin")
+    messages: list[ThreadMessage]
+    updated_at: float
+    can_write: bool
+    thanked: bool = Field(
+        description="Demande : l'aidant a déjà dit ce que la réponse lui a apporté"
+    )
+
+
+class ThreadsResponse(BaseModel):
+    threads: list[Thread]
+
+
+class MessageRequest(BaseModel):
+    """Message dans un fil. Patient face à une demande : c'est sa réponse (frappe relevée).
+    Aidant après la réponse : son premier message est son merci."""
+
+    text: str = Field(default="", max_length=1000)
+    attachments: list[Attachment] = Field(default_factory=list, max_length=4)
+    typing: TypingSignals | None = None
+
+
+class NeedRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=600)
+
+
+class FeedbackRequest(BaseModel):
+    category: Literal["bug", "question", "suggestion", "other"]
+    message: str = Field(min_length=1, max_length=1000)
+
+
+# --- Clinicien : ses patients, sans le contenu de leurs échanges ---------------------------
+
+
+class ClinicianNotes(BaseModel):
+    mood: str = Field(default="", max_length=300)
+    proud: str = Field(default="", max_length=300)
+    loves: str = Field(default="", max_length=300)
+
+
+class ClinicianNotesView(ClinicianNotes):
+    updated_at: float
+
+
+class TrendPoint(BaseModel):
+    at: float
+    wellbeing: float = Field(ge=0, le=1)
+
+
+class ClinicianPatient(BaseModel):
+    id: str
+    first_name: str
+    last_name: str
+    city: str
+    birth_date: str
+    avatar_url: str | None
+    interests: list[str]
+    bio: str
+    joined_at: float
+    wellbeing: float = Field(description="Bien-être lu par les réseaux, de 0 à 1")
+    answered: int
+    declined: int
+    waiting: int
+    last_activity: float | None
+    trend: list[TrendPoint]
+    notes: ClinicianNotesView | None
+
+
+class ClinicianHome(BaseModel):
+    user: AppUser
+    patients: list[ClinicianPatient]
+
+
+# --- Admin : la communauté entière, et les messages envoyés à l'équipe ----------------------
+
+
+class AdminMember(BaseModel):
+    id: str
+    role: AccountRole
+    name: str = Field(description="Prénom et nom")
+    email: str
+    city: str
+    avatar_url: str | None
+    interests: list[str]
+    created_at: float
+    activity: int = Field(description="Demandes envoyées (aidant) ou reçues (patient)")
+
+
+class AdminExchange(BaseModel):
+    id: str
+    kind: Literal["request", "need"]
+    from_name: str
+    to_name: str | None
+    text: str
+    status: Literal["held", "delivered", "answered", "declined", "open", "taken"]
+    reply: str | None
+    created_at: float
+
+
+class AdminFeedback(BaseModel):
+    id: str
+    sender_name: str
+    sender_role: Literal["helper", "patient", "clinician", "admin", "visitor"]
+    category: Literal["bug", "question", "suggestion", "other"]
+    message: str
+    created_at: float
+    resolved: bool
+
+
+class AdminHome(BaseModel):
+    user: AppUser
+    members: list[AdminMember]
+    exchanges: list[AdminExchange]
+    feedback: list[AdminFeedback]
+
+
+class ResolveRequest(BaseModel):
+    resolved: bool
 
 
 # --- Montre Garmin (app Connect IQ) ---------------------------------------------------------

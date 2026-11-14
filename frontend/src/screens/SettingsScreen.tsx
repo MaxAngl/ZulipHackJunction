@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
+import { ApiError, sendFeedback } from '../api/client'
 import Logo from '../components/Logo'
 import {
-  type AdminContactMessage,
   type ThemePreference,
+  readMemberToken,
   readThemePreference,
-  readUserProfile,
-  saveAdminContactMessage,
   saveThemePreference,
 } from '../session'
 
@@ -40,10 +39,6 @@ const CATEGORIES: CategoryOption[] = [
 
 function SettingsScreen() {
   const [theme, setTheme] = useState<ThemePreference>(readThemePreference)
-
-  const helperProfile = readUserProfile('helper')
-  const patientProfile = readUserProfile('patient')
-  const activeProfile = helperProfile || patientProfile
 
   const [category, setCategory] = useState<
     'bug' | 'question' | 'suggestion' | 'other'
@@ -84,31 +79,20 @@ function SettingsScreen() {
     saveThemePreference(newTheme)
   }
 
-  function handleSendMessage(e: React.FormEvent) {
+  const [sendError, setSendError] = useState<string | null>(null)
+
+  async function handleSendMessage(e: React.FormEvent) {
     e.preventDefault()
     if (!message.trim()) return
-
-    const newMessage: AdminContactMessage = {
-      id: `admin-msg-${Date.now()}`,
-      senderName: activeProfile
-        ? `${activeProfile.firstName} ${activeProfile.lastName}`.trim()
-        : 'Community Member',
-      senderRole: helperProfile
-        ? 'helper'
-        : patientProfile
-          ? 'patient'
-          : 'visitor',
-      category,
-      message: message.trim(),
-      timestamp: new Date().toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }),
-      resolved: false,
+    setSendError(null)
+    try {
+      await sendFeedback(readMemberToken(), category, message.trim())
+    } catch (err) {
+      setSendError(
+        err instanceof ApiError ? err.message : 'The server is not responding.',
+      )
+      return
     }
-
-    saveAdminContactMessage(newMessage)
     setMessage('')
     setIsDropdownOpen(false)
     setSentSuccess(true)
@@ -226,7 +210,7 @@ function SettingsScreen() {
           </div>
 
           <form
-            onSubmit={handleSendMessage}
+            onSubmit={(event) => void handleSendMessage(event)}
             className="stack"
             style={{ gap: '16px' }}
           >
@@ -366,6 +350,12 @@ function SettingsScreen() {
                 Send to Administrator
               </button>
             </div>
+
+            {sendError && (
+              <p className="error" role="alert">
+                {sendError}
+              </p>
+            )}
 
             {sentSuccess && (
               <div

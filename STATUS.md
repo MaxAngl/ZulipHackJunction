@@ -31,9 +31,13 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 14:45] **Nouvelle dépendance `garminconnect`** (issue #24) : relancer `uv sync` après le prochain `git pull`. Nouveau dossier `garmin/` qui pousse θ sur la route existante `POST /api/app/patient/state`. `pyproject.toml` (dépendance, `testpaths`), `.pre-commit-config.yaml` (pytest sur `garmin/`), `uv.lock`, `.env.example` et `AGENTS.md` sont modifiés. Aucun contrat touché.
 - [14/11 15:45] **Contrat d'API étendu** (issue #27) : routes `/api/watch/*` (la montre) et `GET/POST/DELETE /api/app/patient/watch` (l'écran patient). Rien n'est retiré. **Contrat ML étendu** : `ml.model` exporte `theta_from_watch`. Nouvelle app Connect IQ dans `watch/`, nouveau bloc « Your watch » dans l'onglet Profil du patient (composant `WatchLink.tsx`). L'estimation de θ passe de `garmin/state.py` à `ml/watch.py`.
 
+- [14/11 18:00] **Contrat d'API changé** (issue #46) : `/api/app/join` est **supprimé**, remplacé par `/api/app/signup` (e-mail, mot de passe, profil complet) et `/api/app/login` (tous les comptes) ; nouvelles routes `/api/app/logout`, `PATCH /api/app/me`, `/api/app/threads/*`, `/api/app/patient/needs`, `/api/app/helper/needs/{id}/take`, `/api/app/feedback`, `/api/clinician/*`, `/api/admin/*`. `AppUser` porte tout le profil ; `HelperHome` gagne `patient` et `needs`. `contract/openapi.json` et `schema.d.ts` sont régénérés.
+- [14/11 18:00] **Base remise à zéro** (issue #46) : nouveau schéma. Au premier démarrage, l'ancienne `data/needed.db` est renommée en `.bak`. Pour une base de démo : `uv run python -m backend.seed` (serveur arrêté). Comptes, tous avec le mot de passe `needed` : aidants `clara@`, `thomas@`, `elena@` ; patients `julien@`, `sofia@`, `lucas@` ; clinicien `clinic@` ; admin `admin@` (tous `@needed.demo`).
+- [14/11 18:00] Le front ne simule plus rien (issue #46) : `SIMULATION_ACCOUNTS`, les fils, besoins, notes et messages en `localStorage` sont supprimés de `session.ts`. Les PR #35 et #39 sont reprises dans #46 ; #41 entre en conflit (connexion).
+
 ## Max (Claude Code)
 
-- **En cours :** #29, les réseaux branchés dans l'app (PR ouverte, à faire relire). Trois PR à merger dans l'ordre : #20 (θ), #22 (réseaux), #29 (branchement) ; chacune part de la précédente.
+- **En cours :** #46, la finalisation : comptes à mot de passe, front branché sur le backend, base de démo. Parcours éprouvé dans le navigateur le 14/11 (inscription, propositions Gemini, réponse, merci, messages et photo, besoin d'un patient, refus, clinicien, admin, déconnexion et reconnexion).
 - [14/11 16:30] L'app tourne sur les réseaux, console et vraie app. Seul le patient reste simulé (`ml/virtual.py`). Ce qui reste à faire pour sortir de la simulation : `docs/modele.md`, section 8.
 - [14/11 15:30] Résultat en boucle fermée sur des patients jamais vus : le réseau B fait nettement mieux que la règle fixe. Chiffres et limites : `docs/modele.md`, section 14. Tout est simulé.
 - [14/11 15:30] Pour réentraîner : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`, puis `uv run python -m ml.nets.train` et `uv run python -m ml.nets.evaluate`. Une dizaine de minutes sur CPU.
@@ -52,8 +56,8 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Si Gemini donne des λ tassés ou incohérents, regarder `lambda_position` dans `ml/pipeline.py` et les trois phrases de référence de `ml/check_gemini.py`.
   - Démo sur deux téléphones : `?view=helper` et `?view=patient`, avec `npm --prefix frontend run dev -- --host`.
   - La console de démo garde son état en mémoire : un redémarrage la remet à zéro. La vraie app, elle, garde tout dans `data/needed.db` ; supprimer ce fichier repart de zéro.
-  - Vraie app sur deux téléphones : `npm --prefix frontend run dev -- --host`, puis `#/helper` sur l'un et `#/patient` sur l'autre. Sur une seule machine, les deux comptes cohabitent dans le même navigateur.
-  - La vraie app n'a ni mot de passe ni chiffrement : pas de vrais patients en l'état.
+  - Vraie app sur deux téléphones : `npm --prefix frontend run dev -- --host`, puis `#/login` sur chacun. Sur une seule machine, un compte aidant et un compte patient cohabitent dans le même navigateur (un jeton par rôle) ; le bandeau de notification est alors commun aux deux.
+  - Mot de passe haché, mais ni HTTPS ni chiffrement de la base, ni limite de tentatives : pas de vrais patients en l'état.
 
 ## Adel (Claude Code)
 

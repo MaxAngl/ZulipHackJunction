@@ -1,24 +1,34 @@
 import { useState } from 'react'
-import { getPatientHome } from '../api/client'
+import {
+  type AppUser,
+  declineThread,
+  getPatientHome,
+  postMessage,
+  postNeed,
+} from '../api/client'
 import BottomNav, { type TabType } from '../components/BottomNav'
 import ChatView from '../components/ChatView'
 import ProfileView from '../components/ProfileView'
 import WatchLink from '../components/WatchLink'
-import { readUserProfile, savePatientCommunityNeed } from '../session'
 import ScreenFrame from './ScreenFrame'
 import { useHome } from './useHome'
+import { useThreads } from './useThreads'
 
 type PatientScreenProps = {
   token: string
   onLeave: () => void
 }
 
-// L'écran du patient, dans la vraie app. Il répond aux demandes et peut aussi exprimer un besoin.
+// L'écran du patient. Il répond aux demandes (sa réponse, sa frappe et ses refus nourrissent
+// la boucle) et peut aussi confier un besoin à la communauté.
 function PatientScreen({ token, onLeave }: PatientScreenProps) {
   const { home, error } = useHome(token, getPatientHome, onLeave)
+  const chat = useThreads(token, 'patient', onLeave)
   const [activeTab, setActiveTab] = useState<TabType>('messages')
+  const [openId, setOpenId] = useState<string | null>(null)
   const [patientNeed, setPatientNeed] = useState('')
   const [sentNeedFeedback, setSentNeedFeedback] = useState(false)
+  const [updatedUser, setUpdatedUser] = useState<AppUser | null>(null)
 
   if (!home) {
     return (
@@ -28,68 +38,62 @@ function PatientScreen({ token, onLeave }: PatientScreenProps) {
     )
   }
 
-  const profile = readUserProfile('patient')
-  const unreadCount = home.inbox.length
+  const me = updatedUser ?? home.user
+  const threads = chat.threads ?? []
+  const toAnswer = threads.filter(
+    (thread) => thread.status === 'to_answer',
+  ).length
+  const myNeeds = threads.filter((thread) => thread.kind === 'need')
 
-  function handleSendNeed() {
-    if (!patientNeed.trim()) return
-    const needText = patientNeed.trim()
-    savePatientCommunityNeed({
-      id: `need-${Date.now()}`,
-      patientName:
-        profile && `${profile.firstName} ${profile.lastName}`.trim()
-          ? `${profile.firstName} ${profile.lastName}`.trim()
-          : (home?.user.name ?? 'Julien Mercier'),
-      patientAvatar: profile?.avatarUrl ?? '/moomins/Muumipeikko2.jpg',
-      text: needText,
-      timestamp: new Date().toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }),
-      answered: false,
-    })
-    setSentNeedFeedback(true)
+  async function handleSendNeed() {
+    const text = patientNeed.trim()
+    if (!text) return
+    const sent = await chat.run(() => postNeed(token, text))
+    if (!sent) return
     setPatientNeed('')
-    setTimeout(() => {
-      setSentNeedFeedback(false)
-      setActiveTab('messages')
-    }, 2000)
+    setSentNeedFeedback(true)
+    window.setTimeout(() => setSentNeedFeedback(false), 3000)
+  }
+
+  async function handleDecline(threadId: string) {
+    const done = await chat.run(() => declineThread(token, threadId))
+    if (done) setOpenId(null)
   }
 
   return (
     <ScreenFrame
-      name={home.user.name}
-      avatarUrl={profile?.avatarUrl}
+      name={me.first_name}
+      avatarUrl={me.avatar_url ?? undefined}
       onLeave={onLeave}
       bottomNav={
         <BottomNav
           activeTab={activeTab}
           onSelectTab={setActiveTab}
-          unreadBadge={unreadCount}
+          unreadBadge={toAnswer}
         />
       }
     >
       <main className="stack">
-        {error && (
+        {(error || chat.error) && (
           <p className="error" role="alert">
-            {error}
+            {error ?? chat.error}
           </p>
         )}
 
-        {/* Onglet 1 : Faire une demande (côté patient) */}
+        {/* Onglet 1 : demander un coup de main à la communauté */}
         {activeTab === 'request' && (
           <section className="stack text-center section-centered">
             <h1 className="text-center">Need a hand for something?</h1>
             <p className="quiet text-center">
-              You can also share a small question, ask for a recipe tip, or
-              request a quick hand from your trusted community circle.
+              Share a small question, ask for a tip, or request a quick hand. A
+              helper from the community will pick it up.
             </p>
 
             <div className="card-patient-ask stack">
               <textarea
                 rows={4}
                 value={patientNeed}
+                maxLength={600}
                 placeholder="e.g. Could someone recommend a quiet park walk in Helsinki, or give a tip on sourdough starter?"
                 aria-label="Your request to community"
                 onChange={(e) => setPatientNeed(e.target.value)}
@@ -98,33 +102,75 @@ function PatientScreen({ token, onLeave }: PatientScreenProps) {
                 <button
                   type="button"
                   className="button button-primary button-wide"
-                  disabled={patientNeed.trim() === ''}
-                  onClick={handleSendNeed}
+                  disabled={chat.busy || patientNeed.trim() === ''}
+                  onClick={() => void handleSendNeed()}
                 >
                   Share with community
                 </button>
               </div>
               {sentNeedFeedback && (
                 <span className="success-pill">
-                  ✓ Your request was discreetly shared with your helper circle!
+                  ✓ Shared. You will find the conversation in Messages.
                 </span>
               )}
             </div>
+
+            {myNeeds.length > 0 && (
+              <div className="stack text-left">
+                <p className="eyebrow">Your requests to the community</p>
+                {myNeeds.map((need) => (
+                  <button
+                    key={need.id}
+                    type="button"
+                    className="card-patient-need-banner text-left"
+                    onClick={() => {
+                      setOpenId(need.id)
+                      setActiveTab('messages')
+                    }}
+                  >
+                    <p className="patient-need-body">
+                      « {need.messages[0]?.text} »
+                    </p>
+                    <span className="quiet font-small">
+                      {need.status === 'open'
+                        ? 'Waiting for a helper'
+                        : `Picked up by ${need.peer?.name ?? 'a helper'}`}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
-        {/* Onglet 2 : Messagerie libre & multimédia */}
+        {/* Onglet 2 : les fils, demandes reçues en tête */}
         {activeTab === 'messages' && (
           <ChatView
             role="patient"
-            userName={home.user.name}
+            userId={me.id}
+            threads={threads}
+            busy={chat.busy}
+            openId={openId}
+            onOpen={setOpenId}
+            onSend={(threadId, text, attachments, typing) =>
+              chat.run(() =>
+                postMessage(token, threadId, text, attachments, typing),
+              )
+            }
+            onDecline={handleDecline}
             onStartNewRequest={() => setActiveTab('request')}
           />
         )}
 
-        {/* Onglet 3 : Mon profil, avec la montre Garmin */}
+        {/* Onglet 3 : mon profil, avec la montre Garmin */}
         {activeTab === 'profile' && (
-          <ProfileView role="patient" name={home.user.name} onLeave={onLeave}>
+          <ProfileView
+            user={me}
+            token={token}
+            threads={threads}
+            onUpdated={setUpdatedUser}
+            onLeave={onLeave}
+          >
             <WatchLink token={token} onSignedOut={onLeave} />
           </ProfileView>
         )}

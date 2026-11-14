@@ -161,7 +161,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/app/join": {
+    "/api/app/signup": {
         parameters: {
             query?: never;
             header?: never;
@@ -171,10 +171,50 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Join
-         * @description Inscription : un prénom, des centres d'intérêt, et un jeton pour cet appareil.
+         * Signup
+         * @description Inscription d'un aidant ou d'un patient : e-mail, mot de passe et profil.
          */
-        post: operations["join_api_app_join_post"];
+        post: operations["signup_api_app_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description Connexion de tout compte : aidant, patient, clinicien ou admin.
+         */
+        post: operations["login_api_app_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description Ferme cette session ; les autres sessions du même compte restent ouvertes.
+         */
+        post: operations["logout_api_app_logout_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -192,6 +232,198 @@ export interface paths {
         get: operations["me_api_app_me_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Me
+         * @description Change le profil ; de nouveaux centres d'intérêt ou une nouvelle bio refont l'appariement.
+         */
+        patch: operations["update_me_api_app_me_patch"];
+        trace?: never;
+    };
+    "/api/app/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Feedback
+         * @description Message à l'équipe, depuis les réglages. Connecté ou non.
+         */
+        post: operations["feedback_api_app_feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Threads */
+        get: operations["threads_api_app_threads_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/threads/{thread_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Message
+         * @description Écrit dans un fil. Patient face à une demande : sa réponse. Aidant ensuite : son merci.
+         */
+        post: operations["post_message_api_app_threads__thread_id__messages_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/threads/{thread_id}/decline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Decline Thread
+         * @description Le patient laisse passer une demande ; elle sort de son fil, la boucle en apprend.
+         */
+        post: operations["decline_thread_api_app_threads__thread_id__decline_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/patient/needs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Need
+         * @description Le patient demande un coup de main à la communauté.
+         */
+        post: operations["post_need_api_app_patient_needs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/app/helper/needs/{need_id}/take": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take Need
+         * @description Un aidant prend le besoin d'un patient ; un fil s'ouvre entre eux.
+         */
+        post: operations["take_need_api_app_helper_needs__need_id__take_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clinician": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clinician Home
+         * @description Les patients qui ont donné l'e-mail de ce clinicien, sans le contenu de leurs échanges.
+         */
+        get: operations["clinician_home_api_clinician_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/clinician/patients/{patient_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Clinician Notes */
+        put: operations["clinician_notes_api_clinician_patients__patient_id__notes_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Home */
+        get: operations["admin_home_api_admin_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/feedback/{feedback_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Resolve */
+        post: operations["admin_resolve_api_admin_feedback__feedback_id__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -478,6 +710,103 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Ack */
+        Ack: {
+            /**
+             * Status
+             * @default ok
+             * @constant
+             */
+            status: "ok";
+        };
+        /** AdminExchange */
+        AdminExchange: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "request" | "need";
+            /** From Name */
+            from_name: string;
+            /** To Name */
+            to_name: string | null;
+            /** Text */
+            text: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "held" | "delivered" | "answered" | "declined" | "open" | "taken";
+            /** Reply */
+            reply: string | null;
+            /** Created At */
+            created_at: number;
+        };
+        /** AdminFeedback */
+        AdminFeedback: {
+            /** Id */
+            id: string;
+            /** Sender Name */
+            sender_name: string;
+            /**
+             * Sender Role
+             * @enum {string}
+             */
+            sender_role: "helper" | "patient" | "clinician" | "admin" | "visitor";
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "bug" | "question" | "suggestion" | "other";
+            /** Message */
+            message: string;
+            /** Created At */
+            created_at: number;
+            /** Resolved */
+            resolved: boolean;
+        };
+        /** AdminHome */
+        AdminHome: {
+            user: components["schemas"]["AppUser"];
+            /** Members */
+            members: components["schemas"]["AdminMember"][];
+            /** Exchanges */
+            exchanges: components["schemas"]["AdminExchange"][];
+            /** Feedback */
+            feedback: components["schemas"]["AdminFeedback"][];
+        };
+        /** AdminMember */
+        AdminMember: {
+            /** Id */
+            id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "helper" | "patient" | "clinician" | "admin";
+            /**
+             * Name
+             * @description Prénom et nom
+             */
+            name: string;
+            /** Email */
+            email: string;
+            /** City */
+            city: string;
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Interests */
+            interests: string[];
+            /** Created At */
+            created_at: number;
+            /**
+             * Activity
+             * @description Demandes envoyées (aidant) ou reçues (patient)
+             */
+            activity: number;
+        };
         /**
          * AppProposal
          * @description Une demande proposée à l'aidant. Ni position, ni effort : il ne voit que le texte.
@@ -518,7 +847,10 @@ export interface components {
             /** Created At */
             created_at: number;
         };
-        /** AppUser */
+        /**
+         * AppUser
+         * @description Le compte connecté, tel que son propriétaire le voit.
+         */
         AppUser: {
             /** Id */
             id: string;
@@ -526,11 +858,53 @@ export interface components {
              * Role
              * @enum {string}
              */
-            role: "helper" | "patient";
-            /** Name */
+            role: "helper" | "patient" | "clinician" | "admin";
+            /** Email */
+            email: string;
+            /**
+             * Name
+             * @description Prénom
+             */
             name: string;
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /** City */
+            city: string;
+            /** Birth Date */
+            birth_date: string;
+            /** Bio */
+            bio: string;
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Passion Photos */
+            passion_photos: string[];
+            /** Clinician Email */
+            clinician_email: string | null;
+            /** Allow Profile View */
+            allow_profile_view: boolean;
             /** Interests */
             interests: string[];
+            /** Created At */
+            created_at: number;
+        };
+        /** Attachment */
+        Attachment: {
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "image" | "video" | "file";
+            /** Name */
+            name: string;
+            /**
+             * Url
+             * @description Fichier encodé (data URL)
+             */
+            url: string;
+            /** Size */
+            size?: string | null;
         };
         /**
          * AxisState
@@ -603,6 +977,87 @@ export interface components {
              */
             axes?: number[];
         };
+        /** ClinicianHome */
+        ClinicianHome: {
+            user: components["schemas"]["AppUser"];
+            /** Patients */
+            patients: components["schemas"]["ClinicianPatient"][];
+        };
+        /** ClinicianNotes */
+        ClinicianNotes: {
+            /**
+             * Mood
+             * @default
+             */
+            mood: string;
+            /**
+             * Proud
+             * @default
+             */
+            proud: string;
+            /**
+             * Loves
+             * @default
+             */
+            loves: string;
+        };
+        /** ClinicianNotesView */
+        ClinicianNotesView: {
+            /**
+             * Mood
+             * @default
+             */
+            mood: string;
+            /**
+             * Proud
+             * @default
+             */
+            proud: string;
+            /**
+             * Loves
+             * @default
+             */
+            loves: string;
+            /** Updated At */
+            updated_at: number;
+        };
+        /** ClinicianPatient */
+        ClinicianPatient: {
+            /** Id */
+            id: string;
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /** City */
+            city: string;
+            /** Birth Date */
+            birth_date: string;
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Interests */
+            interests: string[];
+            /** Bio */
+            bio: string;
+            /** Joined At */
+            joined_at: number;
+            /**
+             * Wellbeing
+             * @description Bien-être lu par les réseaux, de 0 à 1
+             */
+            wellbeing: number;
+            /** Answered */
+            answered: number;
+            /** Declined */
+            declined: number;
+            /** Waiting */
+            waiting: number;
+            /** Last Activity */
+            last_activity: number | null;
+            /** Trend */
+            trend: components["schemas"]["TrendPoint"][];
+            notes: components["schemas"]["ClinicianNotesView"] | null;
+        };
         /**
          * ComponentState
          * @description Une des six composantes de l'état L(θ) du patient.
@@ -645,6 +1100,16 @@ export interface components {
         ErrorResponse: {
             error: components["schemas"]["ErrorDetail"];
         };
+        /** FeedbackRequest */
+        FeedbackRequest: {
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "bug" | "question" | "suggestion" | "other";
+            /** Message */
+            message: string;
+        };
         /**
          * FormatState
          * @description Un format de la grille fixe, avec l'effort qu'il demande au patient.
@@ -686,10 +1151,14 @@ export interface components {
              * @description La personne à qui s'adressent les propositions
              */
             patient_name: string | null;
+            /** @description Son profil, tel qu'elle accepte de le montrer */
+            patient?: components["schemas"]["PublicProfile"] | null;
             /** Proposals */
             proposals: components["schemas"]["AppProposal"][];
             /** Requests */
             requests: components["schemas"]["AppRequest"][];
+            /** Needs */
+            needs?: components["schemas"]["OpenNeed"][];
         };
         /** HistoryEntry */
         HistoryEntry: {
@@ -760,17 +1229,12 @@ export interface components {
             /** Helper Interest */
             helper_interest: string;
         };
-        /** JoinRequest */
-        JoinRequest: {
-            /**
-             * Role
-             * @enum {string}
-             */
-            role: "helper" | "patient";
-            /** Name */
-            name: string;
-            /** Interests */
-            interests: string[];
+        /** LoginRequest */
+        LoginRequest: {
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
         };
         /**
          * LoopState
@@ -817,6 +1281,21 @@ export interface components {
             history: components["schemas"]["HistoryEntry"][];
             generator: components["schemas"]["GeneratorState"];
             model: components["schemas"]["ModelState"];
+        };
+        /**
+         * MessageRequest
+         * @description Message dans un fil. Patient face à une demande : c'est sa réponse (frappe relevée).
+         *     Aidant après la réponse : son premier message est son merci.
+         */
+        MessageRequest: {
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /** Attachments */
+            attachments?: components["schemas"]["Attachment"][];
+            typing?: components["schemas"]["TypingSignals"] | null;
         };
         /**
          * MessageState
@@ -886,6 +1365,24 @@ export interface components {
              */
             vector?: number[];
         };
+        /** NeedRequest */
+        NeedRequest: {
+            /** Text */
+            text: string;
+        };
+        /**
+         * OpenNeed
+         * @description Un besoin publié par un patient, que personne n'a encore pris.
+         */
+        OpenNeed: {
+            /** Id */
+            id: string;
+            /** Text */
+            text: string;
+            /** Created At */
+            created_at: number;
+            patient: components["schemas"]["PublicProfile"];
+        };
         /** PatientHome */
         PatientHome: {
             user: components["schemas"]["AppUser"];
@@ -903,6 +1400,67 @@ export interface components {
             /** Interests */
             interests: string[];
         };
+        /**
+         * ProfileUpdate
+         * @description Champs du profil à changer ; ceux qui manquent restent tels quels.
+         */
+        ProfileUpdate: {
+            /** First Name */
+            first_name?: string | null;
+            /** Last Name */
+            last_name?: string | null;
+            /** City */
+            city?: string | null;
+            /** Birth Date */
+            birth_date?: string | null;
+            /** Interests */
+            interests?: string[] | null;
+            /** Bio */
+            bio?: string | null;
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Passion Photos */
+            passion_photos?: string[] | null;
+            /** Clinician Email */
+            clinician_email?: string | null;
+            /** Allow Profile View */
+            allow_profile_view?: boolean | null;
+        };
+        /**
+         * PublicProfile
+         * @description Ce qu'un autre membre voit. Profil privé : seulement le prénom, le rôle et l'avatar.
+         */
+        PublicProfile: {
+            /** Id */
+            id: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "helper" | "patient";
+            /**
+             * Name
+             * @description Prénom
+             */
+            name: string;
+            /** Last Name */
+            last_name: string;
+            /** City */
+            city: string;
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Bio */
+            bio: string;
+            /** Interests */
+            interests: string[];
+            /** Passion Photos */
+            passion_photos: string[];
+            /**
+             * Visible
+             * @description Faux si la personne garde son profil privé
+             */
+            visible: boolean;
+        };
         /** ReplyRequest */
         ReplyRequest: {
             /** Request Id */
@@ -910,6 +1468,11 @@ export interface components {
             /** Text */
             text: string;
             typing?: components["schemas"]["TypingSignals"] | null;
+        };
+        /** ResolveRequest */
+        ResolveRequest: {
+            /** Resolved */
+            resolved: boolean;
         };
         /** RespondRequest */
         RespondRequest: {
@@ -954,7 +1517,7 @@ export interface components {
         };
         /**
          * SessionResponse
-         * @description Le jeton identifie l'appareil. Il est renvoyé dans l'en-tête `X-Needed-Token`.
+         * @description Le jeton identifie la session. Il est renvoyé dans l'en-tête `X-Needed-Token`.
          */
         SessionResponse: {
             /** Token */
@@ -981,6 +1544,58 @@ export interface components {
              */
             value: number | null;
         };
+        /**
+         * SignupRequest
+         * @description Inscription d'un aidant ou d'un patient. Cliniciens et admins sont créés par l'équipe.
+         */
+        SignupRequest: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "helper" | "patient";
+            /** Email */
+            email: string;
+            /** Password */
+            password: string;
+            /** First Name */
+            first_name: string;
+            /**
+             * Last Name
+             * @default
+             */
+            last_name: string;
+            /**
+             * City
+             * @default
+             */
+            city: string;
+            /**
+             * Birth Date
+             * @description AAAA-MM-JJ
+             * @default
+             */
+            birth_date: string;
+            /** Interests */
+            interests: string[];
+            /**
+             * Bio
+             * @description Compte dans l'appariement
+             * @default
+             */
+            bio: string;
+            /** Avatar Url */
+            avatar_url?: string | null;
+            /** Passion Photos */
+            passion_photos?: string[];
+            /** Clinician Email */
+            clinician_email?: string | null;
+            /**
+             * Allow Profile View
+             * @default true
+             */
+            allow_profile_view: boolean;
+        };
         /** ThanksRequest */
         ThanksRequest: {
             /** Request Id */
@@ -992,6 +1607,69 @@ export interface components {
         ThetaRequest: {
             /** Theta */
             theta: number;
+        };
+        /**
+         * Thread
+         * @description Un fil vu par l'un des deux. `id` est celui de la demande ou du besoin.
+         */
+        Thread: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "request" | "need";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "to_answer" | "on_its_way" | "answered" | "declined" | "open" | "taken";
+            /** @description Vide tant qu'aucun aidant n'a pris le besoin */
+            peer: components["schemas"]["PublicProfile"] | null;
+            /** Messages */
+            messages: components["schemas"]["ThreadMessage"][];
+            /** Updated At */
+            updated_at: number;
+            /** Can Write */
+            can_write: boolean;
+            /**
+             * Thanked
+             * @description Demande : l'aidant a déjà dit ce que la réponse lui a apporté
+             */
+            thanked: boolean;
+        };
+        /** ThreadMessage */
+        ThreadMessage: {
+            /** Id */
+            id: string;
+            /** Mine */
+            mine: boolean;
+            /** Sender Name */
+            sender_name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "request" | "reply" | "thanks" | "need" | "message";
+            /** Text */
+            text: string;
+            /** Attachments */
+            attachments: components["schemas"]["Attachment"][];
+            /** Created At */
+            created_at: number;
+        };
+        /** ThreadsResponse */
+        ThreadsResponse: {
+            /** Threads */
+            threads: components["schemas"]["Thread"][];
+        };
+        /** TrendPoint */
+        TrendPoint: {
+            /** At */
+            at: number;
+            /** Wellbeing */
+            wellbeing: number;
         };
         /**
          * TypingSignals
@@ -1672,7 +2350,7 @@ export interface operations {
             };
         };
     };
-    join_api_app_join_post: {
+    signup_api_app_signup_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -1681,7 +2359,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["JoinRequest"];
+                "application/json": components["schemas"]["SignupRequest"];
             };
         };
         responses: {
@@ -1692,6 +2370,160 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    login_api_app_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    logout_api_app_logout_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ack"];
                 };
             };
             /** @description Unauthorized */
@@ -1768,6 +2600,876 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppUser"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    update_me_api_app_me_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppUser"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    feedback_api_app_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ack"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    threads_api_app_threads_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_message_api_app_threads__thread_id__messages_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path: {
+                thread_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessageRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    decline_thread_api_app_threads__thread_id__decline_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path: {
+                thread_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    post_need_api_app_patient_needs_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeedRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    take_need_api_app_helper_needs__need_id__take_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path: {
+                need_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThreadsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clinician_home_api_clinician_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicianHome"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    clinician_notes_api_clinician_patients__patient_id__notes_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path: {
+                patient_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClinicianNotes"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClinicianHome"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    admin_home_api_admin_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminHome"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    admin_resolve_api_admin_feedback__feedback_id__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path: {
+                feedback_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminHome"];
                 };
             };
             /** @description Unauthorized */

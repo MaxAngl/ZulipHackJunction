@@ -546,16 +546,16 @@
         }
       }
     },
-    "/api/app/join": {
+    "/api/app/signup": {
       "post": {
-        "summary": "Join",
-        "description": "Inscription : un prénom, des centres d'intérêt, et un jeton pour cet appareil.",
-        "operationId": "join_api_app_join_post",
+        "summary": "Signup",
+        "description": "Inscription d'un aidant ou d'un patient : e-mail, mot de passe et profil.",
+        "operationId": "signup_api_app_signup_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/JoinRequest"
+                "$ref": "#/components/schemas/SignupRequest"
               }
             }
           },
@@ -635,6 +635,192 @@
         }
       }
     },
+    "/api/app/login": {
+      "post": {
+        "summary": "Login",
+        "description": "Connexion de tout compte : aidant, patient, clinicien ou admin.",
+        "operationId": "login_api_app_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/app/logout": {
+      "post": {
+        "summary": "Logout",
+        "description": "Ferme cette session ; les autres sessions du même compte restent ouvertes.",
+        "operationId": "logout_api_app_logout_post",
+        "parameters": [
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ack"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
     "/api/app/me": {
       "get": {
         "summary": "Me",
@@ -664,6 +850,1172 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AppUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      },
+      "patch": {
+        "summary": "Update Me",
+        "description": "Change le profil ; de nouveaux centres d'intérêt ou une nouvelle bio refont l'appariement.",
+        "operationId": "update_me_api_app_me_patch",
+        "parameters": [
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppUser"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/app/feedback": {
+      "post": {
+        "summary": "Feedback",
+        "description": "Message à l'équipe, depuis les réglages. Connecté ou non.",
+        "operationId": "feedback_api_app_feedback_post",
+        "parameters": [
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ack"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/app/threads": {
+      "get": {
+        "summary": "Threads",
+        "operationId": "threads_api_app_threads_get",
+        "parameters": [
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/app/threads/{thread_id}/messages": {
+      "post": {
+        "summary": "Post Message",
+        "description": "Écrit dans un fil. Patient face à une demande : sa réponse. Aidant ensuite : son merci.",
+        "operationId": "post_message_api_app_threads__thread_id__messages_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/app/threads/{thread_id}/decline": {
+      "post": {
+        "summary": "Decline Thread",
+        "description": "Le patient laisse passer une demande ; elle sort de son fil, la boucle en apprend.",
+        "operationId": "decline_thread_api_app_threads__thread_id__decline_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/app/patient/needs": {
+      "post": {
+        "summary": "Post Need",
+        "description": "Le patient demande un coup de main à la communauté.",
+        "operationId": "post_need_api_app_patient_needs_post",
+        "parameters": [
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NeedRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/app/helper/needs/{need_id}/take": {
+      "post": {
+        "summary": "Take Need",
+        "description": "Un aidant prend le besoin d'un patient ; un fil s'ouvre entre eux.",
+        "operationId": "take_need_api_app_helper_needs__need_id__take_post",
+        "parameters": [
+          {
+            "name": "need_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Need Id"
+            }
+          },
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/clinician": {
+      "get": {
+        "summary": "Clinician Home",
+        "description": "Les patients qui ont donné l'e-mail de ce clinicien, sans le contenu de leurs échanges.",
+        "operationId": "clinician_home_api_clinician_get",
+        "parameters": [
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicianHome"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/clinician/patients/{patient_id}/notes": {
+      "put": {
+        "summary": "Clinician Notes",
+        "operationId": "clinician_notes_api_clinician_patients__patient_id__notes_put",
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          },
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClinicianNotes"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClinicianHome"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/admin": {
+      "get": {
+        "summary": "Admin Home",
+        "operationId": "admin_home_api_admin_get",
+        "parameters": [
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminHome"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
+    },
+    "/api/admin/feedback/{feedback_id}": {
+      "post": {
+        "summary": "Admin Resolve",
+        "operationId": "admin_resolve_api_admin_feedback__feedback_id__post",
+        "parameters": [
+          {
+            "name": "feedback_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Feedback Id"
+            }
+          },
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminHome"
                 }
               }
             }
@@ -2333,6 +3685,255 @@
   },
   "components": {
     "schemas": {
+      "Ack": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status",
+            "default": "ok"
+          }
+        },
+        "type": "object",
+        "title": "Ack"
+      },
+      "AdminExchange": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "request",
+              "need"
+            ],
+            "title": "Kind"
+          },
+          "from_name": {
+            "type": "string",
+            "title": "From Name"
+          },
+          "to_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Name"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "held",
+              "delivered",
+              "answered",
+              "declined",
+              "open",
+              "taken"
+            ],
+            "title": "Status"
+          },
+          "reply": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "from_name",
+          "to_name",
+          "text",
+          "status",
+          "reply",
+          "created_at"
+        ],
+        "title": "AdminExchange"
+      },
+      "AdminFeedback": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "sender_name": {
+            "type": "string",
+            "title": "Sender Name"
+          },
+          "sender_role": {
+            "type": "string",
+            "enum": [
+              "helper",
+              "patient",
+              "clinician",
+              "admin",
+              "visitor"
+            ],
+            "title": "Sender Role"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "bug",
+              "question",
+              "suggestion",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          },
+          "resolved": {
+            "type": "boolean",
+            "title": "Resolved"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "sender_name",
+          "sender_role",
+          "category",
+          "message",
+          "created_at",
+          "resolved"
+        ],
+        "title": "AdminFeedback"
+      },
+      "AdminHome": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AppUser"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/AdminMember"
+            },
+            "type": "array",
+            "title": "Members"
+          },
+          "exchanges": {
+            "items": {
+              "$ref": "#/components/schemas/AdminExchange"
+            },
+            "type": "array",
+            "title": "Exchanges"
+          },
+          "feedback": {
+            "items": {
+              "$ref": "#/components/schemas/AdminFeedback"
+            },
+            "type": "array",
+            "title": "Feedback"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "members",
+          "exchanges",
+          "feedback"
+        ],
+        "title": "AdminHome"
+      },
+      "AdminMember": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "helper",
+              "patient",
+              "clinician",
+              "admin"
+            ],
+            "title": "Role"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Prénom et nom"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          },
+          "activity": {
+            "type": "integer",
+            "title": "Activity",
+            "description": "Demandes envoyées (aidant) ou reçues (patient)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "name",
+          "email",
+          "city",
+          "avatar_url",
+          "interests",
+          "created_at",
+          "activity"
+        ],
+        "title": "AdminMember"
+      },
       "AppProposal": {
         "properties": {
           "id": {
@@ -2436,13 +4037,73 @@
             "type": "string",
             "enum": [
               "helper",
-              "patient"
+              "patient",
+              "clinician",
+              "admin"
             ],
             "title": "Role"
           },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
           "name": {
             "type": "string",
-            "title": "Name"
+            "title": "Name",
+            "description": "Prénom"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "birth_date": {
+            "type": "string",
+            "title": "Birth Date"
+          },
+          "bio": {
+            "type": "string",
+            "title": "Bio"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "passion_photos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Passion Photos"
+          },
+          "clinician_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinician Email"
+          },
+          "allow_profile_view": {
+            "type": "boolean",
+            "title": "Allow Profile View"
           },
           "interests": {
             "items": {
@@ -2450,16 +4111,75 @@
             },
             "type": "array",
             "title": "Interests"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
           }
         },
         "type": "object",
         "required": [
           "id",
           "role",
+          "email",
           "name",
-          "interests"
+          "first_name",
+          "last_name",
+          "city",
+          "birth_date",
+          "bio",
+          "avatar_url",
+          "passion_photos",
+          "clinician_email",
+          "allow_profile_view",
+          "interests",
+          "created_at"
         ],
-        "title": "AppUser"
+        "title": "AppUser",
+        "description": "Le compte connecté, tel que son propriétaire le voit."
+      },
+      "Attachment": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video",
+              "file"
+            ],
+            "title": "Type"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "title": "Name"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 3000000,
+            "title": "Url",
+            "description": "Fichier encodé (data URL)"
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 20
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "name",
+          "url"
+        ],
+        "title": "Attachment"
       },
       "AxisState": {
         "properties": {
@@ -2607,6 +4327,196 @@
         "title": "CandidateState",
         "description": "Une demande générée, puis mesurée."
       },
+      "ClinicianHome": {
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/AppUser"
+          },
+          "patients": {
+            "items": {
+              "$ref": "#/components/schemas/ClinicianPatient"
+            },
+            "type": "array",
+            "title": "Patients"
+          }
+        },
+        "type": "object",
+        "required": [
+          "user",
+          "patients"
+        ],
+        "title": "ClinicianHome"
+      },
+      "ClinicianNotes": {
+        "properties": {
+          "mood": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Mood",
+            "default": ""
+          },
+          "proud": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Proud",
+            "default": ""
+          },
+          "loves": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Loves",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "title": "ClinicianNotes"
+      },
+      "ClinicianNotesView": {
+        "properties": {
+          "mood": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Mood",
+            "default": ""
+          },
+          "proud": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Proud",
+            "default": ""
+          },
+          "loves": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Loves",
+            "default": ""
+          },
+          "updated_at": {
+            "type": "number",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "updated_at"
+        ],
+        "title": "ClinicianNotesView"
+      },
+      "ClinicianPatient": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "birth_date": {
+            "type": "string",
+            "title": "Birth Date"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "bio": {
+            "type": "string",
+            "title": "Bio"
+          },
+          "joined_at": {
+            "type": "number",
+            "title": "Joined At"
+          },
+          "wellbeing": {
+            "type": "number",
+            "title": "Wellbeing",
+            "description": "Bien-être lu par les réseaux, de 0 à 1"
+          },
+          "answered": {
+            "type": "integer",
+            "title": "Answered"
+          },
+          "declined": {
+            "type": "integer",
+            "title": "Declined"
+          },
+          "waiting": {
+            "type": "integer",
+            "title": "Waiting"
+          },
+          "last_activity": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity"
+          },
+          "trend": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "type": "array",
+            "title": "Trend"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClinicianNotesView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "first_name",
+          "last_name",
+          "city",
+          "birth_date",
+          "avatar_url",
+          "interests",
+          "bio",
+          "joined_at",
+          "wellbeing",
+          "answered",
+          "declined",
+          "waiting",
+          "last_activity",
+          "trend",
+          "notes"
+        ],
+        "title": "ClinicianPatient"
+      },
       "ComponentState": {
         "properties": {
           "key": {
@@ -2684,6 +4594,32 @@
         ],
         "title": "ErrorResponse",
         "description": "Format unique de toutes les erreurs renvoyées par l'API."
+      },
+      "FeedbackRequest": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "bug",
+              "question",
+              "suggestion",
+              "other"
+            ],
+            "title": "Category"
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "message"
+        ],
+        "title": "FeedbackRequest"
       },
       "FormatState": {
         "properties": {
@@ -2774,6 +4710,17 @@
             "title": "Patient Name",
             "description": "La personne à qui s'adressent les propositions"
           },
+          "patient": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicProfile"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Son profil, tel qu'elle accepte de le montrer"
+          },
           "proposals": {
             "items": {
               "$ref": "#/components/schemas/AppProposal"
@@ -2787,6 +4734,13 @@
             },
             "type": "array",
             "title": "Requests"
+          },
+          "needs": {
+            "items": {
+              "$ref": "#/components/schemas/OpenNeed"
+            },
+            "type": "array",
+            "title": "Needs"
           }
         },
         "type": "object",
@@ -2932,41 +4886,27 @@
         ],
         "title": "InterestPair"
       },
-      "JoinRequest": {
+      "LoginRequest": {
         "properties": {
-          "role": {
+          "email": {
             "type": "string",
-            "enum": [
-              "helper",
-              "patient"
-            ],
-            "title": "Role"
-          },
-          "name": {
-            "type": "string",
-            "maxLength": 40,
+            "maxLength": 120,
             "minLength": 1,
-            "title": "Name"
+            "title": "Email"
           },
-          "interests": {
-            "items": {
-              "type": "string",
-              "maxLength": 40,
-              "minLength": 1
-            },
-            "type": "array",
-            "maxItems": 8,
-            "minItems": 1,
-            "title": "Interests"
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Password"
           }
         },
         "type": "object",
         "required": [
-          "role",
-          "name",
-          "interests"
+          "email",
+          "password"
         ],
-        "title": "JoinRequest"
+        "title": "LoginRequest"
       },
       "LoopState": {
         "properties": {
@@ -3066,6 +5006,37 @@
         ],
         "title": "LoopState",
         "description": "Tout l'état de la démo : un patient, sa zone, la manche en cours et l'historique."
+      },
+      "MessageRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Text",
+            "default": ""
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "type": "array",
+            "maxItems": 4,
+            "title": "Attachments"
+          },
+          "typing": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TypingSignals"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "MessageRequest",
+        "description": "Message dans un fil. Patient face à une demande : c'est sa réponse (frappe relevée).\nAidant après la réponse : son premier message est son merci."
       },
       "MessageState": {
         "properties": {
@@ -3201,6 +5172,49 @@
         ],
         "title": "ModelState"
       },
+      "NeedRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 600,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "NeedRequest"
+      },
+      "OpenNeed": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/PublicProfile"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "created_at",
+          "patient"
+        ],
+        "title": "OpenNeed",
+        "description": "Un besoin publié par un patient, que personne n'a encore pris."
+      },
       "PatientHome": {
         "properties": {
           "user": {
@@ -3255,6 +5269,223 @@
         ],
         "title": "Person"
       },
+      "ProfileUpdate": {
+        "properties": {
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "birth_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 10
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birth Date"
+          },
+          "interests": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 40,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 8,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interests"
+          },
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 300
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 400000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "passion_photos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 400000
+                },
+                "type": "array",
+                "maxItems": 3
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Passion Photos"
+          },
+          "clinician_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 3,
+                "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinician Email"
+          },
+          "allow_profile_view": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allow Profile View"
+          }
+        },
+        "type": "object",
+        "title": "ProfileUpdate",
+        "description": "Champs du profil à changer ; ceux qui manquent restent tels quels."
+      },
+      "PublicProfile": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "helper",
+              "patient"
+            ],
+            "title": "Role"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name",
+            "description": "Prénom"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "bio": {
+            "type": "string",
+            "title": "Bio"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          },
+          "passion_photos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Passion Photos"
+          },
+          "visible": {
+            "type": "boolean",
+            "title": "Visible",
+            "description": "Faux si la personne garde son profil privé"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "role",
+          "name",
+          "last_name",
+          "city",
+          "avatar_url",
+          "bio",
+          "interests",
+          "passion_photos",
+          "visible"
+        ],
+        "title": "PublicProfile",
+        "description": "Ce qu'un autre membre voit. Profil privé : seulement le prénom, le rôle et l'avatar."
+      },
       "ReplyRequest": {
         "properties": {
           "request_id": {
@@ -3284,6 +5515,19 @@
           "text"
         ],
         "title": "ReplyRequest"
+      },
+      "ResolveRequest": {
+        "properties": {
+          "resolved": {
+            "type": "boolean",
+            "title": "Resolved"
+          }
+        },
+        "type": "object",
+        "required": [
+          "resolved"
+        ],
+        "title": "ResolveRequest"
       },
       "RespondRequest": {
         "properties": {
@@ -3430,7 +5674,7 @@
           "user"
         ],
         "title": "SessionResponse",
-        "description": "Le jeton identifie l'appareil. Il est renvoyé dans l'en-tête `X-Needed-Token`."
+        "description": "Le jeton identifie la session. Il est renvoyé dans l'en-tête `X-Needed-Token`."
       },
       "SignalState": {
         "properties": {
@@ -3470,6 +5714,124 @@
         "title": "SignalState",
         "description": "Un des signaux bruts de θ, au dernier relevé."
       },
+      "SignupRequest": {
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "helper",
+              "patient"
+            ],
+            "title": "Role"
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 6,
+            "title": "Password"
+          },
+          "first_name": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Last Name",
+            "default": ""
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 60,
+            "title": "City",
+            "default": ""
+          },
+          "birth_date": {
+            "type": "string",
+            "maxLength": 10,
+            "title": "Birth Date",
+            "description": "AAAA-MM-JJ",
+            "default": ""
+          },
+          "interests": {
+            "items": {
+              "type": "string",
+              "maxLength": 40,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 8,
+            "minItems": 1,
+            "title": "Interests"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Bio",
+            "description": "Compte dans l'appariement",
+            "default": ""
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 400000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "passion_photos": {
+            "items": {
+              "type": "string",
+              "maxLength": 400000
+            },
+            "type": "array",
+            "maxItems": 3,
+            "title": "Passion Photos"
+          },
+          "clinician_email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 3,
+                "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clinician Email"
+          },
+          "allow_profile_view": {
+            "type": "boolean",
+            "title": "Allow Profile View",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "role",
+          "email",
+          "password",
+          "first_name",
+          "interests"
+        ],
+        "title": "SignupRequest",
+        "description": "Inscription d'un aidant ou d'un patient. Cliniciens et admins sont créés par l'équipe."
+      },
       "ThanksRequest": {
         "properties": {
           "request_id": {
@@ -3504,6 +5866,167 @@
           "theta"
         ],
         "title": "ThetaRequest"
+      },
+      "Thread": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "request",
+              "need"
+            ],
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "to_answer",
+              "on_its_way",
+              "answered",
+              "declined",
+              "open",
+              "taken"
+            ],
+            "title": "Status"
+          },
+          "peer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PublicProfile"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Vide tant qu'aucun aidant n'a pris le besoin"
+          },
+          "messages": {
+            "items": {
+              "$ref": "#/components/schemas/ThreadMessage"
+            },
+            "type": "array",
+            "title": "Messages"
+          },
+          "updated_at": {
+            "type": "number",
+            "title": "Updated At"
+          },
+          "can_write": {
+            "type": "boolean",
+            "title": "Can Write"
+          },
+          "thanked": {
+            "type": "boolean",
+            "title": "Thanked",
+            "description": "Demande : l'aidant a déjà dit ce que la réponse lui a apporté"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "peer",
+          "messages",
+          "updated_at",
+          "can_write",
+          "thanked"
+        ],
+        "title": "Thread",
+        "description": "Un fil vu par l'un des deux. `id` est celui de la demande ou du besoin."
+      },
+      "ThreadMessage": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "mine": {
+            "type": "boolean",
+            "title": "Mine"
+          },
+          "sender_name": {
+            "type": "string",
+            "title": "Sender Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "request",
+              "reply",
+              "thanks",
+              "need",
+              "message"
+            ],
+            "title": "Kind"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "attachments": {
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            },
+            "type": "array",
+            "title": "Attachments"
+          },
+          "created_at": {
+            "type": "number",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "mine",
+          "sender_name",
+          "kind",
+          "text",
+          "attachments",
+          "created_at"
+        ],
+        "title": "ThreadMessage"
+      },
+      "ThreadsResponse": {
+        "properties": {
+          "threads": {
+            "items": {
+              "$ref": "#/components/schemas/Thread"
+            },
+            "type": "array",
+            "title": "Threads"
+          }
+        },
+        "type": "object",
+        "required": [
+          "threads"
+        ],
+        "title": "ThreadsResponse"
+      },
+      "TrendPoint": {
+        "properties": {
+          "at": {
+            "type": "number",
+            "title": "At"
+          },
+          "wellbeing": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Wellbeing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "at",
+          "wellbeing"
+        ],
+        "title": "TrendPoint"
       },
       "TypingSignals": {
         "properties": {

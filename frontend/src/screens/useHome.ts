@@ -19,7 +19,7 @@ export function useHome<T>(
   const fail = useCallback(
     (err: unknown) => {
       if (err instanceof ApiError && err.status === 401) {
-        onSignedOut() // jeton inconnu du serveur : on repasse par l'inscription
+        onSignedOut() // session inconnue du serveur : on repasse par la connexion
         return
       }
       setError(err instanceof ApiError ? err.message : OFFLINE_MESSAGE)
@@ -27,35 +27,39 @@ export function useHome<T>(
     [onSignedOut],
   )
 
-  useEffect(() => {
-    let cancelled = false
-    const refresh = () => {
-      if (busyRef.current) return
+  // Une lecture, ignorée si une action est en cours (son résultat fait foi).
+  const load = useCallback(
+    () =>
       fetcher(token)
         .then((next) => {
-          if (!cancelled && !busyRef.current) setHome(next)
+          if (!busyRef.current) setHome(next)
         })
-        .catch((err: unknown) => {
-          if (!cancelled) fail(err)
-        })
-    }
-    refresh()
-    const timer = window.setInterval(refresh, POLL_MS)
-    return () => {
-      cancelled = true
-      window.clearInterval(timer)
-    }
-  }, [token, fetcher, fail])
+        .catch(fail),
+    [token, fetcher, fail],
+  )
 
+  useEffect(() => {
+    const tick = () => {
+      if (!busyRef.current) void load()
+    }
+    tick()
+    const timer = window.setInterval(tick, POLL_MS)
+    return () => window.clearInterval(timer)
+  }, [load])
+
+  // Renvoie le nouvel état, ou null si l'action a échoué (le message est dans `error`).
   const run = useCallback(
-    async (action: () => Promise<T>) => {
+    async (action: () => Promise<T>): Promise<T | null> => {
       busyRef.current = true
       setBusy(true)
       setError(null)
       try {
-        setHome(await action())
+        const next = await action()
+        setHome(next)
+        return next
       } catch (err) {
         fail(err)
+        return null
       } finally {
         busyRef.current = false
         setBusy(false)
@@ -64,5 +68,5 @@ export function useHome<T>(
     [fail],
   )
 
-  return { home, error, busy, run }
+  return { home, error, busy, run, refresh: load }
 }

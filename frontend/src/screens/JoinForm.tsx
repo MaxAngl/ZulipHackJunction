@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ApiError, join, type Role } from '../api/client'
 import {
-  readClinicianEmail,
-  readUserProfile,
-  saveClinicianEmail,
-  saveToken,
-  saveUserProfile,
-} from '../session'
+  ApiError,
+  type Role,
+  type SessionResponse,
+  signup,
+} from '../api/client'
+import { pickedImage } from '../images'
 
 const STARTERS: Record<Role, string[]> = {
   patient: ['gardening', 'jazz', 'baking', 'reading', 'chess', 'knitting'],
@@ -40,36 +39,22 @@ const MOOMIN_AVATARS = [
 
 type JoinFormProps = {
   role: Role
-  onJoined: (token: string) => void
+  onJoined: (session: SessionResponse) => void
 }
 
+// Inscription d'un aidant ou d'un patient : e-mail et mot de passe, puis le profil.
+// Tout part au backend ; le navigateur ne garde que le jeton de session.
 function JoinForm({ role, onJoined }: JoinFormProps) {
-  const existingProfile = readUserProfile(role)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [birthDate, setBirthDate] = useState('')
+  const [city, setCity] = useState('')
 
-  const [firstName, setFirstName] = useState(
-    () => existingProfile?.firstName ?? '',
-  )
-  const [lastName, setLastName] = useState(
-    () => existingProfile?.lastName ?? '',
-  )
-  const [birthDate, setBirthDate] = useState(
-    () => existingProfile?.birthDate ?? '',
-  )
-  const [city, setCity] = useState(() => existingProfile?.city ?? '')
-
-  const initialIsMoomin =
-    existingProfile?.avatarUrl?.startsWith('/moomins/') ?? false
-  const [selectedMoomin, setSelectedMoomin] = useState<string | null>(() =>
-    initialIsMoomin ? (existingProfile?.avatarUrl ?? null) : null,
-  )
-  const [rawPhoto, setRawPhoto] = useState<string | null>(() =>
-    !initialIsMoomin && existingProfile?.avatarUrl
-      ? existingProfile.avatarUrl
-      : null,
-  )
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(
-    () => existingProfile?.avatarUrl ?? null,
-  )
+  const [selectedMoomin, setSelectedMoomin] = useState<string | null>(null)
+  const [rawPhoto, setRawPhoto] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
 
   // États de recadrage interactif (pan & zoom)
   const [zoom, setZoom] = useState(1)
@@ -117,45 +102,31 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
     }
   }, [isDragging])
 
-  const [clinicianEmail, setClinicianEmail] = useState(
-    () => existingProfile?.clinicianEmail ?? readClinicianEmail() ?? '',
-  )
-  const [bio, setBio] = useState(() => existingProfile?.bio ?? '')
-  const [passionPhotos, setPassionPhotos] = useState<string[]>(
-    () => existingProfile?.passionPhotos ?? [],
-  )
-  const [allowProfileView, setAllowProfileView] = useState<boolean>(
-    () => existingProfile?.allowProfileView ?? true,
-  )
-  const [interests, setInterests] = useState<string[]>(
-    () => existingProfile?.interests ?? [],
-  )
+  const [clinicianEmail, setClinicianEmail] = useState('')
+  const [bio, setBio] = useState('')
+  const [passionPhotos, setPassionPhotos] = useState<string[]>([])
+  const [allowProfileView, setAllowProfileView] = useState(true)
+  const [interests, setInterests] = useState<string[]>([])
   const [custom, setCustom] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  function handlePassionPhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-    const remainingSlots = 3 - passionPhotos.length
-    if (remainingSlots <= 0) return
-
-    const toProcess = Math.min(files.length, remainingSlots)
-    for (let i = 0; i < toProcess; i++) {
-      const file = files[i]
-      if (!file.type.startsWith('image/')) continue
-      const reader = new FileReader()
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          setPassionPhotos((prev) => {
-            if (prev.length >= 3) return prev
-            return [...prev, reader.result as string]
-          })
-        }
-      }
-      reader.readAsDataURL(file)
-    }
+  // Photos réduites avant l'envoi : une photo de téléphone pèse plusieurs Mo.
+  async function handlePassionPhotoUpload(
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const files = Array.from(e.target.files ?? [])
     e.target.value = ''
+    const room = 3 - passionPhotos.length
+    for (const file of files.slice(0, Math.max(0, room))) {
+      if (!file.type.startsWith('image/')) continue
+      try {
+        const photo = await pickedImage(file)
+        setPassionPhotos((prev) => (prev.length >= 3 ? prev : [...prev, photo]))
+      } catch {
+        setError(`${file.name} could not be read.`)
+      }
+    }
   }
 
   function handleRemovePassionPhoto(idx: number) {
@@ -305,38 +276,34 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
     setBusy(true)
     setError(null)
     try {
-      const fullName = `${firstName.trim()} ${lastName.trim()}`
-        .trim()
-        .slice(0, 40)
       const cleanedInterests = Array.from(
         new Set(
           interests.map((item) => item.trim().toLowerCase()).filter(Boolean),
         ),
       ).slice(0, 8)
-
-      const session = await join(role, fullName, cleanedInterests)
-      saveToken(role, session.token)
-
       const finalAvatar = rawPhoto
         ? (getCroppedDataUrl() ?? rawPhoto)
-        : (selectedMoomin ?? avatarUrl ?? undefined)
+        : (selectedMoomin ?? avatarUrl ?? null)
 
-      saveUserProfile(role, {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        birthDate: birthDate.trim(),
+      const session = await signup({
+        role,
+        email: email.trim(),
+        password,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        birth_date: birthDate.trim(),
         city: city.trim(),
-        avatarUrl: finalAvatar,
-        clinicianEmail: role === 'patient' ? clinicianEmail.trim() : undefined,
+        interests: cleanedInterests,
         bio: bio.trim(),
-        interests,
-        passionPhotos,
-        allowProfileView,
+        avatar_url: finalAvatar,
+        passion_photos: passionPhotos,
+        clinician_email:
+          role === 'patient' && clinicianEmail.trim()
+            ? clinicianEmail.trim()
+            : null,
+        allow_profile_view: allowProfileView,
       })
-      if (role === 'patient' && clinicianEmail.trim() !== '') {
-        saveClinicianEmail(clinicianEmail.trim())
-      }
-      onJoined(session.token)
+      onJoined(session)
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : 'The server is not responding.',
@@ -351,6 +318,8 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
     ...interests.filter((item) => !STARTERS[role].includes(item)),
   ]
 
+  const isAccountReady =
+    /^\S+@\S+\.\S+$/.test(email.trim()) && password.length >= 6
   const isNameReady = firstName.trim() !== '' && lastName.trim() !== ''
   const isBirthDateReady = birthDate.trim() !== ''
   const isCityReady = city.trim() !== ''
@@ -361,6 +330,7 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
   const isInterestsReady = interests.length > 0
 
   const ready =
+    isAccountReady &&
     isNameReady &&
     isBirthDateReady &&
     isCityReady &&
@@ -382,6 +352,43 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
           ? 'Tell us a bit about you to connect at your own pace.'
           : 'Complete your helper profile to build trust and start lending a hand.'}
       </p>
+
+      <p className="quiet">
+        Already a member? <a href="#/login">Sign in</a>
+      </p>
+
+      {/* Compte : e-mail et mot de passe */}
+      <div className="grid-2">
+        <label className="field">
+          <span>
+            Email <span className="required-asterisk">*</span>
+          </span>
+          <input
+            type="email"
+            value={email}
+            maxLength={120}
+            required
+            autoComplete="email"
+            placeholder="you@example.com"
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span>
+            Password <span className="required-asterisk">*</span>
+          </span>
+          <input
+            type="password"
+            value={password}
+            minLength={6}
+            maxLength={128}
+            required
+            autoComplete="new-password"
+            placeholder="6 characters or more"
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </label>
+      </div>
 
       {/* Identité : prénom et nom */}
       <div className="grid-2">
@@ -731,7 +738,7 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
                 accept="image/*"
                 multiple
                 className="visually-hidden"
-                onChange={handlePassionPhotoUpload}
+                onChange={(event) => void handlePassionPhotoUpload(event)}
               />
               <span className="passion-add-icon">+</span>
               <span className="font-small quiet">Add photo</span>

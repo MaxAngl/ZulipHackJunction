@@ -15,6 +15,7 @@ from backend.schemas import (
     WatchPairingStatus,
     WatchStatus,
 )
+from backend.tests.accounts import signup_body
 from backend.watch import WATCH_REPLY
 
 client = TestClient(app)
@@ -50,9 +51,7 @@ def empty_database(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _join(role: str, name: str, interests: list[str]) -> dict[str, str]:
-    response = client.post(
-        "/api/app/join", json={"role": role, "name": name, "interests": interests}
-    )
+    response = client.post("/api/app/signup", json=signup_body(role, name, interests))
     assert response.status_code == 200, response.text
     return {"X-Needed-Token": SessionResponse.model_validate(response.json()).token}
 

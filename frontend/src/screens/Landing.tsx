@@ -21,6 +21,9 @@ function Landing() {
           <a className="button button-wide" href="#/patient">
             My clinic invited me
           </a>
+          <a className="button button-ghost button-wide" href="#/login">
+            I already have an account
+          </a>
         </div>
         <p className="lead">
           Needed is a community of people helping each other through the small

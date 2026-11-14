@@ -5,24 +5,36 @@ from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header
 
+from backend import portals
 from backend.community import Community
-from backend.errors import register_error_handlers
+from backend.errors import ApiError, register_error_handlers
 from backend.loop import loop
 from backend.schemas import (
+    Ack,
+    AdminHome,
     AppUser,
+    ClinicianHome,
+    ClinicianNotes,
     DeclineRequest,
     ErrorResponse,
+    FeedbackRequest,
     HealthResponse,
     HelperHome,
-    JoinRequest,
+    LoginRequest,
     LoopState,
+    MessageRequest,
+    NeedRequest,
     PatientHome,
+    ProfileUpdate,
     ReplyRequest,
+    ResolveRequest,
     RespondRequest,
     SendRequest,
     SessionResponse,
+    SignupRequest,
     ThanksRequest,
     ThetaRequest,
+    ThreadsResponse,
     WatchAnswer,
     WatchHome,
     WatchLinkRequest,
@@ -32,6 +44,8 @@ from backend.schemas import (
     WatchStatus,
 )
 from backend.store import Store, User
+from backend.threads import Threads
+from backend.views import app_user
 from backend.watch import WatchDevice, Watches
 from ml.model import load_env_file
 
@@ -111,11 +125,20 @@ def get_community() -> Community:
     return Community(Store())
 
 
+def get_threads() -> Threads:
+    """Sans état propre : tout est dans la communauté, qui garde la base ouverte."""
+    return Threads(get_community())
+
+
 Token = Annotated[str | None, Header(alias="X-Needed-Token")]
 
 
 def any_user(token: Token = None) -> User:
     return get_community().signed_in(token)
+
+
+def member_user(token: Token = None) -> User:
+    return get_community().signed_in(token, "helper", "patient")
 
 
 def helper_user(token: Token = None) -> User:
@@ -126,19 +149,121 @@ def patient_user(token: Token = None) -> User:
     return get_community().signed_in(token, "patient")
 
 
+def clinician_user(token: Token = None) -> User:
+    return get_community().signed_in(token, "clinician")
+
+
+def admin_user(token: Token = None) -> User:
+    return get_community().signed_in(token, "admin")
+
+
+Anyone = Annotated[User, Depends(any_user)]
+Member = Annotated[User, Depends(member_user)]
 Helper = Annotated[User, Depends(helper_user)]
 Patient = Annotated[User, Depends(patient_user)]
+Clinician = Annotated[User, Depends(clinician_user)]
+Admin = Annotated[User, Depends(admin_user)]
 
 
-@app.post("/api/app/join", responses=ERROR_RESPONSES)
-def join(body: JoinRequest) -> SessionResponse:
-    """Inscription : un prénom, des centres d'intérêt, et un jeton pour cet appareil."""
-    return get_community().join(body.role, body.name, body.interests)
+@app.post("/api/app/signup", responses=ERROR_RESPONSES)
+def signup(body: SignupRequest) -> SessionResponse:
+    """Inscription d'un aidant ou d'un patient : e-mail, mot de passe et profil."""
+    return get_community().signup(body)
+
+
+@app.post("/api/app/login", responses=ERROR_RESPONSES)
+def login(body: LoginRequest) -> SessionResponse:
+    """Connexion de tout compte : aidant, patient, clinicien ou admin."""
+    return get_community().login(body.email, body.password)
+
+
+@app.post("/api/app/logout", responses=ERROR_RESPONSES)
+def logout(token: Token = None) -> Ack:
+    """Ferme cette session ; les autres sessions du même compte restent ouvertes."""
+    get_community().logout(token)
+    return Ack()
 
 
 @app.get("/api/app/me", responses=ERROR_RESPONSES)
-def me(user: Annotated[User, Depends(any_user)]) -> AppUser:
-    return AppUser(id=user.id, role=user.role, name=user.name, interests=user.interests)
+def me(user: Anyone) -> AppUser:
+    return app_user(user)
+
+
+@app.patch("/api/app/me", responses=ERROR_RESPONSES)
+def update_me(body: ProfileUpdate, user: Anyone) -> AppUser:
+    """Change le profil ; de nouveaux centres d'intérêt ou une nouvelle bio refont l'appariement."""
+    return get_community().update_profile(user, body)
+
+
+@app.post("/api/app/feedback", responses=ERROR_RESPONSES)
+def feedback(body: FeedbackRequest, token: Token = None) -> Ack:
+    """Message à l'équipe, depuis les réglages. Connecté ou non."""
+    community = get_community()
+    try:
+        user = community.signed_in(token) if token else None
+    except ApiError:
+        user = None  # session expirée : le message part quand même, sans nom
+    portals.send_feedback(community.store, user, body)
+    return Ack()
+
+
+# --- Fils de discussion : demandes et besoins, des deux côtés --------------------------------
+
+
+@app.get("/api/app/threads", responses=ERROR_RESPONSES)
+def threads(user: Member) -> ThreadsResponse:
+    return get_threads().for_user(user)
+
+
+@app.post("/api/app/threads/{thread_id}/messages", responses=ERROR_RESPONSES)
+def post_message(thread_id: str, body: MessageRequest, user: Member) -> ThreadsResponse:
+    """Écrit dans un fil. Patient face à une demande : sa réponse. Aidant ensuite : son merci."""
+    return get_threads().post(user, thread_id, body)
+
+
+@app.post("/api/app/threads/{thread_id}/decline", responses=ERROR_RESPONSES)
+def decline_thread(thread_id: str, user: Patient) -> ThreadsResponse:
+    """Le patient laisse passer une demande ; elle sort de son fil, la boucle en apprend."""
+    return get_threads().decline(user, thread_id)
+
+
+@app.post("/api/app/patient/needs", responses=ERROR_RESPONSES)
+def post_need(body: NeedRequest, user: Patient) -> ThreadsResponse:
+    """Le patient demande un coup de main à la communauté."""
+    return get_threads().post_need(user, body.text)
+
+
+@app.post("/api/app/helper/needs/{need_id}/take", responses=ERROR_RESPONSES)
+def take_need(need_id: str, user: Helper) -> ThreadsResponse:
+    """Un aidant prend le besoin d'un patient ; un fil s'ouvre entre eux."""
+    return get_threads().take_need(user, need_id)
+
+
+# --- Portails : clinicien et admin ----------------------------------------------------------
+
+
+@app.get("/api/clinician", responses=ERROR_RESPONSES)
+def clinician_home(user: Clinician) -> ClinicianHome:
+    """Les patients qui ont donné l'e-mail de ce clinicien, sans le contenu de leurs échanges."""
+    return portals.clinician_home(get_community().store, user)
+
+
+@app.put("/api/clinician/patients/{patient_id}/notes", responses=ERROR_RESPONSES)
+def clinician_notes(patient_id: str, body: ClinicianNotes, user: Clinician) -> ClinicianHome:
+    return portals.save_notes(get_community().store, user, patient_id, body)
+
+
+@app.get("/api/admin", responses=ERROR_RESPONSES)
+def admin_home(user: Admin) -> AdminHome:
+    return portals.admin_home(get_community().store, user)
+
+
+@app.post("/api/admin/feedback/{feedback_id}", responses=ERROR_RESPONSES)
+def admin_resolve(feedback_id: str, body: ResolveRequest, user: Admin) -> AdminHome:
+    return portals.resolve_feedback(get_community().store, user, feedback_id, body.resolved)
+
+
+# --- Écrans d'origine de la vraie app (toujours servis) --------------------------------------
 
 
 @app.get("/api/app/helper", responses=ERROR_RESPONSES)
