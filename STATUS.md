@@ -54,8 +54,10 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Le repli hors ligne (trigrammes de lettres) ne comprend pas le sens : « ski » et « montagne » n'y sont pas proches. Il ne sert qu'à ne jamais casser sans clé Gemini.
   - Un profil enregistré n'est pas recalculé si les intérêts changent : supprimer sa ligne dans la table `profiles` pour le recalculer.
 
-## _<prénom C>_
+## Rami (Antigravity)
 
-- **En cours :** —
+- **En cours :** #31, poursuite des évolutions et finitions de l'interface (UI/UX).
 - **Bloqué :** —
-- **Notes pour la suite :** —
+- **Notes pour la suite :**
+  - #11 est mergée dans main.
+  - L'inscription applique les contraintes de Max (max 40 car., max 8 intérêts).
