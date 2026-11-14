@@ -243,7 +243,7 @@ class LoopService:
                     for theirs in self.helper.interests
                 ]
                 candidate, review = measure_message(
-                    written, helper_pairs, proposal.pair if proposal else None
+                    written, helper_pairs, proposal.pair if proposal else None, zone
                 )
                 if not review.safe:
                     raise ApiError(

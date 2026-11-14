@@ -76,7 +76,8 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Le bonus d'attente (`WAIT_WEIGHT`, `WAIT_FULL_DAYS` dans `ml/matching.py`) est un premier réglage, à ajuster avec l'équipe.
   - Le repli hors ligne (trigrammes de lettres) ne comprend pas le sens : « ski » et « montagne » n'y sont pas proches. Il ne sert qu'à ne jamais casser sans clé Gemini.
   - Un profil enregistré n'est pas recalculé si les intérêts changent : supprimer sa ligne dans la table `profiles` pour le recalculer.
-  - [14/11 21:00] #69 : sans Gemini, le modèle local remplace les trigrammes et les mots-clés. Sur 12 scénarios d'intérêts × 3 états : 100 propositions au lieu de 78, un seul cas vide au lieu de 6. Reste à corriger : un intérêt commun (gardening × gardening) donne toujours λ = 0,5, et c'est justement le couple que le matching préfère ; et la banque hors ligne colle encore des phrases sans lien entre elles (seule une vraie génération, Gemini ou Claude, règle ça).
+  - [14/11 21:00] #69 : sans Gemini, le modèle local remplace les trigrammes et les mots-clés. Sur 12 scénarios d'intérêts × 3 états : 100 propositions au lieu de 78, un seul cas vide au lieu de 6. Reste à corriger : la banque hors ligne colle encore des phrases sans lien entre elles (seule une vraie génération, Gemini ou Claude, règle ça).
+  - [14/11 21:45] #71, le joker : quand le patient et l'aidant partagent l'intérêt (même nom, ou ressemblance ≥ 0,85 avec le modèle local), toute demande sur ce sujet est placée au centre de la zone du patient ; les plafonds de sécurité des autres axes restent appliqués. Avant, λ valait 0,5 pour toute demande et 4 aidants sur 14 n'avaient aucune proposition. Le seuil Gemini (0,9) n'est pas calibré.
 
 ## Rami (Antigravity)
 
