@@ -28,6 +28,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 13:30] **Nouvelle dépendance `numpy`** (issue #15) : relancer `uv sync` après le prochain `git pull`. Nouveau paquet `ml/simulation` qui génère les données d'entraînement. `pyproject.toml`, `uv.lock` et `AGENTS.md` sont modifiés. Aucun contrat touché, rien n'est branché sur l'app.
 - [14/11 12:51] `.pre-commit-config.yaml` : les hooks de `pre-commit-hooks` passent par `python -m` (Smart App Control de Windows 11 bloquait leurs .exe, WinError 4551). Mêmes vérifications, aucune dépendance ajoutée.
 - [14/11 13:46] **Contrat ML étendu** (issue #19) : `ml.model` exporte `InterestProfile`, `build_profile` et `stable_match` (`ml/matching.py`). Dans la vraie app, l'aidant reçoit le patient qui lui est apparié par centres d'intérêt et temps d'attente. Nouvelle table SQLite `profiles`, créée toute seule. Rien n'est retiré, contrat d'API inchangé, aucune dépendance ajoutée.
+- [14/11 14:43] **Contrat d'API étendu** (issue #34) : `JoinRequest` a un champ `bio` facultatif (300 caractères au plus). Chaque phrase de la bio compte dans l'appariement. `contract/openapi.json` et `schema.d.ts` sont régénérés. Rien n'est retiré : un client qui n'envoie pas `bio` marche toujours. En cas de conflit sur les fichiers générés, résoudre dans `backend/schemas.py` puis régénérer.
 
 ## Max (Claude Code)
 
@@ -51,10 +52,10 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 
 ## Adel (Claude Code)
 
-- **En cours :** #19, l'appariement patient–aidant par centres d'intérêt (PR ouverte). #5 et #23 sont mergées.
+- **En cours :** #34, la bio de l'inscription dans l'appariement (PR ouverte). #5, #19 et #23 sont mergées.
 - **Bloqué :** —
 - **Notes pour la suite :**
-  - Le commentaire libre de l'inscription n'est pas encore dans l'API. Quand il arrive, le passer à `build_profile(tags, comment)` : chaque phrase devient un élément d'intérêt, comparé à tous ceux de l'autre personne.
+  - La bio de l'inscription est envoyée à `/api/app/join` et passée à `build_profile(tags, bio)` : chaque phrase devient un élément d'intérêt, comparé à tous ceux de l'autre personne. Les comptes créés avant n'ont que leurs tags dans leur profil.
   - Le bonus d'attente (`WAIT_WEIGHT`, `WAIT_FULL_DAYS` dans `ml/matching.py`) est un premier réglage, à ajuster avec l'équipe.
   - Le repli hors ligne (trigrammes de lettres) ne comprend pas le sens : « ski » et « montagne » n'y sont pas proches. Il ne sert qu'à ne jamais casser sans clé Gemini.
   - Un profil enregistré n'est pas recalculé si les intérêts changent : supprimer sa ligne dans la table `profiles` pour le recalculer.

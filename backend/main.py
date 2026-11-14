@@ -124,8 +124,8 @@ Patient = Annotated[User, Depends(patient_user)]
 
 @app.post("/api/app/join", responses=ERROR_RESPONSES)
 def join(body: JoinRequest) -> SessionResponse:
-    """Inscription : un prénom, des centres d'intérêt, et un jeton pour cet appareil."""
-    return get_community().join(body.role, body.name, body.interests)
+    """Inscription : un prénom, des centres d'intérêt, une bio facultative, et un jeton."""
+    return get_community().join(body.role, body.name, body.interests, body.bio)
 
 
 @app.get("/api/app/me", responses=ERROR_RESPONSES)

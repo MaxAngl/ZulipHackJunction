@@ -184,6 +184,29 @@ def test_each_helper_is_offered_the_patient_sharing_their_interests():
     assert _helper("/api/app/helper/suggest", sara).patient_name == "Aino"
 
 
+@pytest.mark.parametrize(("bio", "chosen"), [("I play chess.", "Aino"), ("", "Bob")])
+def test_an_interest_written_only_in_the_bio_counts_for_matching(bio: str, chosen: str):
+    """Aino n'écrit « chess » que dans sa bio. Sans bio, Bob, inscrit avant elle, passe devant."""
+    _join("patient", "Bob", ["cooking"])
+    response = client.post(
+        "/api/app/join",
+        json={"role": "patient", "name": "Aino", "interests": ["gardening"], "bio": bio},
+    )
+    assert response.status_code == 200, response.text
+    mikko = _join("helper", "Mikko", ["chess"])
+
+    assert _helper("/api/app/helper/suggest", mikko).patient_name == chosen
+
+
+def test_the_bio_is_optional_and_limited():
+    _join("patient", "Aino", ["gardening"])  # sans bio : toujours accepté
+    response = client.post(
+        "/api/app/join",
+        json={"role": "patient", "name": "Bob", "interests": ["chess"], "bio": "x" * 301},
+    )
+    assert response.status_code == 422
+
+
 def test_an_unrelated_real_need_is_held_and_the_helper_cannot_tell():
     patient = _join("patient", "Aino", ["gardening"])
     helper = _join("helper", "Mikko", ["cooking"])

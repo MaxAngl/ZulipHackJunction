@@ -172,7 +172,7 @@ export interface paths {
         put?: never;
         /**
          * Join
-         * @description Inscription : un prénom, des centres d'intérêt, et un jeton pour cet appareil.
+         * @description Inscription : un prénom, des centres d'intérêt, une bio facultative, et un jeton.
          */
         post: operations["join_api_app_join_post"];
         delete?: never;
@@ -669,6 +669,11 @@ export interface components {
             name: string;
             /** Interests */
             interests: string[];
+            /**
+             * Bio
+             * @default
+             */
+            bio: string;
         };
         /**
          * LoopState

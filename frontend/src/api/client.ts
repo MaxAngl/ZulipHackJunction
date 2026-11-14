@@ -116,8 +116,9 @@ export function join(
   role: Role,
   name: string,
   interests: string[],
+  bio = '',
 ): Promise<SessionResponse> {
-  return post<SessionResponse>('/api/app/join', { role, name, interests })
+  return post<SessionResponse>('/api/app/join', { role, name, interests, bio })
 }
 
 export function getHelperHome(token: string): Promise<HelperHome> {

@@ -236,6 +236,8 @@ class JoinRequest(BaseModel):
     role: Role
     name: str = Field(min_length=1, max_length=40)
     interests: list[Interest] = Field(min_length=1, max_length=8)
+    # Quelques lignes libres sur ses passions : chaque phrase compte dans l'appariement.
+    bio: str = Field(default="", max_length=300)
 
 
 class AppUser(BaseModel):

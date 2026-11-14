@@ -314,7 +314,7 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
         ),
       ).slice(0, 8)
 
-      const session = await join(role, fullName, cleanedInterests)
+      const session = await join(role, fullName, cleanedInterests, bio.trim())
       saveToken(role, session.token)
 
       const finalAvatar = rawPhoto
