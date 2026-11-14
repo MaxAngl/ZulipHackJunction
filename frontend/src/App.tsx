@@ -13,12 +13,15 @@ import ScreenFrame from './screens/ScreenFrame'
 import SettingsScreen from './screens/SettingsScreen'
 import { clearToken, readToken, saveToken } from './session'
 
-// Adresses : `#/` l'accueil, `#/login` la connexion, `#/helper` et `#/patient` la vraie app
-// (inscription si personne n'est connecté), `#/demo` la console, `#/clinician` le portail
+// Adresses : `#/` l'accueil, `#/login` la connexion, `#/join/helper` et `#/join/patient`
+// l'inscription (toujours le formulaire, même si une session est ouverte), `#/helper` et
+// `#/patient` la vraie app (inscription si personne n'est connecté), `#/demo` la console, `#/clinician` le portail
 // médical, `#/admin` celui de l'équipe, `#/settings` les réglages.
 type Route =
   | 'home'
   | 'login'
+  | 'join-helper'
+  | 'join-patient'
   | 'helper'
   | 'patient'
   | 'demo'
@@ -28,6 +31,8 @@ type Route =
 
 const ROUTES: Route[] = [
   'login',
+  'join-helper',
+  'join-patient',
   'helper',
   'patient',
   'demo',
@@ -42,7 +47,7 @@ function readRoute(): Route {
   const pathname = window.location.pathname
     .replace(/^\//, '')
     .replace(/\/$/, '')
-  const target = (hash || pathname) as Route
+  const target = (hash || pathname).replace('/', '-') as Route
   return ROUTES.includes(target) ? target : 'home'
 }
 
@@ -63,8 +68,14 @@ function App() {
   }, [])
 
   // Une session ouverte : le jeton est gardé pour son rôle, et l'on va sur l'écran de ce rôle.
+  // Une autre session du même rôle dans ce navigateur est fermée : on ne reste pas connecté
+  // sous le compte de quelqu'un d'autre.
   const signIn = useCallback((session: SessionResponse) => {
     const role = session.user.role
+    const previous = readToken(role)
+    if (previous && previous !== session.token) {
+      logout(previous).catch(() => undefined) // déjà fermée : rien à faire
+    }
     saveToken(role, session.token)
     setTokens((current) => ({ ...current, [role]: session.token }))
     window.location.hash = `#/${role}`
@@ -100,6 +111,13 @@ function App() {
     content = (
       <ScreenFrame showSettings={false}>
         <LoginForm signupHref="#/" onSignedIn={signIn} />
+      </ScreenFrame>
+    )
+  } else if (route === 'join-helper' || route === 'join-patient') {
+    const role = route === 'join-helper' ? 'helper' : 'patient'
+    content = (
+      <ScreenFrame showSettings={false}>
+        <JoinForm key={role} role={role} onJoined={signIn} />
       </ScreenFrame>
     )
   } else if (route === 'settings') {

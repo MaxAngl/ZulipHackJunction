@@ -15,10 +15,10 @@ function Landing() {
         </div>
         <h1>Helping others by answering their needs.</h1>
         <div className="stack">
-          <a className="button button-primary button-wide" href="#/helper">
+          <a className="button button-primary button-wide" href="#/join/helper">
             Join the community
           </a>
-          <a className="button button-wide" href="#/patient">
+          <a className="button button-wide" href="#/join/patient">
             My clinic invited me
           </a>
           <a className="button button-ghost button-wide" href="#/login">
