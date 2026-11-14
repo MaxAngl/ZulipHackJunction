@@ -275,6 +275,21 @@ class Community:
             self._release_held(patient.id)
             return self.patient_home(self._fresh(patient))
 
+    def push_reading(self, patient: User, measured: dict[str, float]) -> User:
+        """Mesures réelles d'une montre : elles entrent dans θ, l'autoencodeur relit L(θ).
+
+        Le corps virtuel ne complète que les signaux non mesurés. Comme `push_state`, ce n'est
+        pas rejoué après un redémarrage du serveur : la montre renvoie ses mesures toutes les 30 s.
+        """
+        with self.store.lock:
+            companion = self._companion(patient)
+            if measured:
+                companion.body.measure(measured)
+                self._read(companion)
+                self._save(patient, companion, "watch", patient.tried_formats)
+                self._release_held(patient.id)
+            return self._fresh(patient)
+
     # --- Intérieur ---------------------------------------------------------------------------
 
     def _fresh(self, user: User) -> User:

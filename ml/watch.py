@@ -88,11 +88,3 @@ def estimate(reading: Reading, hour: float) -> Estimate:
         raise ValueError("no usable watch signal in this reading")
     components = {name: 0.5 + sum(values) / len(values) for name, values in shifts.items()}
     return Estimate(components, sum(components.values()) / len(components))
-
-
-def theta_from_watch(reading: Reading, hour: float) -> float | None:
-    """θ provisoire d'un relevé de la montre, ou None si aucun signal n'est exploitable."""
-    try:
-        return estimate(reading, hour).theta
-    except ValueError:
-        return None

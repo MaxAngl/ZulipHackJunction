@@ -474,6 +474,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/app/patient/reading": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Patient Reading
+         * @description Mesures réelles envoyées pour le patient hors de l'app montre (`garmin read --push`).
+         */
+        post: operations["patient_reading_api_app_patient_reading_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1080,7 +1100,10 @@ export interface components {
         };
         /**
          * WatchReading
-         * @description Mesures du moment envoyées par la montre. Noms de ml/simulation/spec.py ; absente = null.
+         * @description Mesures réelles de la montre, aux noms de ml/simulation/spec.py ; absente = null.
+         *
+         *     Elles entrent telles quelles dans θ. L'app montre n'envoie que celles du moment ;
+         *     `garmin read` (Garmin Connect) ajoute la nuit.
          */
         WatchReading: {
             /**
@@ -1096,12 +1119,34 @@ export interface components {
             body_battery?: number | null;
             /** Respiration */
             respiration?: number | null;
+            /** Steps Last Hour */
+            steps_last_hour?: number | null;
             /** Steps Today */
             steps_today?: number | null;
             /** Intensity Minutes Today */
             intensity_minutes_today?: number | null;
             /** Floors Today */
             floors_today?: number | null;
+            /** Outdoor Minutes Today */
+            outdoor_minutes_today?: number | null;
+            /** Sleep Hours */
+            sleep_hours?: number | null;
+            /** Sleep Score */
+            sleep_score?: number | null;
+            /** Deep Sleep Minutes */
+            deep_sleep_minutes?: number | null;
+            /** Rem Sleep Minutes */
+            rem_sleep_minutes?: number | null;
+            /** Awake Minutes */
+            awake_minutes?: number | null;
+            /** Bedtime Hour */
+            bedtime_hour?: number | null;
+            /** Wake Hour */
+            wake_hour?: number | null;
+            /** Hrv Overnight Ms */
+            hrv_overnight_ms?: number | null;
+            /** Spo2 Sleep */
+            spo2_sleep?: number | null;
             /** Resting Hr */
             resting_hr?: number | null;
         };
@@ -3006,6 +3051,86 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WatchStatus"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Entity */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    patient_reading_api_app_patient_reading_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Needed-Token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchReading"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

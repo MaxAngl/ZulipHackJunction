@@ -2329,6 +2329,113 @@
           }
         }
       }
+    },
+    "/api/app/patient/reading": {
+      "post": {
+        "summary": "Patient Reading",
+        "description": "Mesures réelles envoyées pour le patient hors de l'app montre (`garmin read --push`).",
+        "operationId": "patient_reading_api_app_patient_reading_post",
+        "parameters": [
+          {
+            "name": "X-Needed-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Needed-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchReading"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchStatus"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3740,6 +3847,17 @@
             ],
             "title": "Respiration"
           },
+          "steps_last_hour": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps Last Hour"
+          },
           "steps_today": {
             "anyOf": [
               {
@@ -3773,6 +3891,116 @@
             ],
             "title": "Floors Today"
           },
+          "outdoor_minutes_today": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outdoor Minutes Today"
+          },
+          "sleep_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sleep Hours"
+          },
+          "sleep_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sleep Score"
+          },
+          "deep_sleep_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deep Sleep Minutes"
+          },
+          "rem_sleep_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rem Sleep Minutes"
+          },
+          "awake_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Awake Minutes"
+          },
+          "bedtime_hour": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bedtime Hour"
+          },
+          "wake_hour": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Wake Hour"
+          },
+          "hrv_overnight_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hrv Overnight Ms"
+          },
+          "spo2_sleep": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Spo2 Sleep"
+          },
           "resting_hr": {
             "anyOf": [
               {
@@ -3790,7 +4018,7 @@
           "local_hour"
         ],
         "title": "WatchReading",
-        "description": "Mesures du moment envoyées par la montre. Noms de ml/simulation/spec.py ; absente = null."
+        "description": "Mesures réelles de la montre, aux noms de ml/simulation/spec.py ; absente = null.\n\nElles entrent telles quelles dans θ. L'app montre n'envoie que celles du moment ;\n`garmin read` (Garmin Connect) ajoute la nuit."
       },
       "WatchRequest": {
         "properties": {

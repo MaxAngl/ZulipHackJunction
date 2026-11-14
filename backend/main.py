@@ -246,3 +246,9 @@ def patient_watch_link(body: WatchLinkRequest, user: Patient) -> WatchStatus:
 @app.delete("/api/app/patient/watch", responses=ERROR_RESPONSES)
 def patient_watch_unlink(user: Patient) -> WatchStatus:
     return get_watches().unlink(user)
+
+
+@app.post("/api/app/patient/reading", responses=ERROR_RESPONSES)
+def patient_reading(body: WatchReading, user: Patient) -> WatchStatus:
+    """Mesures réelles envoyées pour le patient hors de l'app montre (`garmin read --push`)."""
+    return get_watches().record(user, body)

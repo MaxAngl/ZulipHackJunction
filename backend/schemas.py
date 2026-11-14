@@ -323,16 +323,31 @@ class WatchLinkRequest(BaseModel):
 
 
 class WatchReading(BaseModel):
-    """Mesures du moment envoyées par la montre. Noms de ml/simulation/spec.py ; absente = null."""
+    """Mesures réelles de la montre, aux noms de ml/simulation/spec.py ; absente = null.
+
+    Elles entrent telles quelles dans θ. L'app montre n'envoie que celles du moment ;
+    `garmin read` (Garmin Connect) ajoute la nuit.
+    """
 
     local_hour: float = Field(ge=0, lt=24, description="Heure locale de la montre, décimale")
     heart_rate: float | None = None
     stress: float | None = None
     body_battery: float | None = None
     respiration: float | None = None
+    steps_last_hour: float | None = None
     steps_today: float | None = None
     intensity_minutes_today: float | None = None
     floors_today: float | None = None
+    outdoor_minutes_today: float | None = None
+    sleep_hours: float | None = None
+    sleep_score: float | None = None
+    deep_sleep_minutes: float | None = None
+    rem_sleep_minutes: float | None = None
+    awake_minutes: float | None = None
+    bedtime_hour: float | None = None
+    wake_hour: float | None = None
+    hrv_overnight_ms: float | None = None
+    spo2_sleep: float | None = None
     resting_hr: float | None = None
 
 
