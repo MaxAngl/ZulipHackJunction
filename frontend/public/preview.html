@@ -50,7 +50,7 @@
           32px 32px;
       }
 
-      /* --- Barre d'outils supérieure --- */
+      /* --- Barre d'outils supérieure rétractable --- */
       header.toolbar {
         position: sticky;
         top: 0;
@@ -58,12 +58,89 @@
         background: rgba(20, 21, 26, 0.88);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid var(--border-studio);
-        padding: 12px 20px;
+        padding: 10px 18px;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 16px;
+        gap: 12px;
         flex-wrap: wrap;
+        transition:
+          transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+          opacity 200ms ease,
+          max-height 260ms ease,
+          padding 200ms ease;
+        max-height: 400px;
+        overflow: hidden;
+      }
+
+      body.toolbar-hidden header.toolbar {
+        transform: translateY(-100%);
+        max-height: 0;
+        padding-top: 0;
+        padding-bottom: 0;
+        opacity: 0;
+        border-bottom: none;
+        pointer-events: none;
+        position: absolute;
+        width: 100%;
+      }
+
+      body.toolbar-hidden main.stage {
+        padding-top: 20px;
+        padding-bottom: 24px;
+      }
+
+      .btn-collapse-bar {
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--text);
+        font-weight: 600;
+        border: 1px solid rgba(255, 255, 255, 0.16);
+      }
+      .btn-collapse-bar:hover {
+        background: rgba(255, 255, 255, 0.16);
+        border-color: rgba(255, 255, 255, 0.35);
+      }
+
+      .toolbar-expand-pill {
+        display: none;
+        position: fixed;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 999;
+        background: rgba(20, 21, 26, 0.94);
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--border-studio);
+        color: var(--text);
+        padding: 6px 16px;
+        border-radius: 999px;
+        font-family: inherit;
+        font-size: 0.82rem;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow:
+          0 4px 20px rgba(0, 0, 0, 0.6),
+          0 0 0 1px rgba(0, 216, 255, 0.2);
+        align-items: center;
+        gap: 8px;
+        transition: all 180ms ease;
+      }
+
+      body.toolbar-hidden .toolbar-expand-pill {
+        display: inline-flex;
+      }
+
+      .toolbar-expand-pill:hover {
+        background: #1f222b;
+        border-color: var(--accent);
+        color: var(--accent);
+        transform: translateX(-50%) translateY(2px);
+      }
+
+      .toolbar-right-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .brand-meta {
@@ -681,8 +758,8 @@
     </style>
   </head>
   <body>
-    <!-- Barre d'outils -->
-    <header class="toolbar">
+    <!-- Barre d'outils rétractable -->
+    <header class="toolbar" id="toolbar">
       <div class="brand-meta">
         <span class="device-badge">
           <svg
@@ -698,7 +775,7 @@
           </svg>
           iPhone 15 Pro
         </span>
-        <span class="dim-tag">393 × 852 px (19.5:9)</span>
+        <span class="dim-tag">393 × 852 px</span>
       </div>
 
       <!-- Route selector -->
@@ -715,9 +792,17 @@
 
       <!-- Zoom controls -->
       <div class="zoom-controls">
-        <button class="tab-btn" data-scale="0.8">80%</button>
-        <button class="tab-btn active" data-scale="0.92">92%</button>
-        <button class="tab-btn" data-scale="1">100% (1:1)</button>
+        <button
+          class="tab-btn active"
+          data-scale="fit"
+          title="Ajuster automatiquement la taille pour voir tout le téléphone"
+        >
+          📐 Ajuster
+        </button>
+        <button class="tab-btn" data-scale="0.75">75%</button>
+        <button class="tab-btn" data-scale="0.85">85%</button>
+        <button class="tab-btn" data-scale="0.92">92%</button>
+        <button class="tab-btn" data-scale="1">100%</button>
       </div>
 
       <!-- Notification simulator & power button -->
@@ -745,10 +830,31 @@
         </button>
       </div>
 
-      <a href="/#/" class="direct-link" target="_blank" rel="noreferrer"
-        >Open full app ↗</a
-      >
+      <div class="toolbar-right-actions">
+        <a href="/#/" class="direct-link" target="_blank" rel="noreferrer"
+          >Open full app ↗</a
+        >
+        <button
+          type="button"
+          class="tab-btn btn-collapse-bar"
+          id="btn-collapse-toolbar"
+          title="Masquer le menu pour voir tout le téléphone sans défilement (Touche Échap)"
+        >
+          ▲ Masquer
+        </button>
+      </div>
     </header>
+
+    <!-- Bouton flottant pour ré-afficher le menu rétracté -->
+    <button
+      type="button"
+      class="toolbar-expand-pill"
+      id="btn-expand-toolbar"
+      title="Afficher les options (pages, tailles, notifications)"
+    >
+      <span>⚙️ Menu & Contrôles</span>
+      <span>▼</span>
+    </button>
 
     <!-- Preview Stage -->
     <main class="stage" id="stage">
@@ -977,8 +1083,40 @@
       const tabBtns = document.querySelectorAll('.tab-btn[data-hash]')
       const btnDuo = document.getElementById('btn-duo')
       const zoomBtns = document.querySelectorAll('.zoom-controls .tab-btn')
+      const toolbar = document.getElementById('toolbar')
+      const btnCollapse = document.getElementById('btn-collapse-toolbar')
+      const btnExpand = document.getElementById('btn-expand-toolbar')
 
       let isDuo = false
+      let currentScaleMode = 'fit'
+
+      // Gestion de la barre rétractable
+      function setToolbarVisible(visible) {
+        if (visible) {
+          document.body.classList.remove('toolbar-hidden')
+          localStorage.setItem('needed.preview.toolbar', 'visible')
+        } else {
+          document.body.classList.add('toolbar-hidden')
+          localStorage.setItem('needed.preview.toolbar', 'hidden')
+        }
+        if (currentScaleMode === 'fit') {
+          updateFitScale()
+        }
+      }
+
+      if (btnCollapse) {
+        btnCollapse.addEventListener('click', () => setToolbarVisible(false))
+      }
+      if (btnExpand) {
+        btnExpand.addEventListener('click', () => setToolbarVisible(true))
+      }
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const isHidden = document.body.classList.contains('toolbar-hidden')
+          setToolbarVisible(isHidden)
+        }
+      })
 
       // Gestion du changement de route
       tabBtns.forEach((btn) => {
@@ -1008,16 +1146,50 @@
         phone2Wrap.style.display = 'flex'
       })
 
-      // Gestion du zoom / échelle
+      // Gestion du zoom / échelle avec mode Ajuster (Fit)
+      function getFitScale() {
+        const isHidden = document.body.classList.contains('toolbar-hidden')
+        const availHeight = window.innerHeight - (isHidden ? 50 : 170)
+        const phoneHeight = 890
+        const scale = Math.min(1, Math.max(0.45, availHeight / phoneHeight))
+        return Math.round(scale * 100) / 100
+      }
+
+      function updateFitScale() {
+        const scale = getFitScale()
+        phone1Wrap.style.transform = `scale(${scale})`
+        phone2Wrap.style.transform = `scale(${scale})`
+      }
+
+      function applyScaleMode(scaleVal) {
+        currentScaleMode = scaleVal
+        if (scaleVal === 'fit') {
+          updateFitScale()
+        } else {
+          phone1Wrap.style.transform = `scale(${scaleVal})`
+          phone2Wrap.style.transform = `scale(${scaleVal})`
+        }
+      }
+
       zoomBtns.forEach((btn) => {
         btn.addEventListener('click', () => {
           zoomBtns.forEach((b) => b.classList.remove('active'))
           btn.classList.add('active')
-          const scale = btn.dataset.scale
-          phone1Wrap.style.transform = `scale(${scale})`
-          phone2Wrap.style.transform = `scale(${scale})`
+          applyScaleMode(btn.dataset.scale)
         })
       })
+
+      window.addEventListener('resize', () => {
+        if (currentScaleMode === 'fit') {
+          updateFitScale()
+        }
+      })
+
+      // Initialisation de la taille et de l'état
+      applyScaleMode('fit')
+      if (localStorage.getItem('needed.preview.toolbar') === 'hidden') {
+        setToolbarVisible(false)
+      }
 
       // Synchronisation du thème sombre entre l'application et le cadre du téléphone
       function syncThemeWithApp() {
