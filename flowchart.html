@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Needed · Cartographie Interactive des Écrans et Flux</title>
+  <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0d0f14;
+      color: #f0f3f6;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      background: #161922;
+      border-bottom: 1px solid #282d3d;
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #00d8ff;
+      letter-spacing: -0.02em;
+    }
+    .legend {
+      display: flex;
+      gap: 16px;
+      font-size: 0.82rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+    .container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 65px);
+    }
+    #network {
+      flex: 1;
+      height: 100%;
+      background: radial-gradient(circle at center, #131722 0%, #0a0c10 100%);
+    }
+    .sidebar {
+      width: 380px;
+      background: #141720;
+      border-left: 1px solid #282d3d;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .sidebar h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      color: #00d8ff;
+    }
+    .card {
+      background: #1b202c;
+      border: 1px solid #2d3345;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+    .card strong {
+      color: #ffffff;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .table-section {
+      margin-top: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    th, td {
+      padding: 8px 6px;
+      text-align: left;
+      border-bottom: 1px solid #2d3345;
+    }
+    th {
+      color: #8b949e;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Needed · Graphe des Connexions, Écrans & Interactions</h1>
+      <span style="font-size: 0.82rem; color: #8b949e;">Survolez ou cliquez sur les nœuds et flèches pour inspecter les flux de données</span>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#00d8ff;"></div> Navigation</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff007f;"></div> Appel API Backend</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#9d4edd;"></div> Fiche / Modale</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00b4d8;"></div> Action / Message</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#e63946;"></div> Authentification</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div id="network"></div>
+    <div class="sidebar" id="sidebar">
+      <h2>Détails du flux sélectionné</h2>
+      <div id="details" class="card">
+        Sélectionnez un bouton ou une connexion dans le graphe pour inspecter précisément quel composant envoie quelles données à qui.
+      </div>
+
+      <div class="table-section">
+        <h3 style="font-size: 0.95rem; margin-bottom: 8px; color: #f0f3f6;">Résumé des interactions directes</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Bouton / Action</th>
+              <th>De</th>
+              <th>Vers</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><b>Bouton Engrenage (Paramètres)</b></td><td><code>#/</code></td><td><code>#/settings</code></td></tr><tr><td><b>Bouton Engrenage (Paramètres)</b></td><td><code>#/helper</code></td><td><code>#/settings</code></td></tr><tr><td><b>Bouton Engrenage (Paramètres)</b></td><td><code>#/patient</code></td><td><code>#/settings</code></td></tr><tr><td><b>Bouton Retour (Flèche / Croix)</b></td><td><code>#/settings</code></td><td><code>Historique (Back)</code></td></tr><tr><td><b>Bouton 'I want to help'</b></td><td><code>#/</code></td><td><code>#/helper</code></td></tr><tr><td><b>Bouton 'I need a hand'</b></td><td><code>#/</code></td><td><code>#/patient</code></td></tr><tr><td><b>Lien 'Clinician portal'</b></td><td><code>#/</code></td><td><code>#/clinician</code></td></tr><tr><td><b>Lien 'Simulateur / Console'</b></td><td><code>#/</code></td><td><code>#/demo</code></td></tr><tr><td><b>Bouton (i) Information</b></td><td><code>#/</code></td><td><code>#/</code></td></tr><tr><td><b>Bouton 'Continue'</b></td><td><code>join_form</code></td><td><code>Backend /api/app/join</code></td></tr><tr><td><b>Succès Inscription (Rôle helper)</b></td><td><code>join_form</code></td><td><code>#/helper</code></td></tr><tr><td><b>Succès Inscription (Rôle patient)</b></td><td><code>join_form</code></td><td><code>#/patient</code></td></tr><tr><td><b>Bouton 'Send to patient'</b></td><td><code>#/helper</code></td><td><code>Backend /api/app/helper/send</code></td></tr><tr><td><b>Bouton 'Skip suggestions'</b></td><td><code>#/helper</code></td><td><code>Backend /api/app/helper/suggest</code></td></tr><tr><td><b>Bouton 'Say thanks'</b></td><td><code>#/helper</code></td><td><code>Backend /api/app/helper/thanks</code></td></tr><tr><td><b>Bouton 'Send answer'</b></td><td><code>#/patient</code></td><td><code>Backend /api/app/patient/answer</code></td></tr><tr><td><b>Bouton 'Not right now'</b></td><td><code>#/patient</code></td><td><code>Backend /api/app/patient/decline</code></td></tr><tr><td><b>Bouton 'Share with community'</b></td><td><code>#/patient</code></td><td><code>Messagerie (ChatView)</code></td></tr><tr><td><b>Clic sur l'avatar ou nom de la conversation</b></td><td><code>#/helper</code></td><td><code>peer_profile</code></td></tr><tr><td><b>Clic sur l'avatar ou nom de la conversation</b></td><td><code>#/patient</code></td><td><code>peer_profile</code></td></tr><tr><td><b>Bouton 'Envoyer (Avion)'</b></td><td><code>ChatView</code></td><td><code>Conversation</code></td></tr><tr><td><b>Bouton '✓ A fini de m'aider'</b></td><td><code>ChatView</code></td><td><code>Conversation</code></td></tr><tr><td><b>Bouton '+ Nouvelle demande'</b></td><td><code>ChatView</code></td><td><code>ChatView</code></td></tr><tr><td><b>Bouton 'Paramètres & Confidentialité'</b></td><td><code>ProfileView</code></td><td><code>#/settings</code></td></tr><tr><td><b>Bouton 'Déconnexion / Quitter ce compte'</b></td><td><code>ProfileView</code></td><td><code>#/</code></td></tr><tr><td><b>Bouton 'Déconnecter tous les comptes'</b></td><td><code>#/settings</code></td><td><code>#/</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const nodes = new vis.DataSet([{"id": "Backend /api/app/helper/thanks", "label": "<b>Backend /api/app/helper/thanks</b><br><small>Backend /api/app/helper/thanks</small>", "group": "api", "title": "<b>Backend /api/app/helper/thanks</b><br>Composant / Endpoint d'action", "shape": "ellipse"}, {"id": "join_form", "label": "<b>Cr\u00e9ation de profil (JoinForm)</b><br><small>join_form</small>", "group": "screen", "title": "<b>Cr\u00e9ation de profil (JoinForm)</b><br>Formulaire d'inscription : identit\u00e9, avatar, bio, passions, email clinicien", "shape": "roundrect"}, {"id": "Backend /api/app/patient/answer", "label": "<b>Backend /api/app/patient/answer</b><br><small>Backend /api/app/patient/answer</small>", "group": "api", "title": "<b>Backend /api/app/patient/answer</b><br>Composant / Endpoint d'action", "shape": "ellipse"}, {"id": "Historique (Back)", "label": "<b>Historique (Back)</b><br><small>Historique (Back)</small>", "group": "screen", "title": "<b>Historique (Back)</b><br>Composant / Endpoint d'action", "shape": "roundrect"}, {"id": "Backend /api/app/helper/send", "label": "<b>Backend /api/app/helper/send</b><br><small>Backend /api/app/helper/send</small>", "group": "api", "title": "<b>Backend /api/app/helper/send</b><br>Composant / Endpoint d'action", "shape": "ellipse"}, {"id": "#/settings", "label": "<b>Param\u00e8tres (SettingsScreen)</b><br><small>#/settings</small>", "group": "route", "title": "<b>Param\u00e8tres (SettingsScreen)</b><br>Gestion des comptes, th\u00e8me (jour/nuit), confidentialit\u00e9 et s\u00e9curit\u00e9", "shape": "box"}, {"id": "#/demo", "label": "<b>Console Interactive (DemoScreen)</b><br><small>#/demo</small>", "group": "route", "title": "<b>Console Interactive (DemoScreen)</b><br>Simulateur c\u00f4te-\u00e0-c\u00f4te avec t\u00e9l\u00e9m\u00e9trie theta en temps r\u00e9el", "shape": "box"}, {"id": "Backend /api/app/join", "label": "<b>Backend /api/app/join</b><br><small>Backend /api/app/join</small>", "group": "api", "title": "<b>Backend /api/app/join</b><br>Composant / Endpoint d'action", "shape": "ellipse"}, {"id": "peer_profile", "label": "<b>Fiche Profil Interlocuteur</b><br><small>peer_profile</small>", "group": "modal", "title": "<b>Fiche Profil Interlocuteur</b><br>Fiche compl\u00e8te avec nom, avatar agrandi, bio, centres d'int\u00e9r\u00eat, 3 photos de passion", "shape": "roundrect"}, {"id": "ChatView", "label": "<b>ChatView</b><br><small>ChatView</small>", "group": "screen", "title": "<b>ChatView</b><br>Composant / Endpoint d'action", "shape": "roundrect"}, {"id": "ProfileView", "label": "<b>ProfileView</b><br><small>ProfileView</small>", "group": "screen", "title": "<b>ProfileView</b><br>Composant / Endpoint d'action", "shape": "roundrect"}, {"id": "#/clinician", "label": "<b>Espace Clinicien (ClinicianScreen)</b><br><small>#/clinician</small>", "group": "route", "title": "<b>Espace Clinicien (ClinicianScreen)</b><br>Espace soignant : t\u00e9l\u00e9m\u00e9trie passive, \u00e9dition de notes, suivi rTMS", "shape": "box"}, {"id": "Backend /api/app/helper/suggest", "label": "<b>Backend /api/app/helper/suggest</b><br><small>Backend /api/app/helper/suggest</small>", "group": "api", "title": "<b>Backend /api/app/helper/suggest</b><br>Composant / Endpoint d'action", "shape": "ellipse"}, {"id": "Conversation", "label": "<b>Conversation</b><br><small>Conversation</small>", "group": "screen", "title": "<b>Conversation</b><br>Composant / Endpoint d'action", "shape": "roundrect"}, {"id": "#/", "label": "<b>Accueil (Landing)</b><br><small>#/</small>", "group": "route", "title": "<b>Accueil (Landing)</b><br>Portail d'accueil avec choix de r\u00f4le et explications", "shape": "box"}, {"id": "#/patient", "label": "<b>Espace Patient (PatientScreen)</b><br><small>#/patient</small>", "group": "route", "title": "<b>Espace Patient (PatientScreen)</b><br>Interface patient : partage de besoins, messagerie libre, consultation du profil", "shape": "box"}, {"id": "Messagerie (ChatView)", "label": "<b>Messagerie (ChatView)</b><br><small>Messagerie (ChatView)</small>", "group": "screen", "title": "<b>Messagerie (ChatView)</b><br>Composant / Endpoint d'action", "shape": "roundrect"}, {"id": "Backend /api/app/patient/decline", "label": "<b>Backend /api/app/patient/decline</b><br><small>Backend /api/app/patient/decline</small>", "group": "api", "title": "<b>Backend /api/app/patient/decline</b><br>Composant / Endpoint d'action", "shape": "ellipse"}, {"id": "#/helper", "label": "<b>Espace Aidant (HelperScreen)</b><br><small>#/helper</small>", "group": "route", "title": "<b>Espace Aidant (HelperScreen)</b><br>Interface aidant : choix de requ\u00eates, modifications, suggestions, messagerie, profil", "shape": "box"}]);
+    const edges = new vis.DataSet([{"from": "#/", "to": "#/settings", "label": "Bouton Engrenage (Param\u00e8tres)", "title": "<b>Action : Bouton Engrenage (Param\u00e8tres)</b><br>Type : navigation<br>Donn\u00e9es / Effet : Route #/settings", "color": {"color": "#00d8ff", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/helper", "to": "#/settings", "label": "Bouton Engrenage (Param\u00e8tres)", "title": "<b>Action : Bouton Engrenage (Param\u00e8tres)</b><br>Type : navigation<br>Donn\u00e9es / Effet : Route #/settings", "color": {"color": "#00d8ff", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/patient", "to": "#/settings", "label": "Bouton Engrenage (Param\u00e8tres)", "title": "<b>Action : Bouton Engrenage (Param\u00e8tres)</b><br>Type : navigation<br>Donn\u00e9es / Effet : Route #/settings", "color": {"color": "#00d8ff", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/settings", "to": "Historique (Back)", "label": "Bouton Retour (Fl\u00e8che / Croix)", "title": "<b>Action : Bouton Retour (Fl\u00e8che / Croix)</b><br>Type : navigation<br>Donn\u00e9es / Effet : window.history.back()", "color": {"color": "#00d8ff", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/", "to": "#/helper", "label": "Bouton 'I want to help'", "title": "<b>Action : Bouton 'I want to help'</b><br>Type : navigation<br>Donn\u00e9es / Effet : Route #/helper (redirige vers JoinForm si non connect\u00e9)", "color": {"color": "#00d8ff", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/", "to": "#/patient", "label": "Bouton 'I need a hand'", "title": "<b>Action : Bouton 'I need a hand'</b><br>Type : navigation<br>Donn\u00e9es / Effet : Route #/patient (redirige vers JoinForm si non connect\u00e9)", "color": {"color": "#00d8ff", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/", "to": "#/clinician", "label": "Lien 'Clinician portal'", "title": "<b>Action : Lien 'Clinician portal'</b><br>Type : navigation<br>Donn\u00e9es / Effet : Route #/clinician", "color": {"color": "#00d8ff", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/", "to": "#/demo", "label": "Lien 'Simulateur / Console'", "title": "<b>Action : Lien 'Simulateur / Console'</b><br>Type : navigation<br>Donn\u00e9es / Effet : Route #/demo", "color": {"color": "#00d8ff", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/", "to": "#/", "label": "Bouton (i) Information", "title": "<b>Action : Bouton (i) Information</b><br>Type : modal<br>Donn\u00e9es / Effet : Ouvre le pop-up d'explication de l'application", "color": {"color": "#9d4edd", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "join_form", "to": "Backend /api/app/join", "label": "Bouton 'Continue'", "title": "<b>Action : Bouton 'Continue'</b><br>Type : api<br>Donn\u00e9es / Effet : role, name (firstName+lastName), interests, avatarUrl, bio, passionPhotos, allowProfileView", "color": {"color": "#ff007f", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "join_form", "to": "#/helper", "label": "Succ\u00e8s Inscription (R\u00f4le helper)", "title": "<b>Action : Succ\u00e8s Inscription (R\u00f4le helper)</b><br>Type : transition<br>Donn\u00e9es / Effet : Stocke jeton helper + session profile", "color": {"color": "#2ec4b6", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "join_form", "to": "#/patient", "label": "Succ\u00e8s Inscription (R\u00f4le patient)", "title": "<b>Action : Succ\u00e8s Inscription (R\u00f4le patient)</b><br>Type : transition<br>Donn\u00e9es / Effet : Stocke jeton patient + session profile + email clinicien", "color": {"color": "#2ec4b6", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/helper", "to": "Backend /api/app/helper/send", "label": "Bouton 'Send to patient'", "title": "<b>Action : Bouton 'Send to patient'</b><br>Type : api<br>Donn\u00e9es / Effet : proposal_id ou custom message {text}", "color": {"color": "#ff007f", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/helper", "to": "Backend /api/app/helper/suggest", "label": "Bouton 'Skip suggestions'", "title": "<b>Action : Bouton 'Skip suggestions'</b><br>Type : api<br>Donn\u00e9es / Effet : Demande de nouvelles propositions IA adapt\u00e9es", "color": {"color": "#ff007f", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/helper", "to": "Backend /api/app/helper/thanks", "label": "Bouton 'Say thanks'", "title": "<b>Action : Bouton 'Say thanks'</b><br>Type : api<br>Donn\u00e9es / Effet : request_id (cl\u00f4ture positive + incr\u00e9mentation t\u00e9l\u00e9m\u00e9trie)", "color": {"color": "#ff007f", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/patient", "to": "Backend /api/app/patient/answer", "label": "Bouton 'Send answer'", "title": "<b>Action : Bouton 'Send answer'</b><br>Type : api<br>Donn\u00e9es / Effet : request_id, answer (texte de r\u00e9ponse)", "color": {"color": "#ff007f", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/patient", "to": "Backend /api/app/patient/decline", "label": "Bouton 'Not right now'", "title": "<b>Action : Bouton 'Not right now'</b><br>Type : api<br>Donn\u00e9es / Effet : request_id (d\u00e9clinaison bienveillante sans p\u00e9nalit\u00e9)", "color": {"color": "#ff007f", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/patient", "to": "Messagerie (ChatView)", "label": "Bouton 'Share with community'", "title": "<b>Action : Bouton 'Share with community'</b><br>Type : action<br>Donn\u00e9es / Effet : Bascule sur l'onglet messagerie avec la demande post\u00e9e", "color": {"color": "#00b4d8", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/helper", "to": "peer_profile", "label": "Clic sur l'avatar ou nom de la conversation", "title": "<b>Action : Clic sur l'avatar ou nom de la conversation</b><br>Type : modal<br>Donn\u00e9es / Effet : Ouvre la fiche profil (si allowProfileView=true) ou toast de refus \ud83d\udd12", "color": {"color": "#9d4edd", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/patient", "to": "peer_profile", "label": "Clic sur l'avatar ou nom de la conversation", "title": "<b>Action : Clic sur l'avatar ou nom de la conversation</b><br>Type : modal<br>Donn\u00e9es / Effet : Ouvre la fiche profil (si allowProfileView=true) ou toast de refus \ud83d\udd12", "color": {"color": "#9d4edd", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "ChatView", "to": "Conversation", "label": "Bouton 'Envoyer (Avion)'", "title": "<b>Action : Bouton 'Envoyer (Avion)'</b><br>Type : action<br>Donn\u00e9es / Effet : Message texte + photos / vid\u00e9os / fichiers joints (limite 5 msgs anti-spam)", "color": {"color": "#00b4d8", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "ChatView", "to": "Conversation", "label": "Bouton '\u2713 A fini de m'aider'", "title": "<b>Action : Bouton '\u2713 A fini de m'aider'</b><br>Type : action<br>Donn\u00e9es / Effet : Marque le service comme accompli sans bloquer le fil", "color": {"color": "#00b4d8", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "ChatView", "to": "ChatView", "label": "Bouton '+ Nouvelle demande'", "title": "<b>Action : Bouton '+ Nouvelle demande'</b><br>Type : action<br>Donn\u00e9es / Effet : Relance un nouveau cycle d'entraide", "color": {"color": "#00b4d8", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "ProfileView", "to": "#/settings", "label": "Bouton 'Param\u00e8tres & Confidentialit\u00e9'", "title": "<b>Action : Bouton 'Param\u00e8tres & Confidentialit\u00e9'</b><br>Type : navigation<br>Donn\u00e9es / Effet : Route #/settings", "color": {"color": "#00d8ff", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "ProfileView", "to": "#/", "label": "Bouton 'D\u00e9connexion / Quitter ce compte'", "title": "<b>Action : Bouton 'D\u00e9connexion / Quitter ce compte'</b><br>Type : auth<br>Donn\u00e9es / Effet : Suppression du token de r\u00f4le + retour accueil", "color": {"color": "#e63946", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}, {"from": "#/settings", "to": "#/", "label": "Bouton 'D\u00e9connecter tous les comptes'", "title": "<b>Action : Bouton 'D\u00e9connecter tous les comptes'</b><br>Type : auth<br>Donn\u00e9es / Effet : Supprime token patient + helper + reload", "color": {"color": "#e63946", "highlight": "#ffffff"}, "arrows": "to", "font": {"align": "middle", "size": 11, "color": "#c0c4cc"}}]);
+
+    const container = document.getElementById('network');
+    const data = { nodes: nodes, edges: edges };
+    const options = {
+      nodes: {
+        borderWidth: 2,
+        color: {
+          border: '#3a4256',
+          background: '#1d2230',
+          highlight: { border: '#00d8ff', background: '#252d40' }
+        },
+        font: { color: '#f0f3f6', face: 'system-ui' },
+        margin: 10
+      },
+      edges: {
+        width: 1.8,
+        smooth: { type: 'cubicBezier', roundness: 0.4 },
+        font: { background: '#11141c', strokeWidth: 0 }
+      },
+      physics: {
+        barnesHut: {
+          gravitationalConstant: -3800,
+          centralGravity: 0.35,
+          springLength: 170,
+          springConstant: 0.04
+        }
+      },
+      interaction: { hover: true, tooltipDelay: 100 }
+    };
+
+    const network = new vis.Network(container, data, options);
+
+    const detailsEl = document.getElementById('details');
+
+    network.on("selectEdge", function (params) {
+      if (params.edges.length > 0) {
+        const edgeId = params.edges[0];
+        const edge = edges.get(edgeId);
+        detailsEl.innerHTML = `
+          <span class="badge" style="background: ${edge.color?.color || '#00d8ff'}; color: #000;">${edge.label}</span>
+          <br>
+          <strong>Origine :</strong> <code>${edge.from}</code><br>
+          <strong>Destination :</strong> <code>${edge.to}</code><br><br>
+          <strong>Données & Effet :</strong><br>
+          <div style="background: #11141c; padding: 8px; border-radius: 6px; margin-top: 4px; font-family: monospace; font-size: 0.8rem; color: #00d8ff;">
+            ${edge.title.replace(/<[^>]*>?/gm, '')}
+          </div>
+        `;
+      }
+    });
+
+    network.on("selectNode", function (params) {
+      if (params.nodes.length > 0) {
+        const nodeId = params.nodes[0];
+        const node = nodes.get(nodeId);
+        const relatedEdges = edges.get({
+          filter: function (item) {
+            return item.from === nodeId || item.to === nodeId;
+          }
+        });
+
+        let html = `<strong>Page / Composant :</strong> ${node.id}<br><br>`;
+        html += `<strong>Boutons / Flux sortants :</strong><ul>`;
+        relatedEdges.forEach(e => {
+          if (e.from === nodeId) {
+            html += `<li><b>${e.label}</b> ➜ <code>${e.to}</code></li>`;
+          }
+        });
+        html += `</ul><strong>Flux entrants :</strong><ul>`;
+        relatedEdges.forEach(e => {
+          if (e.to === nodeId) {
+            html += `<li><code>${e.from}</code> ➜ <b>${e.label}</b></li>`;
+          }
+        });
+        html += `</ul>`;
+        detailsEl.innerHTML = html;
+      }
+    });
+  </script>
+</body>
+</html>
