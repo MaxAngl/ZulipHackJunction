@@ -28,8 +28,9 @@ Chaque ligne dit où le changer. Ce qui avait été validé en discussion n'est 
 | Règle de départ : centre = 1 − 0,6·θ, plafond d'effort = 0,25 + 0,75·θ | `ml/model.py` |
 | Largeur de la zone : ±0,18 au départ, divisée par √(1 + n/2) après n réponses, jamais sous ±0,07 | `ml/model.py` |
 | Grille des formats et de leur effort : opinion 0,15 · memory 0,25 · explain 0,40 · review 0,50 · make 0,70 · call 0,85 | `ml/formats.py` |
-| **Mesure λ modifiée** : λ = (a·p − s) / ((a·p − s) + (a·h − s)), avec s = p·h. Sans retirer s, de vrais embeddings donnent presque toujours λ ≈ 0,5. Hors ligne, s vaut 0 et on retrouve la formule validée | `ml/pipeline.py` |
-| Un message sans lien avec aucun des deux centres d'intérêt reçoit λ = 0, donc il est retenu | `ml/pipeline.py` |
+| **Mesure λ modifiée** : λ = 0,5 + (a·p − a·h) / (2·(1 − p·h)), c'est-à-dire la projection du message sur l'axe aidant → patient. La formule validée, a·p / (a·p + a·h), donne presque toujours 0,5 avec de vrais embeddings, parce que deux textes se ressemblent toujours un peu | `ml/pipeline.py`, `lambda_position` |
+| **Avec Gemini, l'échelle est recalée sur chaque lot** : une droite relie les positions mesurées aux positions annoncées par le générateur. Chaque demande garde sa propre mesure | `ml/pipeline.py`, `_calibrate` |
+| Un message sans lien avec aucun des deux centres d'intérêt reçoit λ = 0, donc il est retenu. **Ce test ne marche que hors ligne** : avec Gemini, le seuil est à 0 et reste à calibrer | `ml/pipeline.py`, `MIN_RELEVANCE` |
 | Effort d'un message écrit par l'aidant : format reconnu par Gemini, sinon par mots-clés | `ml/pipeline.py`, `ml/formats.py` |
 | Un message jugé dangereux (argent, données personnelles, avis médical) est **refusé** à l'aidant. C'est la seule exception à « retardé, pas refusé » | `ml/pipeline.py` |
 
@@ -60,6 +61,7 @@ Chaque ligne dit où le changer. Ce qui avait été validé en discussion n'est 
 - **Appels REST directs**, sans SDK : aucune dépendance ajoutée (`ml/gemini.py`).
 - **Modèles par défaut** : `gemini-flash-latest` et `gemini-embedding-001`, modifiables avec `GEMINI_MODEL` et `GEMINI_EMBED_MODEL` dans `.env`.
 - Les noms de champs viennent de la documentation lue cette nuit. En cas de refus de l'API, le client réessaie avec une requête plus simple, puis bascule sur la banque de secours.
+- Le chemin Gemini est couvert par des tests avec une **fausse API** (`ml/tests/test_gemini_path.py`). Ils vérifient notre code, pas le comportement de la vraie API.
 
 ## Repo
 

@@ -182,7 +182,7 @@ Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 - 2026-11-14 — Gemini appelé en REST avec la bibliothèque standard, sans SDK — aucune dépendance à ajouter, et un repli hors ligne si l'API échoue.
 - 2026-11-14 — Modèle de zone et capteur d'état simulés derrière `ml/model.py` et `backend/sensor.py` — pas de données pour entraîner ; les signatures resteront quand le vrai modèle arrivera.
 - 2026-11-14 — Interface et messages d'erreur en anglais — jury international ; les commentaires restent en français.
-- 2026-11-14 — Mesure λ = (a·p − s) / ((a·p − s) + (a·h − s)), avec s = p·h — sans retirer s, de vrais embeddings tassent tout autour de 0,5.
+- 2026-11-14 — Mesure λ = 0,5 + (a·p − a·h) / (2·(1 − p·h)), recalée sur chaque lot avec Gemini — le rapport a·p / (a·p + a·h) tasse tout autour de 0,5 avec de vrais embeddings.
 - 2026-11-14 — État de la démo en mémoire, un seul patient — pas de base de données tant que la boucle n'est pas validée.
 - 2026-11-13 — Relecture automatique des PR par Claude et par Gemini — deux modèles différents ne ratent pas les mêmes bugs.
 - 2026-11-13 — Context7 (MCP, sans clé) branché sur Claude et Gemini — la stack est plus récente que les connaissances des modèles.

@@ -19,14 +19,20 @@ from ml.types import Candidate, InterestPair, Provider, ProviderInfo, Review, Sl
 logger = logging.getLogger(__name__)
 
 CANDIDATES_PER_PAIR = 8
-MIN_RELEVANCE = 0.03  # en dessous, le texte n'a de lien avec aucun des deux centres d'intérêt
 MAX_TEXT_LENGTH = 400
+
+# En dessous de cette ressemblance avec les deux centres d'intérêt, un texte est « hors sujet ».
+# Hors ligne, la mesure lexicale donne 0 dès qu'aucun mot-clé n'est présent. Avec de vrais
+# embeddings, deux textes se ressemblent toujours un peu : le seuil reste à calibrer.
+MIN_RELEVANCE: dict[Provider, float] = {"offline": 0.03, "gemini": 0.0}
+MIN_POINTS_TO_CALIBRATE = 4
 
 _UNSAFE = re.compile(
     r"\b(money|pay me|loan|bank|password|home address|diagnos|medication|prescri|dose|suicid)"
 )
 
 _state = {"note": ""}  # dernier incident Gemini, affiché dans l'interface
+_scale = {"gain": 1.0, "shift": 0.0}  # dernier recalage de l'axe pour les embeddings Gemini
 
 GENERATION_SYSTEM = """You write short requests for a community app where members ask each other \
 for small favours.
@@ -64,21 +70,55 @@ def provider_info() -> ProviderInfo:
     return ProviderInfo("offline", None, "")
 
 
-def lambda_position(a: list[float], p: list[float], h: list[float]) -> tuple[float, bool]:
+def _clip(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def lambda_position(
+    a: list[float], p: list[float], h: list[float], provider: Provider = "offline"
+) -> tuple[float, bool]:
     """Position d'un texte entre l'intérêt de l'aidant (0) et celui du patient (1).
 
-    λ = (a·p − s) / ((a·p − s) + (a·h − s)), avec s = p·h.
-    Retirer s, ce que les deux centres d'intérêt ont en commun, évite que tout se tasse autour
-    de 0,5 avec de vrais embeddings. En mode hors ligne s vaut 0 : on retrouve a·p / (a·p + a·h).
-    Le second élément vaut True quand le texte n'a de lien avec aucun des deux sujets.
+    C'est la projection du texte sur l'axe qui va de h à p :
+        λ = 0,5 + (a·p − a·h) / (2 · (1 − p·h))      (a·x = cosinus entre a et x)
+    Un texte identique à p donne 1, identique à h donne 0, à égale distance donne 0,5. Seule la
+    différence a·p − a·h compte : ce que le texte partage avec les deux sujets s'annule.
+    Le second élément vaut True quand le texte n'a de lien avec aucun des deux sujets : sa
+    position est alors 0, tout côté aidant.
     """
-    shared = cosine(p, h)
-    toward_patient = max(0.0, cosine(a, p) - shared)
-    toward_helper = max(0.0, cosine(a, h) - shared)
-    total = toward_patient + toward_helper
-    if total < MIN_RELEVANCE:
+    to_patient, to_helper = cosine(a, p), cosine(a, h)
+    if max(to_patient, to_helper) < MIN_RELEVANCE[provider]:
         return 0.0, True
-    return toward_patient / total, False
+    span = max(1e-6, 1.0 - cosine(p, h))
+    return _clip(0.5 + (to_patient - to_helper) / (2.0 * span)), False
+
+
+def _calibrate(raw: list[float], intended: list[float | None]) -> None:
+    """Recale l'échelle de l'axe sur un lot généré par Gemini.
+
+    Avec de vrais embeddings, une phrase ressemble moins à un mot qu'un mot à un autre : les
+    positions brutes se tassent autour de 0,5. On cherche donc la droite qui relie au mieux les
+    positions brutes aux positions annoncées par le générateur sur l'ensemble du lot. Chaque
+    demande garde sa propre mesure : une demande qui ne tient pas ce qu'elle annonce s'écarte
+    de la droite, et c'est sa position mesurée qui compte.
+    """
+    points = [(r, t) for r, t in zip(raw, intended, strict=True) if t is not None]
+    if len(points) < MIN_POINTS_TO_CALIBRATE:
+        return
+    mean_raw = sum(r for r, _ in points) / len(points)
+    mean_aim = sum(t for _, t in points) / len(points)
+    spread = sum((r - mean_raw) ** 2 for r, _ in points)
+    together = sum((r - mean_raw) * (t - mean_aim) for r, t in points)
+    if spread < 1e-6 or together <= 0:
+        return  # mesures toutes égales, ou sans rapport avec les annonces : on ne recale pas
+    _scale["gain"] = together / spread
+    _scale["shift"] = mean_aim - _scale["gain"] * mean_raw
+
+
+def _rescaled(raw: float, provider: Provider) -> float:
+    if provider == "offline":
+        return raw
+    return _clip(_scale["shift"] + _scale["gain"] * raw)
 
 
 def _interest_names(pairs: list[InterestPair]) -> list[str]:
@@ -216,26 +256,31 @@ def _measure(
     interests = _interest_names(pairs)
     vectors = embed_texts([draft.text for draft in drafts] + interests, provider, dims)
     by_interest = dict(zip(interests, vectors[len(drafts) :], strict=True))
-    candidates: list[Candidate] = []
-    for draft, vector in zip(drafts, vectors, strict=False):
-        pair = pairs[draft.pair_index]
-        lam, off_topic = lambda_position(
-            vector, by_interest[pair.patient_interest], by_interest[pair.helper_interest]
+    measured = [
+        lambda_position(
+            vector,
+            by_interest[pairs[draft.pair_index].patient_interest],
+            by_interest[pairs[draft.pair_index].helper_interest],
+            provider,
         )
-        candidates.append(
-            Candidate(
-                id=uuid.uuid4().hex[:8],
-                text=draft.text,
-                pair=pair,
-                lam=round(lam, 3),
-                format=draft.format,
-                effort=effort_of(draft.format),
-                off_topic=off_topic,
-                provider=provider,
-                intended=draft.intended,
-            )
+        for draft, vector in zip(drafts, vectors, strict=False)
+    ]
+    if provider == "gemini":
+        _calibrate([raw for raw, _ in measured], [draft.intended for draft in drafts])
+    return [
+        Candidate(
+            id=uuid.uuid4().hex[:8],
+            text=draft.text,
+            pair=pairs[draft.pair_index],
+            lam=0.0 if off_topic else round(_rescaled(raw, provider), 3),
+            format=draft.format,
+            effort=effort_of(draft.format),
+            off_topic=off_topic,
+            provider=provider,
+            intended=draft.intended,
         )
-    return candidates
+        for draft, (raw, off_topic) in zip(drafts, measured, strict=True)
+    ]
 
 
 def generate_candidates(
@@ -301,15 +346,18 @@ def _measure_free_text(
     by_interest = dict(zip(interests, vectors[1:], strict=True))
 
     def relevance(pair: InterestPair) -> float:
-        shared = cosine(by_interest[pair.patient_interest], by_interest[pair.helper_interest])
-        to_patient = cosine(vectors[0], by_interest[pair.patient_interest]) - shared
-        to_helper = cosine(vectors[0], by_interest[pair.helper_interest]) - shared
-        return max(0.0, to_patient) + max(0.0, to_helper)
+        to_patient = cosine(vectors[0], by_interest[pair.patient_interest])
+        to_helper = cosine(vectors[0], by_interest[pair.helper_interest])
+        return to_patient + to_helper
 
     def position(pair: InterestPair) -> tuple[float, bool]:
-        return lambda_position(
-            vectors[0], by_interest[pair.patient_interest], by_interest[pair.helper_interest]
+        raw, off_topic = lambda_position(
+            vectors[0],
+            by_interest[pair.patient_interest],
+            by_interest[pair.helper_interest],
+            provider,
         )
+        return (0.0, True) if off_topic else (_rescaled(raw, provider), False)
 
     if preferred is not None and not position(preferred)[1]:
         return preferred, *position(preferred)
