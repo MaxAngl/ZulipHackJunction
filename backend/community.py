@@ -269,8 +269,9 @@ class Community:
             return None
 
         def last_asked(patient: User) -> float:
+            # Jamais sollicité : il attend depuis son inscription.
             requests = self.store.requests_of("patient", patient.id)
-            return requests[-1].created_at if requests else 0.0
+            return requests[-1].created_at if requests else patient.created_at
 
         free = [patient for patient in patients if self._pending(patient) is None]
         return min(free or patients, key=last_asked)
