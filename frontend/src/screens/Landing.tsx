@@ -1,10 +1,17 @@
 import { useState } from 'react'
+import type { SessionResponse } from '../api/client'
 import Logo from '../components/Logo'
+import QuickLoginModal from '../components/QuickLoginModal'
 import ScreenFrame from './ScreenFrame'
 
+type LandingProps = {
+  onSignedIn?: (session: SessionResponse) => void
+}
+
 // Page d'entrée de la vraie app : deux chemins, et une fenêtre d'information pour les patients de clinique.
-function Landing() {
+function Landing({ onSignedIn }: LandingProps) {
   const [showInfo, setShowInfo] = useState(false)
+  const [showQuickLogin, setShowQuickLogin] = useState(false)
 
   return (
     <ScreenFrame noHeader>
@@ -24,6 +31,15 @@ function Landing() {
           <a className="button button-ghost button-wide" href="#/login">
             I already have an account
           </a>
+          {onSignedIn && (
+            <button
+              type="button"
+              className="button button-ghost button-wide button-quick-demo"
+              onClick={() => setShowQuickLogin(true)}
+            >
+              ⚡ Connexion rapide (Démo)
+            </button>
+          )}
         </div>
         <p className="lead">
           Needed is a community of people helping each other through the small
@@ -114,6 +130,14 @@ function Landing() {
               </button>
             </div>
           </div>
+        )}
+
+        {onSignedIn && (
+          <QuickLoginModal
+            isOpen={showQuickLogin}
+            onClose={() => setShowQuickLogin(false)}
+            onSignedIn={onSignedIn}
+          />
         )}
       </main>
     </ScreenFrame>
