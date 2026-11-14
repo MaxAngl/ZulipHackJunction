@@ -3,6 +3,8 @@ import { ApiError, join, type Role } from '../api/client'
 import {
   readClinicianEmail,
   readUserProfile,
+  saveAccountToDevice,
+  saveActiveRole,
   saveClinicianEmail,
   saveToken,
   saveUserProfile,
@@ -316,6 +318,7 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
 
       const session = await join(role, fullName, cleanedInterests)
       saveToken(role, session.token)
+      saveActiveRole(role)
 
       const finalAvatar = rawPhoto
         ? (getCroppedDataUrl() ?? rawPhoto)
@@ -332,6 +335,20 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
         interests,
         passionPhotos,
         allowProfileView,
+      })
+
+      saveAccountToDevice({
+        id: `account-${role}-${Date.now()}`,
+        role,
+        token: session.token,
+        name: fullName,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        avatarUrl: finalAvatar,
+        city: city.trim(),
+        interests: cleanedInterests,
+        bio: bio.trim(),
+        lastUsed: Date.now(),
       })
       if (role === 'patient' && clinicianEmail.trim() !== '') {
         saveClinicianEmail(clinicianEmail.trim())

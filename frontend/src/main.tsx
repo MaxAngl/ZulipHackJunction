@@ -18,6 +18,18 @@ if (window.matchMedia) {
     })
 }
 
+// Enregistrer le Service Worker pour le support PWA (installation mobile)
+if (
+  'serviceWorker' in navigator &&
+  window.location.protocol.startsWith('http')
+) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.log('SW registration error:', err)
+    })
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />
