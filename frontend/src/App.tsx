@@ -1,54 +1,64 @@
-import { useState } from 'react'
-import { ApiError, predict, type PredictResponse } from './api/client'
+import { useCallback, useEffect, useState } from 'react'
+import type { Role } from './api/client'
+import DemoScreen from './screens/DemoScreen'
+import HelperScreen from './screens/HelperScreen'
+import JoinForm from './screens/JoinForm'
+import Landing from './screens/Landing'
+import PatientScreen from './screens/PatientScreen'
+import ScreenFrame from './screens/ScreenFrame'
+import { clearToken, readToken } from './session'
 
-// Démo de bout en bout front -> backend -> ml. À remplacer par la vraie UI.
+// Quatre adresses : `#/` l'accueil, `#/helper` et `#/patient` la vraie app, `#/demo` la console.
+type Route = 'home' | 'helper' | 'patient' | 'demo'
+
+function readRoute(): Route {
+  const path = window.location.hash.replace(/^#\/?/, '')
+  return path === 'helper' || path === 'patient' || path === 'demo'
+    ? path
+    : 'home'
+}
+
 function App() {
-  const [text, setText] = useState('')
-  const [result, setResult] = useState<PredictResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [route, setRoute] = useState<Route>(readRoute)
+  const [tokens, setTokens] = useState<Record<Role, string | null>>(() => ({
+    helper: readToken('helper'),
+    patient: readToken('patient'),
+  }))
 
-  async function runPrediction() {
-    setLoading(true)
-    setError(null)
-    try {
-      setResult(await predict({ text }))
-    } catch (err) {
-      setResult(null)
-      setError(
-        err instanceof ApiError ? `${err.code} : ${err.message}` : String(err),
-      )
-    } finally {
-      setLoading(false)
-    }
-  }
+  useEffect(() => {
+    const onChange = () => setRoute(readRoute())
+    window.addEventListener('hashchange', onChange)
+    return () => window.removeEventListener('hashchange', onChange)
+  }, [])
 
-  return (
-    <main>
-      <h1>Hackathon</h1>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault()
-          void runPrediction()
-        }}
-      >
-        <textarea
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder="Tape un texte…"
-          rows={4}
+  const leave = useCallback((role: Role) => {
+    clearToken(role)
+    setTokens((current) => ({ ...current, [role]: null }))
+  }, [])
+  const leaveHelper = useCallback(() => leave('helper'), [leave])
+  const leavePatient = useCallback(() => leave('patient'), [leave])
+
+  if (route === 'demo') return <DemoScreen />
+  if (route === 'home') return <Landing />
+
+  const token = tokens[route]
+  if (!token) {
+    return (
+      <ScreenFrame>
+        <JoinForm
+          key={route}
+          role={route}
+          onJoined={(joined) =>
+            setTokens((current) => ({ ...current, [route]: joined }))
+          }
         />
-        <button type="submit" disabled={loading}>
-          {loading ? 'Analyse…' : 'Analyser'}
-        </button>
-      </form>
-      {result && (
-        <p>
-          Label : <strong>{result.label}</strong> (score {result.score})
-        </p>
-      )}
-      {error && <p className="error">{error}</p>}
-    </main>
+      </ScreenFrame>
+    )
+  }
+  return route === 'helper' ? (
+    <HelperScreen token={token} onLeave={leaveHelper} />
+  ) : (
+    <PatientScreen token={token} onLeave={leavePatient} />
   )
 }
 
