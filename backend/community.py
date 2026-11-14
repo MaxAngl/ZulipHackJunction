@@ -263,7 +263,7 @@ class Community:
                     for theirs in helper.interests
                 ]
                 candidate, review = measure_message(
-                    written, pairs, proposal.pair if proposal else None
+                    written, pairs, proposal.pair if proposal else None, self._zone(patient)
                 )
                 if not review.safe:
                     raise ApiError(
