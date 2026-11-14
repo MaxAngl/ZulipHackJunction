@@ -3,6 +3,7 @@ import Logo from '../components/Logo'
 import {
   type ConversationThread,
   type PatientCommunityNeed,
+  SIMULATION_ACCOUNTS,
   readPatientCommunityNeeds,
   readThreads,
   readUserProfile,
@@ -38,119 +39,128 @@ function getInitialAdminData() {
   const helperProfile = readUserProfile('helper')
   const patientProfile = readUserProfile('patient')
 
-  const loadedUsers: AdminUser[] = []
+  // 1. Charger les 6 profils simulés officiels (3 aidants, 3 patients)
+  const loadedUsers: AdminUser[] = SIMULATION_ACCOUNTS.map((acc) => ({
+    id: acc.id,
+    name: `${acc.firstName} ${acc.lastName}`.trim(),
+    role: acc.role,
+    city: acc.city,
+    interests: acc.interests,
+    bio: acc.bio,
+    avatarUrl: acc.avatarUrl,
+    status: 'active' as const,
+  }))
 
+  // S'il existe des profils personnalisés enregistrés localement avec un nom différent, on les inclut
   if (helperProfile) {
-    loadedUsers.push({
-      id: 'u-helper',
-      name: `${helperProfile.firstName} ${helperProfile.lastName}`.trim(),
-      role: 'helper',
-      city: helperProfile.city,
-      interests: helperProfile.interests ?? [
-        'cooking',
-        'photography',
-        'woodworking',
-        'moovie-making',
-        'video-games',
-      ],
-      bio: helperProfile.bio,
-      avatarUrl: helperProfile.avatarUrl,
-      status: 'active',
-    })
-  } else {
-    loadedUsers.push({
-      id: 'u-helper-default',
-      name: 'Rami Chagnaud-Aidant',
-      role: 'helper',
-      city: 'Helsinki',
-      interests: [
-        'cooking',
-        'photography',
-        'woodworking',
-        'moovie-making',
-        'video-games',
-      ],
-      bio: 'Aidant bénévole engagé au sein de la communauté Needed.',
-      status: 'active',
-    })
+    const fullName =
+      `${helperProfile.firstName} ${helperProfile.lastName}`.trim()
+    if (
+      !loadedUsers.some((u) => u.name.toLowerCase() === fullName.toLowerCase())
+    ) {
+      loadedUsers.push({
+        id: 'u-custom-helper',
+        name: fullName,
+        role: 'helper',
+        city: helperProfile.city,
+        interests: helperProfile.interests ?? [],
+        bio: helperProfile.bio,
+        avatarUrl: helperProfile.avatarUrl,
+        status: 'active',
+      })
+    }
   }
 
   if (patientProfile) {
-    loadedUsers.push({
-      id: 'u-patient',
-      name: `${patientProfile.firstName} ${patientProfile.lastName}`.trim(),
-      role: 'patient',
-      city: patientProfile.city,
-      interests: patientProfile.interests ?? [
-        'knitting',
-        'baking',
-        'ceremonie militaire',
-      ],
-      bio: patientProfile.bio,
-      avatarUrl: patientProfile.avatarUrl ?? '/moomins/Muumipeikko2.jpg',
-      status: 'active',
-    })
-  } else {
-    loadedUsers.push({
-      id: 'u-patient-default',
-      name: 'Test1 Patient',
-      role: 'patient',
-      city: 'Helsinki',
-      interests: ['knitting', 'baking', 'ceremonie militaire'],
-      avatarUrl: '/moomins/Muumipeikko2.jpg',
-      bio: 'Membre patient de la communauté Needed.',
-      status: 'active',
-    })
+    const fullName =
+      `${patientProfile.firstName} ${patientProfile.lastName}`.trim()
+    if (
+      !loadedUsers.some((u) => u.name.toLowerCase() === fullName.toLowerCase())
+    ) {
+      loadedUsers.push({
+        id: 'u-custom-patient',
+        name: fullName,
+        role: 'patient',
+        city: patientProfile.city,
+        interests: patientProfile.interests ?? [],
+        bio: patientProfile.bio,
+        avatarUrl: patientProfile.avatarUrl,
+        status: 'active',
+      })
+    }
   }
 
-  // Chargement de l'ensemble des questions (en cours et résolues)
-  const allQuestions: AdminQuestion[] = []
+  // 2. Questions & Interactions entre les 3 aidants et 3 patients
+  const allQuestions: AdminQuestion[] = [
+    {
+      id: 'req-sim-1',
+      fromName: 'Clara Fontaine',
+      fromRole: 'helper',
+      fromAvatar: '/moomins/Characters-04-2.svg',
+      toName: 'Julien Mercier',
+      toRole: 'patient',
+      toAvatar: '/moomins/Muumipeikko2.jpg',
+      text: 'Aurais-tu des astuces de jardinage pour rempoter des plantes d’intérieur en automne ?',
+      status: 'resolved',
+      timestamp: '10:15',
+      replyText:
+        'Avec plaisir ! Il faut surtout choisir un pot percé avec un lit de billes d’argile au fond et un terreau léger.',
+    },
+    {
+      id: 'req-sim-2',
+      fromName: 'Thomas Lindqvist',
+      fromRole: 'helper',
+      fromAvatar: '/moomins/Muumipappa2.jpg',
+      toName: 'Sofia Hakala',
+      toRole: 'patient',
+      toAvatar: '/moomins/Nuuskamuikkunen.png',
+      text: 'Je cherche des recommandations d’albums de jazz nordique pour une ambiance de lecture apaisante, as-tu des pépites ?',
+      status: 'in_progress',
+      timestamp: '11:30',
+    },
+    {
+      id: 'req-sim-3',
+      fromName: 'Elena Sjöberg',
+      fromRole: 'helper',
+      fromAvatar: '/moomins/Nuuskamuikkunen.png',
+      toName: 'Lucas Virtanen',
+      toRole: 'patient',
+      toAvatar: '/moomins/Characters-04-2.svg',
+      text: 'Je prépare une écharpe en laine mérinos pour l’hiver, quel type de maille conseilles-tu pour débuter sans stress ?',
+      status: 'resolved',
+      timestamp: '14:20',
+      replyText:
+        'Le point mousse ou les côtes 1/1 sont idéales et très relaxantes !',
+    },
+  ]
 
-  // 1. Questions backend de l'aidant vers le patient (Requête SQL/API enregistrée)
-  allQuestions.push({
-    id: 'req-backend-1',
-    fromName: helperProfile
-      ? `${helperProfile.firstName} ${helperProfile.lastName}`.trim()
-      : 'Rami Chagnaud-Aidant',
-    fromRole: 'helper',
-    fromAvatar: helperProfile?.avatarUrl,
-    toName: patientProfile
-      ? `${patientProfile.firstName} ${patientProfile.lastName}`.trim()
-      : 'Test1 Patient',
-    toRole: 'patient',
-    toAvatar: patientProfile?.avatarUrl ?? '/moomins/Muumipeikko2.jpg',
-    text: 'I need a recipe of cookies for a family gathering? Could you help me with your favorite one?',
-    status: 'resolved',
-    timestamp: '11:15',
-    replyText:
-      'Bien sûr ! Je te conseille des cookies aux pépites de chocolat et fleur de sel.',
-  })
-
-  // 2. Questions issues des fils de discussion (ChatView)
+  // Questions issues des fils de discussion (ChatView)
   const helperThreads: ConversationThread[] = readThreads('helper')
   helperThreads.forEach((t) => {
-    const isResolved = t.isFinished
-    allQuestions.push({
-      id: `thread-${t.id}`,
-      fromName: helperProfile
-        ? `${helperProfile.firstName} ${helperProfile.lastName}`.trim()
-        : 'Rami Chagnaud-Aidant',
-      fromRole: 'helper',
-      fromAvatar: helperProfile?.avatarUrl,
-      toName: t.peerName,
-      toRole: t.peerRole,
-      toAvatar: t.peerAvatar,
-      text:
-        t.messages.find((m) => m.senderRole === 'helper')?.text ??
-        t.lastMessageText,
-      status: isResolved ? 'resolved' : 'in_progress',
-      timestamp: t.lastMessageTime,
-      replyText:
-        t.messages.find((m) => m.senderRole === 'patient')?.text ?? undefined,
-    })
+    if (!allQuestions.some((q) => q.id === t.id || q.id === `thread-${t.id}`)) {
+      const isResolved = t.isFinished
+      allQuestions.push({
+        id: `thread-${t.id}`,
+        fromName: helperProfile
+          ? `${helperProfile.firstName} ${helperProfile.lastName}`.trim()
+          : 'Clara Fontaine',
+        fromRole: 'helper',
+        fromAvatar: helperProfile?.avatarUrl ?? '/moomins/Characters-04-2.svg',
+        toName: t.peerName,
+        toRole: t.peerRole,
+        toAvatar: t.peerAvatar,
+        text:
+          t.messages.find((m) => m.senderRole === 'helper')?.text ??
+          t.lastMessageText,
+        status: isResolved ? 'resolved' : 'in_progress',
+        timestamp: t.lastMessageTime,
+        replyText:
+          t.messages.find((m) => m.senderRole === 'patient')?.text ?? undefined,
+      })
+    }
   })
 
-  // 3. Demandes directes de patients à la communauté (PatientCommunityNeed)
+  // Demandes directes de patients à la communauté (PatientCommunityNeed)
   const communityNeeds: PatientCommunityNeed[] = readPatientCommunityNeeds()
   communityNeeds.forEach((need) => {
     allQuestions.push({

@@ -38,7 +38,7 @@ function PatientScreen({ token, onLeave }: PatientScreenProps) {
       patientName:
         profile && `${profile.firstName} ${profile.lastName}`.trim()
           ? `${profile.firstName} ${profile.lastName}`.trim()
-          : (home?.user.name ?? 'Test1 Patient'),
+          : (home?.user.name ?? 'Julien Mercier'),
       patientAvatar: profile?.avatarUrl ?? '/moomins/Muumipeikko2.jpg',
       text: needText,
       timestamp: new Date().toLocaleTimeString('fr-FR', {

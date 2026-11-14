@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import Logo from '../components/Logo'
 import {
+  SIMULATION_ACCOUNTS,
   clearToken,
   readClinicianEmail,
   readThemePreference,
   readToken,
   readUserProfile,
   saveThemePreference,
+  setSimulationAccount,
   type ThemePreference,
 } from '../session'
 
@@ -210,6 +212,49 @@ function SettingsScreen() {
               Aucun profil connecté sur cet appareil.
             </p>
           )}
+        </section>
+
+        {/* Section Simulation complète - 3 Aidants & 3 Patients */}
+        <section className="settings-card stack">
+          <h2>Simulation · 3 Aidants &amp; 3 Patients</h2>
+          <p className="quiet font-small">
+            Sélectionnez un profil pour tester les interactions, les fils de
+            discussion et l’annuaire communautaire sous son identité.
+          </p>
+          <div className="stack" style={{ gap: '8px' }}>
+            {SIMULATION_ACCOUNTS.map((acc) => (
+              <div key={acc.id} className="settings-account-row">
+                <div className="settings-avatar-wrap">
+                  <img
+                    src={acc.avatarUrl ?? '/moomins/Nuuskamuikkunen.png'}
+                    alt={acc.firstName}
+                    className="topbar-avatar"
+                  />
+                </div>
+                <div className="settings-account-info">
+                  <strong>
+                    {acc.firstName} {acc.lastName}
+                  </strong>
+                  <span className="quiet font-small">
+                    {acc.role === 'helper' ? 'Aidant(e)' : 'Patient(e)'} ·{' '}
+                    {acc.city}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="button button-ghost button-small"
+                  onClick={() => {
+                    setSimulationAccount(acc.id)
+                    window.location.hash =
+                      acc.role === 'helper' ? '#/helper' : '#/patient'
+                    window.location.reload()
+                  }}
+                >
+                  Tester
+                </button>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* Confidentialité & Télémétrie clinique */}

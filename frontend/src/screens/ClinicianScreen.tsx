@@ -56,7 +56,7 @@ function ClinicianScreen() {
     ? `${patientProfile.firstName} ${patientProfile.lastName}`.trim()
     : hasPatientSession
       ? 'Patient Suivi'
-      : 'Test1 Patient (Cohorte Suivie)'
+      : 'Julien Mercier (Cohorte Suivie)'
 
   const patientAvatar = patientProfile?.avatarUrl ?? '/moomins/Muumipeikko2.jpg'
   const patientCity = patientProfile?.city ?? 'Helsinki, Punavuori'
