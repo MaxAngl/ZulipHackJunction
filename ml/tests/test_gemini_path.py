@@ -70,12 +70,15 @@ class FakeGemini:
         self.calls: list[tuple[str, dict[str, Any]]] = []
         self.refuse_schema = False
         self.down = False
+        self.embeddings_down = False
 
     def post(self, path: str, body: dict[str, Any]) -> dict[str, Any]:
         self.calls.append((path, body))
         if self.down:
             raise gemini.GeminiError(503, "indisponible")
         if path.endswith(":batchEmbedContents"):
+            if self.embeddings_down:
+                raise gemini.GeminiError(429, "quota du jour épuisé")
             texts = [request["content"]["parts"][0]["text"] for request in body["requests"]]
             return {"embeddings": [{"values": _fake_vector(text)} for text in texts]}
         if self.refuse_schema and "responseJsonSchema" in body["generationConfig"]:
@@ -211,3 +214,46 @@ def test_a_generated_request_reads_like_a_normal_message():
         _tidy("Which herb goes best with tomato soup?") == "Which herb goes best with tomato soup?"
     )
     assert _tidy("") == ""
+
+
+def test_a_greeting_and_a_signature_keep_their_own_lines():
+    """Bonjour, demande, fin, signature : chaque ligne reste, la signature sans point final."""
+    from ml.pipeline import _tidy
+
+    assert _tidy("hi Aino,\n could you share  a basil tip?\n\nthanks a lot,\nMikko") == (
+        "Hi Aino,\nCould you share a basil tip?\nThanks a lot,\nMikko"
+    )
+    assert _tidy("Thanks,\nIn&egrave;s") == "Thanks,\nInès"  # vu en réel le 14/11
+
+
+def test_without_embeddings_the_gemini_texts_keep_the_position_gemini_aimed_at(
+    fake: FakeGemini,
+):
+    """Quota d'embeddings épuisé : les demandes de Gemini restent, à la position visée."""
+    fake.embeddings_down = True
+    candidates = _generate()
+    aimed = {item["text"]: item.get("position") for item in GENERATED["requests"]}
+    assert candidates and {candidate.text for candidate in candidates} <= set(aimed)
+    for candidate in candidates:
+        if aimed[candidate.text] is None:
+            assert candidate.provider == "offline"  # sans position visée : mesure par mots-clés
+        else:
+            assert candidate.lam == pytest.approx(aimed[candidate.text])
+            assert not candidate.off_topic
+    assert "estimated by Gemini" in provider_info().note
+
+
+def test_offline_requests_greet_by_name_and_vary_their_words():
+    """Hors ligne aussi : le prénom du patient, la signature de l'aidant, des formules variées."""
+    candidates = generate_candidates(PAIRS, zone_for(0.5), "Mikko", "Aino", avoid=[], seed=1)
+    lines = [candidate.text.splitlines() for candidate in candidates]
+    assert all(len(parts) == 4 for parts in lines)
+    assert all("Aino" in parts[0] and parts[3] == "Mikko" for parts in lines)
+    assert len({parts[0] for parts in lines}) >= 5  # pas toujours la même formule d'appel
+    assert len({parts[2] for parts in lines}) >= 5  # ni la même formule de fin
+
+    # Une seconde génération ne reprend pas les mêmes demandes, quel que soit l'habillage.
+    again = generate_candidates(
+        PAIRS, zone_for(0.5), "Mikko", "Aino", [c.text for c in candidates], seed=2
+    )
+    assert not {c.text.splitlines()[1] for c in again} & {parts[1] for parts in lines}
