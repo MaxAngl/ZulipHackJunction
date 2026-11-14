@@ -16,10 +16,10 @@ function Landing() {
         <h1>Helping others by answering their needs.</h1>
         <div className="stack">
           <a className="button button-primary button-wide" href="#/helper">
-            Join the community
+            Already in the community
           </a>
           <a className="button button-wide" href="#/patient">
-            My clinic invited me
+            My clinic just invited me
           </a>
         </div>
         <p className="lead">

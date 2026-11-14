@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { getPatientHome } from '../api/client'
 import BottomNav, { type TabType } from '../components/BottomNav'
 import ChatView from '../components/ChatView'
+import PatientRequests from '../components/PatientRequests'
 import ProfileView from '../components/ProfileView'
 import { readUserProfile, savePatientCommunityNeed } from '../session'
 import ScreenFrame from './ScreenFrame'
@@ -14,7 +15,7 @@ type PatientScreenProps = {
 
 // L'écran du patient, dans la vraie app. Il répond aux demandes et peut aussi exprimer un besoin.
 function PatientScreen({ token, onLeave }: PatientScreenProps) {
-  const { home, error } = useHome(token, getPatientHome, onLeave)
+  const { home, error, busy, run } = useHome(token, getPatientHome, onLeave)
   const [activeTab, setActiveTab] = useState<TabType>('messages')
   const [patientNeed, setPatientNeed] = useState('')
   const [sentNeedFeedback, setSentNeedFeedback] = useState(false)
@@ -112,13 +113,16 @@ function PatientScreen({ token, onLeave }: PatientScreenProps) {
           </section>
         )}
 
-        {/* Onglet 2 : Messagerie libre & multimédia */}
+        {/* Onglet 2 : les vraies demandes reçues, puis la messagerie libre & multimédia */}
         {activeTab === 'messages' && (
-          <ChatView
-            role="patient"
-            userName={home.user.name}
-            onStartNewRequest={() => setActiveTab('request')}
-          />
+          <>
+            <PatientRequests token={token} home={home} busy={busy} run={run} />
+            <ChatView
+              role="patient"
+              userName={home.user.name}
+              onStartNewRequest={() => setActiveTab('request')}
+            />
+          </>
         )}
 
         {/* Onglet 3 : Mon profil */}
