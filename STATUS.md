@@ -35,7 +35,8 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 16:30] L'app tourne sur les réseaux, console et vraie app. Seul le patient reste simulé (`ml/virtual.py`). Ce qui reste à faire pour sortir de la simulation : `docs/modele.md`, section 8.
 - [14/11 15:30] Résultat en boucle fermée sur des patients jamais vus : le réseau B fait nettement mieux que la règle fixe. Chiffres et limites : `docs/modele.md`, section 14. Tout est simulé.
 - [14/11 15:30] Pour réentraîner : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`, puis `uv run python -m ml.nets.train` et `uv run python -m ml.nets.evaluate`. Une dizaine de minutes sur CPU.
-- **Bloqué :** pas de clé Gemini sur la machine, donc la connexion à Gemini n'est pas testée en réel. Mettre la clé dans `.env`, puis `uv run python -m ml.check_gemini`.
+- **Bloqué :** —
+- [14/11 17:00] Gemini testé en réel avec la clé de l'équipe (#36) : tout fonctionne avec le modèle léger `gemini-flash-lite-latest`, devenu le modèle par défaut. La clé va dans `.env` (jamais dans git) ; la demander à Max. Vérifier chez soi : `uv run python -m ml.check_gemini`.
 - **Notes pour la suite :**
   - Données simulées : `uv run python -m ml.simulation` écrit `ml/data/sim` (hors git). Le sens de chaque colonne est dans `meta.json`, les règles dans `docs/modele.md`, section 12.
   - Les choix de θ, de L et de la récompense sont délégués à Claude et attendent une relecture de l'équipe (section 11).

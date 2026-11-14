@@ -8,6 +8,7 @@ sur le mode hors ligne, la démo ne doit jamais casser à cause du réseau ou d'
 import json
 import logging
 import os
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -15,9 +16,13 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 API_ROOT = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_MODEL = "gemini-flash-latest"
+# Le modèle « flash-lite » : le moins gourmand, choisi par l'équipe. Des demandes de deux
+# phrases ne demandent pas plus. L'alias suit la dernière version.
+DEFAULT_MODEL = "gemini-flash-lite-latest"
 DEFAULT_EMBED_MODEL = "gemini-embedding-001"
 TIMEOUT_SECONDS = 25
+RETRY_STATUSES = (429, 500, 503)
+RETRY_PAUSES = (0.6, 1.5)  # secondes avant le deuxième et le troisième essai
 
 
 class GeminiError(Exception):
@@ -55,14 +60,22 @@ def _post(path: str, body: dict[str, Any]) -> dict[str, Any]:
         headers={"Content-Type": "application/json", "x-goog-api-key": key},
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-            return json.loads(response.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:400]
-        raise GeminiError(exc.code, detail) from exc
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-        raise GeminiError(0, str(exc)) from exc
+    # Une surcharge passagère du modèle (503, vue en réel) ou un quota par minute (429) : on
+    # réessaie deux fois, brièvement, avant de laisser l'appelant basculer hors ligne.
+    for pause in (*RETRY_PAUSES, None):
+        try:
+            with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:400]
+            if exc.code in RETRY_STATUSES and pause is not None:
+                logger.info("Gemini %s, nouvel essai dans %.1f s", exc.code, pause)
+                time.sleep(pause)
+                continue
+            raise GeminiError(exc.code, detail) from exc
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            raise GeminiError(0, str(exc)) from exc
+    raise GeminiError(0, "aucune réponse")  # jamais atteint : la dernière passe lève toujours
 
 
 def _first_text(data: dict[str, Any]) -> str:

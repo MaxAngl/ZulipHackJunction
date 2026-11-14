@@ -14,7 +14,7 @@ Chaque ligne dit où le changer. Ce qui avait été validé en discussion n'est 
 
 ## À faire en premier
 
-1. **Mettre une clé Gemini** dans `.env` à la racine (`GEMINI_API_KEY=...`), puis lancer `uv run python -m ml.check_gemini`. **La connexion à Gemini n'a jamais été testée en réel** : il n'y avait pas de clé sur la machine. Sans clé, l'app tourne avec une banque de secours.
+1. **Mettre la clé Gemini de l'équipe** dans `.env` à la racine (`GEMINI_API_KEY=...`), puis lancer `uv run python -m ml.check_gemini`. La clé ne va jamais dans git : la demander à un coéquipier. **La connexion a été testée en réel le 14 novembre**, avec le modèle léger `gemini-flash-lite-latest` : génération, embeddings, mesure de position et relecture des messages fonctionnent. Sans clé, l'app tourne avec une banque de secours.
 2. Lancer : `uv run uvicorn backend.main:app --port 8000` et `npm --prefix frontend run dev`, puis ouvrir http://localhost:5173. L'accueil mène à la **vraie app** (`#/helper`, `#/patient`) ; la **console de démo** est sur `#/demo`.
 3. Trancher les trois premières lignes du tableau « Produit ».
 4. **Ne pas y mettre de vrais patients en l'état** : la vraie app n'a ni mot de passe, ni chiffrement, ni recueil de consentement (voir « La vraie app »).
@@ -88,7 +88,8 @@ De vraies personnes, sur leur téléphone, avec une base de données. La même b
 - **Pourquoi lui** : vous vouliez déjà « un modèle type Gemini », et Gemini est au cœur de la boucle à trois endroits. Il écrit les demandes pour la zone, ses embeddings mesurent où chacune tombe, et il relit les messages écrits par l'aidant. L'argument à présenter : Gemini propose, une mesure indépendante dispose.
 - **Écartés** : Gemma, ElevenLabs et Nemotron demandaient un second branchement ; les autres sont de l'infrastructure.
 - **Appels REST directs**, sans SDK : aucune dépendance ajoutée (`ml/gemini.py`).
-- **Modèles par défaut** : `gemini-flash-latest` et `gemini-embedding-001`, modifiables avec `GEMINI_MODEL` et `GEMINI_EMBED_MODEL` dans `.env`.
+- **Modèles par défaut** : `gemini-flash-lite-latest` (le moins gourmand, choisi par l'équipe) et `gemini-embedding-001`, modifiables avec `GEMINI_MODEL` et `GEMINI_EMBED_MODEL` dans `.env`.
+- **Mesuré en réel le 14 novembre**, dans la console, avec la zone du réseau B : une génération prend environ 4 secondes et rend 16 demandes ; selon l'état du patient, 2 à 14 tombent dans la zone, et trois sont proposées sauf quand la zone ne permet qu'un format (état très bas : deux). Un message libre hors zone est retenu, une demande d'argent est refusée. Un appel sur une dizaine a reçu une erreur 503 de Google (modèle surchargé) : le client réessaie maintenant deux fois avant de basculer sur la banque de secours.
 - Les noms de champs viennent de la documentation lue cette nuit. En cas de refus de l'API, le client réessaie avec une requête plus simple, puis bascule sur la banque de secours.
 - Le chemin Gemini est couvert par des tests avec une **fausse API** (`ml/tests/test_gemini_path.py`). Ils vérifient notre code, pas le comportement de la vraie API.
 

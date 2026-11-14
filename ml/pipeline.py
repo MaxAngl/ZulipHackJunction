@@ -146,6 +146,30 @@ def _mix_words(lam: float, patient_interest: str, helper_interest: str) -> str:
     return f"mainly about {helper_interest}, with a light touch of {patient_interest}"
 
 
+def _weight_limit(zone: Zone) -> tuple[str, str, str]:
+    """Comment dire au générateur ce qui est trop lourd pour ce patient.
+
+    Renvoie la ligne de consigne, puis la façon de nommer « dans la limite » et « au-delà ».
+    Avec une zone à six axes, on nomme les formats permis : un format léger peut être exclu
+    (trop d'exposition personnelle, par exemple) alors qu'un plus lourd passe. Avec l'ancienne
+    zone, un plafond d'effort suffit.
+    """
+    if zone.box is None:
+        return (
+            f"Effort ceiling: {zone.effort_max:.2f}.",
+            "at or under the effort ceiling",
+            "just above the ceiling",
+        )
+    suitable = [fmt.key for fmt in FORMATS.values() if zone.box.allows_costs(fmt.axes)]
+    if not suitable:  # rien ne passe : on vise le format le plus léger
+        suitable = [min(FORMATS.values(), key=lambda fmt: fmt.effort).key]
+    return (
+        f"Formats that suit this recipient right now: {', '.join(suitable)}.",
+        "in one of the formats that suit the recipient",
+        "in a format that does not suit them right now",
+    )
+
+
 def _generation_prompt(
     pairs: list[InterestPair], zone: Zone, helper_name: str, patient_name: str, avoid: list[str]
 ) -> str:
@@ -156,6 +180,7 @@ def _generation_prompt(
     format_lines = "\n".join(
         f"- {fmt.key} (effort {fmt.effort:.2f}): {fmt.hint}" for fmt in FORMATS.values()
     )
+    limit, within, beyond = _weight_limit(zone)
     first = pairs[0]
     target = _mix_words(zone.center, first.patient_interest, first.helper_interest)
     avoid_block = ""
@@ -176,12 +201,12 @@ Acceptable range: {zone.low:.2f} to {zone.high:.2f}.
 
 Formats (use only these keys):
 {format_lines}
-Effort ceiling: {zone.effort_max:.2f}.
+{limit}
 
 Write {CANDIDATES_PER_PAIR} requests for each pair:
-- about two thirds inside the acceptable range and at or under the effort ceiling, at different \
-positions within the range;
-- the others just outside the range or just above the ceiling, so both limits can be checked;
+- about two thirds inside the acceptable range and {within}, at different positions within \
+the range;
+- the others just outside the range or {beyond}, so both limits can be checked;
 - vary the formats and never repeat an idea.{avoid_block}
 
 For each request give "pair" (its number), "format" (a key), "position" (your own estimate, \

@@ -5,13 +5,23 @@ Ces tests ne prouvent pas que la vraie API répond comme attendu (pour cela :
 lit les réponses, écarte ce qui est invalide et bascule hors ligne en cas d'erreur.
 """
 
+import io
 import json
+import urllib.error
 from typing import Any
 
 import pytest
 
 from ml import embedding, gemini, lexicon
-from ml.model import InterestPair, generate_candidates, measure_message, provider_info, zone_for
+from ml.model import (
+    InterestPair,
+    Zone,
+    ZoneBox,
+    generate_candidates,
+    measure_message,
+    provider_info,
+    zone_for,
+)
 
 PAIRS = [InterestPair("gardening", "cooking"), InterestPair("jazz", "cycling")]
 DIMS = sorted(lexicon.all_interests())
@@ -118,6 +128,18 @@ def test_the_prompt_carries_the_zone(fake: FakeGemini):
     assert body["generationConfig"]["responseMimeType"] == "application/json"
 
 
+def test_with_a_six_axis_zone_the_prompt_names_the_formats_that_suit(fake: FakeGemini):
+    """Un format léger peut être exclu alors qu'un plus lourd passe : on nomme les formats."""
+    # Exposition personnelle plafonnée à 0,30 : « memory » (0,45) est exclu, « explain » passe.
+    box = ZoneBox(low=(0.6, 0.6, 0.2, 0.2, 0.1), high=(0.8, 0.8, 0.5, 0.5, 0.3), startup_max=0.15)
+    zone = Zone(center=0.7, half_width=0.1, effort_max=0.5, common_center=0.7, box=box)
+    generate_candidates(PAIRS, zone, "Mikko", "Aino", avoid=[], seed=1)
+    prompt = fake.calls[0][1]["contents"][0]["parts"][0]["text"]
+    assert "Formats that suit this recipient right now: opinion, explain, review." in prompt
+    assert "Effort ceiling" not in prompt
+    assert "0.60 to 0.80" in prompt
+
+
 def test_a_refused_configuration_is_retried_more_simply(fake: FakeGemini):
     fake.refuse_schema = True
     candidates = _generate()
@@ -141,3 +163,34 @@ def test_a_written_message_is_reviewed_and_measured_with_gemini(fake: FakeGemini
     assert measured.provider == "gemini"
     assert measured.pair == PAIRS[0]
     assert 0.5 < measured.lam < 1.0
+
+
+def _overloaded(monkeypatch: pytest.MonkeyPatch, failures: int) -> list[str]:
+    """Remplace le réseau : `failures` réponses 503, puis une réponse normale."""
+    calls: list[str] = []
+
+    def urlopen(request, timeout):
+        calls.append(request.full_url)
+        if len(calls) <= failures:
+            raise urllib.error.HTTPError(request.full_url, 503, "busy", {}, io.BytesIO(b"busy"))
+        return io.BytesIO(b'{"ok": true}')
+
+    monkeypatch.setattr("ml.gemini.api_key", lambda: "test-key")
+    monkeypatch.setattr("urllib.request.urlopen", urlopen)
+    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+    return calls
+
+
+def test_a_passing_overload_is_retried(monkeypatch: pytest.MonkeyPatch):
+    """Vu en réel : le modèle répond 503 quand il est surchargé, puis répond normalement."""
+    calls = _overloaded(monkeypatch, failures=1)
+    assert gemini._post("models/any:generateContent", {}) == {"ok": True}
+    assert len(calls) == 2
+
+
+def test_a_lasting_overload_ends_in_an_error_after_three_tries(monkeypatch: pytest.MonkeyPatch):
+    calls = _overloaded(monkeypatch, failures=10)
+    with pytest.raises(gemini.GeminiError) as caught:
+        gemini._post("models/any:generateContent", {})
+    assert caught.value.status == 503
+    assert len(calls) == 3
