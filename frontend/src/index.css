@@ -1,24 +1,34 @@
-/* Charte : minimaliste. Noir sur blanc, traits fins, un seul accent, le cyan vif. */
+/* Charte (issue #43) : une affiche, pas une appli grise. Trois couleurs seulement, en aplats :
+   le papier crème (jamais de blanc pur), le noir des filets et du texte, le cyan en grand
+   (bandeau d'en-tête, action principale, sélection). Aucun gris, aucun voile pâle, aucun
+   dégradé, aucun flou. Coins presque droits. La signature (bandeau, boutons qui s'enfoncent)
+   est dans theme.css. Titres en Bricolage Grotesque, texte en Figtree (index.html). */
 :root {
   color-scheme: light;
-  --bg: #fefaef;
-  --surface-soft: #f7f3e6;
+  --bg: #faf8f2;
+  --surface-soft: transparent; /* pas de carte crème sur fond crème */
   --ink: #0a0a0a;
-  --muted: #6e6e6e;
-  --line: #e8e2d2;
+  --muted: #4d493f;
+  --line: transparent; /* pas de cadre par défaut ; un filet se pose exprès (--rule) */
+  --rule: #0a0a0a;
+  --grid: #d9d3c4;
   --cyan: #00d8ff;
-  --cyan-deep: #008fad; /* cyan lisible en texte sur fond clair */
-  --cyan-wash: rgba(0, 216, 255, 0.18);
-  --on-cyan: #000000;
-  --neutral-dot: #c8c2b4;
+  --cyan-deep: #00768d; /* cyan lisible en texte sur fond clair */
+  --cyan-wash: var(--cyan); /* une sélection est un aplat cyan plein */
+  --on-cyan: #0a0a0a;
+  --neutral-dot: #c9c3b5;
   --held: #d9480f;
   --loss: #d4183d;
-  --glass-dock-bg: rgba(254, 250, 239, 0.45);
-  --glass-dock-border: rgba(255, 255, 255, 0.65);
-  --glass-dock-shadow: 0 10px 30px -4px rgba(10, 10, 10, 0.08);
-  --radius: 8px;
+  --glass-dock-bg: #0a0a0a; /* le dock est un aplat noir, plus un verre */
+  --glass-dock-border: #0a0a0a;
+  --glass-dock-shadow: none;
+  --dock-ink: #b8b2a4;
+  --dock-ink-active: #0a0a0a;
+  --radius: 4px;
+  --press: 3px; /* décalage de l'ombre pleine des éléments qu'on touche */
+  --font-display: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
   font-family:
-    Inter,
+    'Figtree',
     system-ui,
     -apple-system,
     'Segoe UI',
@@ -29,35 +39,39 @@
   line-height: 1.5;
 }
 
-/* Mode sombre adouci (Warm Charcoal / Slate, non agressif pour les yeux) */
+/* Mode sombre : la même affiche imprimée à l'envers, encre crème sur noir, le même cyan */
 [data-theme='dark'] {
   color-scheme: dark;
-  --bg: #16181b;
-  --surface-soft: #202428;
-  --ink: #f0f3f6;
-  --muted: #9aa5b1;
-  --line: #2e343b;
+  --bg: #0d0d0b;
+  --surface-soft: transparent;
+  --ink: #f6f2e8;
+  --muted: #b5afa2;
+  --line: transparent;
+  --rule: #f6f2e8;
+  --grid: #34322c;
   --cyan: #00d8ff;
-  --cyan-deep: #38e1ff;
-  --cyan-wash: rgba(0, 216, 255, 0.18);
-  --on-cyan: #000000;
-  --neutral-dot: #48535e;
-  --glass-dock-bg: rgba(22, 24, 27, 0.65);
-  --glass-dock-border: rgba(255, 255, 255, 0.12);
-  --glass-dock-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.45);
+  --cyan-deep: #4fe3ff;
+  --cyan-wash: var(--cyan);
+  --on-cyan: #0a0a0a;
+  --neutral-dot: #4a473f;
+  --glass-dock-bg: #0d0d0b;
+  --glass-dock-border: #f6f2e8;
+  --glass-dock-shadow: none;
+  --dock-ink: #b5afa2;
+  --dock-ink-active: #0a0a0a;
 }
 
-/* En mode sombre, les éléments sélectionnés utilisent le bleu/cyan avec un texte très lisible */
+/* Un choix se montre inversé, dans les deux thèmes : aplat de la couleur du texte */
 [data-theme='dark'] .chip-on {
-  background: var(--cyan);
-  border-color: var(--cyan);
-  color: #000000;
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
   font-weight: 700;
 }
 
 [data-theme='dark'] .chip-off {
-  color: var(--muted);
-  border-color: var(--line);
+  color: var(--ink);
+  border-color: var(--surface-soft);
 }
 
 [data-theme='dark'] .chip-off:hover {
@@ -78,14 +92,14 @@
 
 [data-theme='dark'] .moomin-card-selected {
   border-color: var(--cyan);
-  background: rgba(0, 216, 255, 0.22);
+  background: var(--cyan-wash);
   box-shadow: 0 0 0 2px var(--cyan);
 }
 
 [data-theme='dark'] .bubble-out {
-  background: #2b333c;
-  color: #f0f3f6;
-  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  color: var(--ink);
+  border: none;
 }
 
 * {
@@ -113,7 +127,13 @@ body {
 h1,
 h2 {
   margin: 0;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+h3 {
+  font-family: var(--font-display);
   letter-spacing: -0.02em;
 }
 
@@ -169,8 +189,9 @@ p {
 }
 
 .brand-name {
+  font-family: var(--font-display);
   font-size: 1.95rem;
-  font-weight: 750;
+  font-weight: 800;
   letter-spacing: -0.04em;
   line-height: 1.05;
 }
@@ -203,33 +224,28 @@ p {
   justify-content: center;
   text-align: center;
   font: inherit;
-  font-weight: 600;
-  padding: 9px 18px;
+  font-weight: 700;
+  padding: 11px 20px;
   border-radius: var(--radius);
-  border: 1px solid var(--ink);
+  border: 2px solid var(--ink);
   background: transparent;
   color: var(--ink);
   cursor: pointer;
   text-decoration: none;
   transition:
-    transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.18s ease,
+    transform 0.12s ease,
     background 0.15s ease,
     border-color 0.15s ease,
     color 0.15s ease;
-  will-change: transform, box-shadow;
 }
 
 .button:hover:not(:disabled) {
   background: var(--ink);
   color: var(--bg);
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 6px 18px -3px rgba(10, 10, 10, 0.14);
 }
 
 .button:active:not(:disabled) {
-  transform: translateY(1.5px) scale(0.975);
-  box-shadow: 0 2px 5px rgba(10, 10, 10, 0.15);
+  transform: scale(0.97);
   transition-duration: 0.06s;
 }
 
@@ -257,7 +273,6 @@ textarea:focus-visible {
   background: var(--ink);
   border-color: var(--ink);
   color: var(--bg);
-  box-shadow: 0 8px 22px -2px rgba(0, 216, 255, 0.38);
 }
 
 .button-ghost {
@@ -267,27 +282,20 @@ textarea:focus-visible {
 
 .button-ghost:hover:not(:disabled) {
   background: var(--surface-soft);
-  border-color: var(--line);
+  border-color: var(--surface-soft);
   color: var(--ink);
-  box-shadow: 0 4px 12px -2px rgba(10, 10, 10, 0.08);
-}
-
-[data-theme='dark'] .button:hover:not(:disabled) {
-  box-shadow: 0 6px 18px -3px rgba(0, 0, 0, 0.5);
 }
 
 [data-theme='dark'] .button-primary:hover:not(:disabled) {
   background: var(--cyan-deep);
   border-color: var(--cyan-deep);
-  color: #000000;
-  box-shadow: 0 8px 24px -2px rgba(0, 216, 255, 0.35);
+  color: var(--on-cyan);
 }
 
 [data-theme='dark'] .button-ghost:hover:not(:disabled) {
   background: var(--surface-soft);
-  border-color: var(--line);
+  border-color: var(--surface-soft);
   color: var(--ink);
-  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
 }
 
 .button-wide {
@@ -309,10 +317,10 @@ input[type='email'],
 input[type='date'] {
   width: 100%;
   font: inherit;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-radius: var(--radius);
-  border: 1px solid var(--line);
-  background: var(--bg);
+  border: 2px solid var(--surface-soft);
+  background: var(--surface-soft);
   color: var(--ink);
 }
 
@@ -373,7 +381,7 @@ input[type='date']:focus {
   align-items: center;
   gap: 6px;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   font-size: 0.8rem;
   color: var(--neutral-dot);
 }
@@ -417,7 +425,7 @@ input[type='date']:focus {
   gap: 14px;
   min-height: 440px;
   border: 1px solid var(--ink);
-  border-radius: 22px;
+  border-radius: var(--radius);
 }
 
 .phone-header {
@@ -471,7 +479,7 @@ input[type='date']:focus {
 
 .chip {
   padding: 1px 9px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   font-size: 0.78rem;
   color: var(--muted);
@@ -506,7 +514,7 @@ input[type='date']:focus {
   padding: 18px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
 }
 
 .proposal-text {
@@ -531,7 +539,7 @@ input[type='date']:focus {
 
 .bubble {
   padding: 11px 14px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   max-width: 94%;
 }
 
@@ -911,6 +919,7 @@ td.request {
 }
 
 .brand-hero-name {
+  font-family: var(--font-display);
   font-size: 2.8rem;
   font-weight: 800;
   letter-spacing: -0.05em;
@@ -950,7 +959,7 @@ td.request {
   background: transparent;
   border: 1px solid var(--line);
   padding: 8px 16px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   cursor: pointer;
   transition:
     transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -965,12 +974,12 @@ td.request {
   border-color: var(--ink);
   background: var(--surface-soft);
   transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(10, 10, 10, 0.06);
+  box-shadow: none;
 }
 
 .button-info:active {
   transform: translateY(1px) scale(0.97);
-  box-shadow: 0 1px 3px rgba(10, 10, 10, 0.08);
+  box-shadow: none;
   transition-duration: 0.05s;
 }
 
@@ -995,8 +1004,6 @@ td.request {
   inset: 0;
   z-index: 1000;
   background: rgba(10, 10, 10, 0.45);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1006,12 +1013,12 @@ td.request {
 
 .modal-card {
   background: var(--bg);
-  border: 1px solid var(--ink);
-  border-radius: 20px;
+  border: none;
+  border-radius: var(--radius);
   padding: 26px 24px;
   max-width: 430px;
   width: 100%;
-  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   animation: slideUp 180ms ease-out;
 }
 
@@ -1029,7 +1036,7 @@ td.request {
   color: var(--muted);
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   line-height: 1;
 }
 
@@ -1158,21 +1165,27 @@ td.request {
 button.chip {
   font: inherit;
   font-size: 0.9rem;
-  padding: 5px 13px;
+  font-weight: 600;
+  padding: 7px 15px;
+  border-width: 2px;
   background: transparent;
   cursor: pointer;
 }
 
-.chip-off {
+/* Un centre d'intérêt est un aplat : gris s'il est libre, inversé (noir) s'il est choisi */
+.chip-off,
+button.chip.chip-off {
   color: var(--ink);
-  border-color: var(--ink);
+  background: var(--surface-soft);
+  border-color: var(--surface-soft);
 }
 
-.chip-on {
-  background: var(--cyan);
-  border-color: var(--cyan);
-  color: var(--on-cyan);
-  font-weight: 600;
+.chip-on,
+button.chip.chip-on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+  font-weight: 700;
 }
 
 .thread {
@@ -1188,7 +1201,7 @@ button.chip {
   padding: 18px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
 }
 
 .bubble-big {
@@ -1210,10 +1223,10 @@ button.chip {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--cyan-wash);
-  border: 1px solid var(--cyan);
-  color: var(--ink);
+  border-radius: var(--radius);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  color: var(--cyan);
 }
 
 .clinician-hero h1 {
@@ -1228,7 +1241,7 @@ button.chip {
   padding: 16px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
 }
 
 .meta-label {
@@ -1253,7 +1266,7 @@ button.chip {
   padding: 20px;
   background: var(--surface-soft);
   border: 1px solid var(--ink);
-  border-radius: 16px;
+  border-radius: var(--radius);
 }
 
 .patient-header {
@@ -1270,14 +1283,18 @@ button.chip {
   font-size: 0.78rem;
   font-weight: 650;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
 }
 
 .status-pill-active {
-  background: var(--cyan-wash);
-  border-color: var(--cyan);
-  color: var(--ink);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+.status-pill-active .status-dot {
+  background: var(--cyan);
 }
 
 .status-dot {
@@ -1300,7 +1317,7 @@ button.chip {
   padding: 12px;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 
 .metric-title {
@@ -1341,7 +1358,7 @@ button.chip {
   padding: 14px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
   font-size: 0.88rem;
 }
 
@@ -1397,7 +1414,7 @@ button.chip {
   padding: 16px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
 }
 
 .crop-viewport {
@@ -1407,7 +1424,7 @@ button.chip {
   overflow: hidden;
   position: relative;
   border: 2.5px solid var(--ink);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
   background: #ffffff;
   cursor: grab;
   touch-action: none;
@@ -1574,7 +1591,7 @@ button.chip {
   padding: 8px 4px;
   background: #ffffff;
   border: 1.5px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -1593,7 +1610,7 @@ button.chip {
   width: 44px;
   height: 44px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 
 .moomin-card-name {
@@ -1646,7 +1663,7 @@ button.chip {
 .tag-quiet {
   font-size: 0.74rem;
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--surface-soft);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -1655,7 +1672,7 @@ button.chip {
 .card-notes-editor {
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
   padding: 20px;
 }
 
@@ -1672,7 +1689,7 @@ button.chip {
   padding: 4px 8px;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   white-space: nowrap;
 }
 
@@ -1699,7 +1716,7 @@ button.chip {
   background: #e8f5e9;
   border: 1px solid #a5d6a7;
   padding: 6px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   display: inline-flex;
   align-items: center;
 }
@@ -1714,19 +1731,13 @@ button.chip {
   width: calc(100% - 32px);
   max-width: 390px;
   background: var(--glass-dock-bg);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
   border: 1px solid var(--glass-dock-border);
-  border-radius: 32px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 6px 10px;
+  padding: 6px;
   z-index: 100;
-  box-shadow:
-    var(--glass-dock-shadow),
-    0 2px 8px -2px rgba(10, 10, 10, 0.04),
-    inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .bottom-nav-item {
@@ -1736,28 +1747,32 @@ button.chip {
   gap: 3px;
   background: transparent;
   border: none;
-  color: var(--muted);
+  color: var(--dock-ink);
+  font-family: inherit;
   cursor: pointer;
-  padding: 6px 8px;
-  border-radius: 22px;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 7px 8px;
+  border-radius: var(--radius);
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
   flex: 1;
   text-align: center;
 }
 
 .bottom-nav-item:hover {
-  color: var(--ink);
+  color: #ffffff;
 }
 
-.bottom-nav-item-active {
-  color: var(--ink);
+/* Onglet actif : le cyan colore l'icône et le libellé, sans pastille derrière */
+.bottom-nav-item-active,
+.bottom-nav-item-active:hover {
+  color: var(--dock-ink-active);
   font-weight: 700;
-  background: rgba(0, 216, 255, 0.12);
+  background: transparent;
 }
 
 .bottom-nav-item-active .bottom-nav-icon {
-  stroke: var(--cyan-deep);
-  transform: scale(1.08);
+  stroke: var(--dock-ink-active);
 }
 
 .bottom-nav-label {
@@ -1777,13 +1792,14 @@ button.chip {
   position: absolute;
   top: -4px;
   right: -8px;
-  background: var(--cyan-deep);
-  color: #ffffff;
+  background: var(--cyan);
+  color: var(--on-cyan);
+  border: 2px solid var(--glass-dock-bg);
   font-size: 0.65rem;
   font-weight: 800;
   min-width: 16px;
   height: 16px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1811,7 +1827,7 @@ button.chip {
 .card-patient-ask {
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
   padding: 18px;
   text-align: left;
   margin-top: 12px;
@@ -1831,7 +1847,7 @@ button.chip {
   padding: 24px 16px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius);
   text-align: center;
 }
 
@@ -1845,7 +1861,7 @@ button.chip {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 .profile-avatar-large {
@@ -1870,7 +1886,7 @@ button.chip {
   font-size: 0.78rem;
   font-weight: 650;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--cyan-wash);
   border: 1px solid var(--cyan);
   color: var(--ink);
@@ -1880,7 +1896,7 @@ button.chip {
   padding: 16px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
 }
 
 .profile-info-row {
@@ -1919,7 +1935,7 @@ button.chip {
   padding: 18px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
   gap: 14px;
 }
 
@@ -1930,7 +1946,7 @@ button.chip {
   padding: 10px 12px;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius);
 }
 
 .settings-account-info {
@@ -1967,7 +1983,7 @@ button.chip {
   justify-content: center;
   width: 38px;
   height: 38px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--surface-soft);
   color: var(--ink);
@@ -1980,7 +1996,7 @@ button.chip {
     background 0.2s ease,
     border-color 0.2s ease,
     box-shadow 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
 }
 
 .settings-back-btn .icon-close,
@@ -2009,7 +2025,7 @@ button.chip {
   width: 58px;
   border-color: var(--cyan);
   background: var(--cyan-wash);
-  box-shadow: 0 3px 10px rgba(0, 216, 255, 0.2);
+  box-shadow: none;
 }
 
 .settings-back-btn:hover .icon-close {
@@ -2027,7 +2043,7 @@ button.chip {
   display: flex;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 4px;
 }
 
@@ -2036,9 +2052,9 @@ button.chip {
   top: 4px;
   bottom: 4px;
   width: calc((100% - 8px) / 3);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface-soft);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
   transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   pointer-events: none;
   z-index: 1;
@@ -2058,7 +2074,7 @@ button.chip {
 
 [data-theme='dark'] .theme-sliding-glider {
   background: var(--surface-soft);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: none;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -2072,7 +2088,7 @@ button.chip {
   padding: 8px 12px;
   border: none;
   background: transparent;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--muted);
@@ -2126,11 +2142,11 @@ button.chip {
   padding: 10px 14px;
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
   cursor: pointer;
   text-align: left;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: none;
 }
 
 .custom-select-trigger:hover {
@@ -2183,15 +2199,10 @@ button.chip {
   top: calc(100% + 6px);
   left: 0;
   right: 0;
-  background: var(--surface-soft);
-  border: 1px solid var(--line);
-  border-radius: 14px;
+  background: var(--bg);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
   padding: 6px;
-  box-shadow:
-    0 12px 32px -4px rgba(0, 0, 0, 0.16),
-    0 4px 12px rgba(0, 0, 0, 0.05);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   z-index: 60;
   display: flex;
   flex-direction: column;
@@ -2215,7 +2226,7 @@ button.chip {
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -2227,7 +2238,8 @@ button.chip {
 }
 
 .custom-select-option.selected {
-  background: rgba(0, 216, 255, 0.12);
+  background: var(--surface-soft);
+  font-weight: 700;
 }
 
 .custom-select-option-info {
@@ -2255,7 +2267,7 @@ button.chip {
   background: var(--bg);
   color: var(--ink);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
   font: inherit;
   font-size: 0.92rem;
   line-height: 1.45;
@@ -2274,7 +2286,7 @@ button.chip {
 
 .settings-submit-btn {
   max-width: 280px;
-  box-shadow: 0 4px 14px rgba(0, 216, 255, 0.25);
+  box-shadow: none;
   transition:
     transform 0.18s ease,
     box-shadow 0.18s ease;
@@ -2282,7 +2294,7 @@ button.chip {
 
 .settings-submit-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(0, 216, 255, 0.35);
+  box-shadow: none;
 }
 
 .settings-success-badge {
@@ -2301,7 +2313,7 @@ button.chip {
 [data-theme='dark'] .custom-select-menu {
   background: rgba(26, 28, 34, 0.96);
   border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
 }
 
 /* --- Messagerie style Instagram/WhatsApp & Multimédia ------------------------ */
@@ -2342,7 +2354,7 @@ button.chip {
   padding: 12px 14px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius);
   cursor: pointer;
   transition: all 0.18s ease;
 }
@@ -2350,7 +2362,7 @@ button.chip {
 .thread-row-item:hover {
   border-color: var(--cyan);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  box-shadow: none;
 }
 
 .thread-row-unread {
@@ -2448,7 +2460,7 @@ button.chip {
   color: #0b6938;
   background: #e8f5e9;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   white-space: nowrap;
 }
 
@@ -2516,7 +2528,7 @@ button.chip {
   background: var(--surface-soft);
   border: 1px solid var(--line);
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   color: var(--muted);
 }
 
@@ -2545,7 +2557,7 @@ button.chip {
 .chat-bubble {
   max-width: 82%;
   padding: 10px 14px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   font-size: 0.92rem;
   display: flex;
   flex-direction: column;
@@ -2590,7 +2602,7 @@ button.chip {
 .chat-attached-media {
   max-width: 220px;
   max-height: 200px;
-  border-radius: 10px;
+  border-radius: var(--radius);
   object-fit: cover;
 }
 
@@ -2599,7 +2611,7 @@ button.chip {
   flex-direction: column;
   background: rgba(0, 0, 0, 0.06);
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   font-size: 0.82rem;
 }
 
@@ -2618,7 +2630,7 @@ button.chip {
   background: var(--surface-soft);
   border: 1px solid var(--line);
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius);
 }
 
 .staged-remove {
@@ -2660,7 +2672,7 @@ button.chip {
 .chat-input-field {
   flex: 1;
   padding: 10px 14px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--bg);
   color: var(--ink);
@@ -2701,7 +2713,7 @@ button.chip {
   padding: 18px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius);
   gap: 16px;
 }
 
@@ -2724,8 +2736,8 @@ button.chip {
   background: var(--bg);
   border: 1.5px solid var(--cyan);
   padding: 6px 14px;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px var(--cyan-wash);
+  border-radius: var(--radius);
+  box-shadow: none;
 }
 
 .achievements-number {
@@ -2744,7 +2756,7 @@ button.chip {
 .achievements-graph-wrap {
   background: var(--bg);
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius);
   padding: 12px 14px 10px;
 }
 
@@ -2775,7 +2787,7 @@ button.chip {
   width: 100%;
   max-width: 28px;
   background: var(--surface-soft);
-  border-radius: 6px;
+  border-radius: var(--radius);
   display: flex;
   align-items: flex-end;
   overflow: hidden;
@@ -2784,7 +2796,7 @@ button.chip {
 .chart-bar-fill {
   width: 100%;
   background: var(--cyan);
-  border-radius: 6px;
+  border-radius: var(--radius);
   transition: height 0.4s ease;
 }
 
@@ -2824,7 +2836,7 @@ button.chip {
   align-items: center;
   text-align: center;
   padding: 12px 6px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--bg);
   gap: 6px;
@@ -2833,7 +2845,7 @@ button.chip {
 
 .badge-unlocked {
   border-color: var(--cyan);
-  box-shadow: 0 4px 12px var(--cyan-wash);
+  box-shadow: none;
 }
 
 .badge-locked {
@@ -2876,7 +2888,7 @@ button.chip {
   font-size: 0.65rem;
   font-weight: 700;
   padding: 2px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: #e8f5e9;
   color: #0b6938;
 }
@@ -2896,7 +2908,7 @@ button.chip {
   font-size: 0.72rem;
   font-weight: 750;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--cyan-wash);
   color: var(--ink);
   border: 1px solid var(--cyan);
@@ -2905,12 +2917,12 @@ button.chip {
 .card-patient-need-banner {
   background: var(--surface-soft);
   border: 1.5px solid var(--cyan);
-  border-radius: 16px;
+  border-radius: var(--radius);
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: 0 4px 16px var(--cyan-wash);
+  box-shadow: none;
   animation: slideDown 0.2s ease-out;
 }
 
@@ -2933,14 +2945,14 @@ button.chip {
   font-size: 0.68rem;
   font-weight: 750;
   padding: 3px 8px;
-  border-radius: 999px;
-  background: #e0f2fe;
-  color: #0369a1;
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--bg);
 }
 
 [data-theme='dark'] .patient-need-tag {
-  background: #082f49;
-  color: #7dd3fc;
+  background: var(--ink);
+  color: var(--bg);
 }
 
 .patient-need-body {
@@ -2959,7 +2971,7 @@ button.chip {
   border: none;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 12px;
+  border-radius: var(--radius);
   transition: background 0.15s ease;
   font: inherit;
   color: inherit;
@@ -2998,8 +3010,8 @@ button.chip {
   color: #8d6e63;
   border: 1px solid #ffe082;
   padding: 10px 14px;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius);
+  box-shadow: none;
   z-index: 80;
   animation: slideDown 0.18s ease-out;
 }
@@ -3028,8 +3040,6 @@ button.chip {
   position: absolute;
   inset: 0;
   background: rgba(10, 10, 10, 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   z-index: 150;
   display: flex;
   flex-direction: column;
@@ -3045,7 +3055,7 @@ button.chip {
   max-height: 88%;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -3094,7 +3104,7 @@ button.chip {
   overflow: hidden;
   border: 3px solid var(--cyan);
   background: #fff;
-  box-shadow: 0 6px 18px var(--cyan-wash);
+  box-shadow: none;
 }
 
 .peer-avatar-xlarge {
@@ -3132,7 +3142,7 @@ button.chip {
   font-size: 0.72rem;
   font-weight: 700;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--surface-soft);
   border: 1px solid var(--line);
   color: var(--muted);
@@ -3141,7 +3151,7 @@ button.chip {
 .peer-profile-section {
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius);
   padding: 14px 16px;
 }
 
@@ -3163,7 +3173,7 @@ button.chip {
   font-size: 0.75rem;
   font-weight: 700;
   padding: 4px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--bg);
   border: 1px solid var(--line);
   color: var(--cyan-deep);
@@ -3180,7 +3190,7 @@ button.chip {
 .passion-photo-card {
   position: relative;
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--line);
   background: var(--surface-soft);
@@ -3213,7 +3223,7 @@ button.chip {
 
 .passion-photo-add-box {
   aspect-ratio: 1;
-  border-radius: 12px;
+  border-radius: var(--radius);
   border: 1.5px dashed var(--line);
   background: var(--bg);
   display: flex;
@@ -3244,7 +3254,7 @@ button.chip {
   gap: 12px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
   padding: 12px 14px;
   cursor: pointer;
   transition: border-color 0.15s ease;
@@ -3274,7 +3284,7 @@ button.chip {
   padding: 6px 12px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius);
   margin-top: 8px;
   color: var(--muted);
 }
@@ -3309,7 +3319,7 @@ button.chip {
   color: var(--ink);
   border: 1px solid var(--line);
   padding: 8px 18px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   font-size: 0.85rem;
   font-weight: 650;
   text-decoration: none;
@@ -3321,7 +3331,7 @@ button.chip {
   border-color: var(--cyan);
   background: var(--cyan-wash);
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 4px 14px var(--cyan-wash);
+  box-shadow: none;
 }
 
 .button-admin-pill:active {
@@ -3391,7 +3401,7 @@ button.chip {
 .admin-card {
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
   padding: 18px 16px;
   display: flex;
   flex-direction: column;
@@ -3485,7 +3495,7 @@ button.chip {
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius);
 }
 
 .role-badge-helper {
@@ -3663,7 +3673,7 @@ button.chip {
   font-size: 0.68rem;
   font-weight: 700;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--surface-soft);
   border: 1px solid var(--held);
   color: var(--held);
@@ -3673,7 +3683,7 @@ button.chip {
   font-size: 0.68rem;
   font-weight: 700;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--cyan-wash);
   border: 1px solid var(--cyan);
   color: var(--ink);
@@ -3765,7 +3775,7 @@ button.chip {
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
-  border-radius: 9999px;
+  border-radius: var(--radius);
   background: var(--surface-soft);
   border: 1.5px solid var(--line);
   color: var(--text);
@@ -3783,10 +3793,9 @@ button.chip {
 }
 
 .helper-patient-pill.active {
-  border-color: var(--accent);
-  background: rgba(0, 216, 255, 0.12);
-  color: var(--text);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--bg);
 }
 
 .helper-pill-avatar {
@@ -3799,12 +3808,12 @@ button.chip {
 .card-helper-patient {
   background: var(--surface-soft);
   border: 1.5px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius);
   padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  box-shadow: none;
 }
 
 .helper-patient-top {
@@ -3850,7 +3859,7 @@ button.chip {
   margin: 0;
   padding: 8px 12px;
   background: var(--surface);
-  border-radius: 10px;
+  border-radius: var(--radius);
   border-left: 3px solid var(--accent);
 }
 
@@ -3882,12 +3891,12 @@ button.chip {
   display: inline-flex;
   align-items: center;
   padding: 5px 12px;
-  border-radius: 9999px;
+  border-radius: var(--radius);
   font-size: 0.82rem;
-  font-weight: 500;
-  background: rgba(0, 216, 255, 0.1);
-  color: var(--text);
-  border: 1px solid rgba(0, 216, 255, 0.4);
+  font-weight: 600;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--bg);
 }
 
 .helper-ai-section {
@@ -3916,10 +3925,10 @@ button.chip {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 3px 8px;
-  border-radius: 9999px;
-  background: rgba(0, 216, 255, 0.15);
-  color: var(--accent);
-  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--ink);
+  color: var(--cyan);
+  border: 1px solid var(--ink);
 }
 
 .helper-proposal-card {
@@ -3929,7 +3938,7 @@ button.chip {
   padding: 16px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius);
   transition:
     transform 0.15s ease,
     border-color 0.15s ease;
@@ -3954,7 +3963,7 @@ button.chip {
   color: var(--muted);
   background: var(--surface);
   padding: 2px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius);
   border: 1px solid var(--line);
 }
 

@@ -120,11 +120,9 @@ function ClinicianScreen({ token, onLeave }: ClinicianScreenProps) {
           <Logo size={36} />
           <div className="brand-text">
             <span className="brand-name">Needed</span>
-            <span className="brand-tagline">Clinician Oversight Portal</span>
           </div>
         </div>
         <div className="topbar-actions">
-          <span className="badge-clinic">Medical Portal</span>
           <button
             type="button"
             className="button button-ghost button-small"
@@ -137,13 +135,7 @@ function ClinicianScreen({ token, onLeave }: ClinicianScreenProps) {
 
       <main className="stack">
         <section className="clinician-hero">
-          <p className="eyebrow">Passive Telemetry & Personality Insights</p>
           <h1>Post-TMS Patient Oversight</h1>
-          <p className="quiet">
-            Continuous remission tracking without questionnaires. Well-being is
-            read from the watch and in-app signals; the content of exchanges
-            stays private to the patient.
-          </p>
         </section>
 
         {error && (
@@ -211,16 +203,13 @@ function ClinicianScreen({ token, onLeave }: ClinicianScreenProps) {
                   </div>
                 )}
                 <div>
-                  <span className="eyebrow">Monitored Patient</span>
                   <h2>{`${patient.first_name} ${patient.last_name}`.trim()}</h2>
                   <div className="patient-tags">
                     {patient.birth_date && (
-                      <span className="tag-quiet">
-                        Born: {patient.birth_date}
-                      </span>
+                      <span className="tag-quiet">{patient.birth_date}</span>
                     )}
                     {patient.city && (
-                      <span className="tag-quiet">City: {patient.city}</span>
+                      <span className="tag-quiet">{patient.city}</span>
                     )}
                     <span className="tag-quiet">
                       Joined: {when(patient.joined_at)}
@@ -290,12 +279,7 @@ function ClinicianScreen({ token, onLeave }: ClinicianScreenProps) {
           <section className="card-notes-editor stack">
             <div className="editor-header">
               <div>
-                <span className="eyebrow">Therapeutic Profile</span>
                 <h2>Patient Personality & Mood Baseline</h2>
-                <p className="quiet">
-                  Document what makes {patient.first_name} proud and what brings
-                  them joy.
-                </p>
               </div>
               <span className="last-saved-badge">
                 {patient.notes

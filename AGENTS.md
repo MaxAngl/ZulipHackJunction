@@ -243,7 +243,7 @@ Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 - 2026-11-14 — Vraie app à côté de la console de démo : comptes par jeton d'appareil, sans mot de passe — assez pour une démo sur deux téléphones ; à remplacer avant tout usage avec de vrais patients.
 - 2026-11-14 — Stockage SQLite avec la bibliothèque standard (`data/needed.db`, ignoré par git) — persistance sans dépendance ni service à installer.
 - 2026-11-14 — Dans la vraie app, θ est estimé d'après le comportement du patient, et un capteur externe peut le pousser par l'API — pas de capteur réel disponible ; la règle n'est pas validée.
-- 2026-11-14 — Charte minimaliste : noir sur blanc, traits fins, un seul accent cyan vif `#00D8FF` — demande de l'équipe.
+- 2026-11-14 — Charte (issue #43) : fond à peine crème `#FAF8F2` (jamais de blanc pur), encre noire, cyan vif `#00D8FF` en aplats ; ni carte, ni ombre, ni dégradé, ni pointillés ; titres en Bricolage Grotesque, texte en Figtree. Système dans `frontend/src/theme.css` — demande de l'équipe, le style du pitch adouci pour l'app.
 - 2026-11-14 — Challenge technique visé : Best Use of Gemini API — Gemini écrit les demandes, ses embeddings les mesurent, et il relit les messages de l'aidant.
 - 2026-11-14 — Gemini appelé en REST avec la bibliothèque standard, sans SDK — aucune dépendance à ajouter, et un repli hors ligne si l'API échoue.
 - 2026-11-14 — Modèle de zone et capteur d'état simulés derrière `ml/model.py` et `backend/sensor.py` — pas de données pour entraîner ; les signatures resteront quand le vrai modèle arrivera.

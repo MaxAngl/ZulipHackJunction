@@ -203,10 +203,6 @@ function SettingsScreen() {
         <section className="settings-card stack">
           <div className="settings-section-header text-center">
             <h2>Contact Administrator</h2>
-            <p className="quiet font-small settings-section-desc">
-              Encountered a bug or have a suggestion? Send a direct note to the
-              administrative team.
-            </p>
           </div>
 
           <form
@@ -367,7 +363,7 @@ function SettingsScreen() {
                   justifyContent: 'center',
                   gap: '8px',
                   padding: '12px 14px',
-                  borderRadius: '12px',
+                  borderRadius: '4px',
                   textAlign: 'center',
                   fontWeight: 600,
                   fontSize: '0.9rem',
@@ -392,27 +388,11 @@ function SettingsScreen() {
               padding: '12px 14px',
               background: 'var(--bg)',
               border: '1px solid var(--line)',
-              borderRadius: '12px',
+              borderRadius: '4px',
             }}
           >
-            <div>
-              <strong style={{ fontSize: '0.95rem' }}>Needed</strong>
-              <p className="quiet font-small" style={{ margin: 0 }}>
-                rTMS Recovery Peer Network · Junction 2026
-              </p>
-            </div>
-            <span
-              style={{
-                fontWeight: 700,
-                padding: '4px 10px',
-                background: 'rgba(0, 216, 255, 0.15)',
-                color: 'var(--cyan-deep)',
-                borderRadius: '999px',
-                fontSize: '0.85rem',
-              }}
-            >
-              v1.2.0
-            </span>
+            <strong style={{ fontSize: '0.95rem' }}>Needed</strong>
+            <span className="quiet">v1.2.0</span>
           </div>
         </section>
       </main>
