@@ -19,6 +19,14 @@ if (window.matchMedia) {
     })
 }
 
+// App installable (PWA) : le service worker, seulement dans la version buildée. En dev, il
+// garderait d'anciennes versions des fichiers et gênerait le rechargement à chaud.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => undefined)
+  })
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <App />

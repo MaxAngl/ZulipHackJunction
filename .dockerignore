@@ -1,0 +1,20 @@
+# Ce que l'image n'emporte pas (Dockerfile, issue #59).
+.git
+.github
+.venv
+**/__pycache__
+**/node_modules
+frontend/dist
+.pytest_cache
+.ruff_cache
+# Secrets : la clé Gemini se donne au service d'hébergement, jamais dans l'image.
+.env
+.env.*
+# Données locales et d'entraînement
+data
+ml/data
+ml/models
+# Inutile au serveur
+watch
+garmin
+docs

@@ -38,6 +38,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 18:30] **Contrat d'API changé** (issue #53) : les besoins publiés par les patients sont retirés. Routes `/api/app/patient/needs` et `/api/app/helper/needs/{id}/take` supprimées, `HelperHome.needs` et `OpenNeed` aussi ; `Thread` et `AdminExchange` perdent `kind` (un fil est toujours une demande). La table `needs` n'est plus créée ; relancer `uv run python -m backend.seed` pour une base propre.
 - [14/11 18:55] **Quota Gemini** : la clé de l'équipe a épuisé son quota gratuit d'embeddings du jour (1 000 requêtes, erreur 429). La génération marche toujours. Depuis #56, les demandes écrites par Gemini sont gardées et placées à la position qu'il dit viser ; l'appariement des nouveaux comptes passe hors ligne jusqu'à la remise à zéro du quota.
 - [14/11 18:55] Demandes plus chaleureuses (#56) : bonjour au prénom, demande, mot de fin, signature, sur quatre lignes, avec des formules qui varient. Gemini et banque hors ligne.
+- [14/11 19:10] **Mise en ligne** (issue #59) : `Dockerfile`, `render.yaml` et `.dockerignore` à la racine ; l'API sert aussi le front buildé (`frontend/dist`) ; l'app est installable sur téléphone (`frontend/public/manifest.webmanifest`, `sw.js`, icônes). En dev, rien ne change (`npm run dev` : pas de service worker).
 
 ## Max (Claude Code)
 

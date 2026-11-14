@@ -92,7 +92,7 @@ gh pr checks                               # état de la CI de la PR
 gh pr merge --squash --delete-branch       # merger quand la CI est verte
 ```
 
-**Déploiement** : _à décider. Noter ici la commande dès que c'est fait._
+**Déploiement** : Render, formule gratuite (`render.yaml`, `Dockerfile`). Render redéploie tout seul à chaque push sur `main` ; la clé Gemini se saisit dans Render (Environment), jamais dans git. Une seule adresse : l'API sert aussi le front buildé (`frontend/dist`). Pour vérifier en local comme en ligne : `npm --prefix frontend run build`, puis `uv run uvicorn backend.main:app --port 8000` et ouvrir http://localhost:8000. Limites de la formule gratuite : veille après 15 minutes sans visite, disque effacé à chaque redémarrage (comptes et demandes perdus).
 
 ## Arborescence
 
@@ -212,6 +212,7 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Mise en ligne sur Render, formule gratuite, image Docker ; l'app s'installe sur téléphone (PWA : manifeste, service worker « réseau d'abord », icônes) — gratuit, HTTPS, déploiement à chaque push sur main, et 512 Mo suffisent (l'app en prend environ 250). Le disque n'est pas conservé : une vraie base viendra après la démo.
 - 2026-11-14 — Le patient ne publie plus de besoin à la communauté : plus d'onglet « New Request » chez lui, plus de « Direct patient requests » chez l'aidant (issue #53) — cela brouillait la lecture du concept, où c'est le patient qui rend service. Décision de Max.
 - 2026-11-14 — Comptes à e-mail et mot de passe (PBKDF2-SHA256 de la bibliothèque standard, un sel par compte), une session par connexion (table `sessions`, en-tête `X-Needed-Token`). **Cela remplace les comptes par jeton d'appareil décidés plus bas** — il fallait pouvoir se reconnecter depuis un autre téléphone ; aucune dépendance ajoutée.
 - 2026-11-14 — Tout ce que l'app affiche vient du backend : profils, fils, notes du clinicien, messages à l'équipe. Le navigateur ne garde que les jetons, le thème, les notifications du bandeau et les fils lus — deux téléphones doivent voir la même chose.
