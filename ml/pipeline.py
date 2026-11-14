@@ -4,11 +4,12 @@ Le modèle de langage propose, il ne décide pas : chaque demande est replacée 
 une mesure indépendante (embeddings), et seules celles qui tombent dans la zone sont gardées.
 """
 
+import html
 import logging
 import random
 import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from ml import gemini, lexicon
@@ -42,11 +43,18 @@ be something the asker would genuinely want, and something the recipient can giv
 what they like or know.
 
 Rules:
-- Write in the asker's voice, first person, addressed to the recipient.
-- One or two sentences, at most 220 characters. Concrete and specific.
-- Write it as a normal message: a capital letter at the start, a question mark or a full stop \
-at the end.
-- No greeting, no name, no emoji, no exclamation mark.
+- Write in the asker's voice, first person, as a short warm message to the recipient.
+- Four lines, separated by a line break ("\n"):
+  1. a greeting with the recipient's first name ("Hi Emma,");
+  2. the request itself: one or two sentences, at most 200 characters, concrete and specific, \
+with a capital letter at the start and a question mark or a full stop at the end;
+  3. a short friendly closing ("Thanks a lot,");
+  4. the asker's first name.
+- Vary the greeting and the closing from one request to the next: never use the same greeting \
+or the same closing twice in your answer. Greetings such as Hi, Hello, Hey, Good morning, Dear, \
+Hi there; closings such as Thanks a lot, Many thanks, Cheers, No rush at all, Thank you in \
+advance, Whenever suits you. Invent others too.
+- At most one exclamation mark, no emoji.
 - Never mention health, mood, wellbeing, therapy, recovery, AI or the app itself.
 - Never ask for money, personal data, or medical or legal advice.
 - Each request uses exactly one format from the list, and fits its description.
@@ -244,15 +252,49 @@ _QUESTION_START = re.compile(
 
 
 def _tidy(text: str) -> str:
-    """Majuscule au début, ponctuation à la fin. Vu en réel : le modèle léger les oublie parfois,
-    et la demande arrive telle quelle sur le téléphone du patient."""
-    text = " ".join(text.split())
-    if not text:
-        return text
-    text = text[0].upper() + text[1:]
-    if text[-1] not in ".?!…":
-        text += "?" if _QUESTION_START.match(text) else "."
-    return text
+    """Majuscule en tête de chaque ligne ; une demande d'une seule ligne finit par une ponctuation.
+
+    Vu en réel : le modèle léger les oublie parfois, et la demande arrive telle quelle sur le
+    téléphone du patient. Les retours à la ligne sont gardés : bonjour, demande, fin, signature.
+    Une signature n'a pas de point final : la ponctuation ne touche qu'une ligne seule.
+    """
+    # Vu en réel : Gemini écrit parfois « In&egrave;s » au lieu de « Inès ».
+    lines = [" ".join(line.split()) for line in html.unescape(text).splitlines()]
+    lines = [line[0].upper() + line[1:] for line in lines if line]
+    if len(lines) == 1 and lines[0][-1] not in ".?!…":
+        lines[0] += "?" if _QUESTION_START.match(lines[0]) else "."
+    return "\n".join(lines)
+
+
+# Hors ligne : la demande de la banque, habillée comme le ferait Gemini, sans répéter les formules.
+GREETINGS = (
+    "Hi {name},",
+    "Hello {name},",
+    "Hey {name},",
+    "Good morning {name},",
+    "Dear {name},",
+    "Hi there {name},",
+    "Hello there {name},",
+)
+CLOSINGS = (
+    "Thanks a lot,",
+    "Many thanks,",
+    "Cheers,",
+    "No rush at all, thank you!",
+    "Thank you in advance,",
+    "Whenever suits you, thanks!",
+    "Thanks so much,",
+)
+
+
+def _dress(body: str, patient_name: str, helper_name: str, greeting: str, closing: str) -> str:
+    return "\n".join((greeting.format(name=patient_name), body, closing, helper_name))
+
+
+def _body(text: str) -> str:
+    """La demande seule, sans bonjour ni fin : c'est elle que la banque hors ligne compare."""
+    lines = text.splitlines()
+    return "\n".join(lines[1:-2]) if len(lines) >= 4 else text
 
 
 def _draft_with_gemini(
@@ -285,12 +327,26 @@ def _draft_with_gemini(
     return drafts
 
 
-def _draft_offline(pairs: list[InterestPair], seed: int, skip: set[str]) -> list[_Draft]:
+def _draft_offline(
+    pairs: list[InterestPair], seed: int, skip: set[str], helper_name: str, patient_name: str
+) -> list[_Draft]:
     rng = random.Random(seed)
+    greetings, closings = list(GREETINGS), list(CLOSINGS)
+    rng.shuffle(greetings)
+    rng.shuffle(closings)
     drafts: list[_Draft] = []
     for index, pair in enumerate(pairs):
         requests = lexicon.sample(pair.patient_interest, pair.helper_interest, rng, skip)
-        drafts += [_Draft(index, fmt, text) for fmt, text in requests]
+        for fmt, text in requests:
+            n = len(drafts)
+            dressed = _dress(
+                text,
+                patient_name,
+                helper_name,
+                greetings[n % len(greetings)],
+                closings[n % len(closings)],
+            )
+            drafts.append(_Draft(index, fmt, dressed))
     return drafts
 
 
@@ -332,6 +388,27 @@ def _measure(
     return candidates
 
 
+def _estimated(drafts: list[_Draft], pairs: list[InterestPair]) -> list[Candidate]:
+    """Sans embeddings : la position que Gemini dit avoir visée, à défaut la mesure par mots-clés.
+
+    Mode dégradé. La mesure par mots-clés seule place mal les textes de Gemini (souvent 0 ou 1,
+    vu en réel) et la zone n'en garde presque aucun ; Gemini, lui, a écrit pour la zone.
+    """
+    lexical = _measure(drafts, pairs, "offline")
+    return [
+        replace(
+            candidate,
+            lam=round(draft.intended, 3),
+            off_topic=False,
+            provider="gemini",
+            axes=request_axes(draft.intended, candidate.format),
+        )
+        if draft.intended is not None
+        else candidate
+        for candidate, draft in zip(lexical, drafts, strict=True)
+    ]
+
+
 def generate_candidates(
     pairs: list[InterestPair],
     zone: Zone,
@@ -343,19 +420,32 @@ def generate_candidates(
     """Étapes 4 et 5 : générer des demandes pour la zone, puis les mesurer.
 
     Avec Gemini si une clé est configurée, sinon avec la banque hors ligne. En cas d'erreur
-    Gemini, on bascule sur la banque pour cet appel : la démo continue.
+    Gemini, on bascule sur la banque pour cet appel : la démo continue. Si seuls les embeddings
+    échouent (quota du jour épuisé, vu en réel le 14/11), les demandes écrites par Gemini sont
+    gardées, placées à la position qu'il dit avoir visée (`_estimated`).
     """
     known = set(avoid)
     if gemini.is_configured():
         try:
             drafts = _draft_with_gemini(pairs, zone, helper_name, patient_name, avoid)
-            candidates = _measure(drafts, pairs, "gemini")
-            _state["note"] = ""
-            return [candidate for candidate in candidates if candidate.text not in known]
         except gemini.GeminiError as exc:
             logger.warning("Gemini indisponible, bascule hors ligne : %s", exc)
             _state["note"] = f"Gemini error ({exc.status or 'network'}): built-in bank used."
-    candidates = _measure(_draft_offline(pairs, seed, known), pairs, "offline")
+        else:
+            try:
+                candidates = _measure(drafts, pairs, "gemini")
+                _state["note"] = ""
+            except gemini.GeminiError as exc:
+                logger.warning("Embeddings Gemini indisponibles, position estimée : %s", exc)
+                _state["note"] = (
+                    f"Gemini embeddings error ({exc.status or 'network'}): "
+                    "positions estimated by Gemini."
+                )
+                candidates = _estimated(drafts, pairs)
+            return [candidate for candidate in candidates if candidate.text not in known]
+    bodies = {_body(text) for text in known}
+    drafts = _draft_offline(pairs, seed, bodies, helper_name, patient_name)
+    candidates = _measure(drafts, pairs, "offline")
     return [candidate for candidate in candidates if candidate.text not in known]
 
 

@@ -352,10 +352,12 @@ button.chip.chip-on {
 
 .helper-proposal-text {
   font-family: var(--font-display);
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-weight: 700;
-  letter-spacing: -0.025em;
-  line-height: 1.15;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  /* Bonjour, demande, fin, signature : une ligne chacun (issue #56). */
+  white-space: pre-line;
 }
 
 .helper-proposal-card .row {
