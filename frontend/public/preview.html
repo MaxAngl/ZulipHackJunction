@@ -1,0 +1,1330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Needed · iPhone 15 Pro Studio Preview (393 × 852 px)</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      :root {
+        --bg-studio: #0e0f12;
+        --card-bg: #18191e;
+        --border-studio: #282a32;
+        --accent: #00d8ff;
+        --text: #f0f0f5;
+        --text-muted: #8a8d9a;
+        --chassis-color: #2b2b2f;
+        --chassis-border: #4a4a52;
+        --screen-w: 393px;
+        --screen-h: 852px;
+        --scale: 0.95;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+          Arial, sans-serif;
+        background: var(--bg-studio);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: auto;
+        background-image:
+          radial-gradient(
+            circle at 50% 15%,
+            rgba(0, 216, 255, 0.08) 0%,
+            transparent 60%
+          ),
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size:
+          100% 100%,
+          32px 32px,
+          32px 32px;
+      }
+
+      /* --- Barre d'outils supérieure --- */
+      header.toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(20, 21, 26, 0.88);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border-studio);
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .brand-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .device-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(0, 216, 255, 0.12);
+        border: 1px solid rgba(0, 216, 255, 0.3);
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .dim-tag {
+        color: var(--text-muted);
+        font-size: 0.82rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .nav-tabs,
+      .zoom-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #121317;
+        padding: 4px;
+        border-radius: 10px;
+        border: 1px solid var(--border-studio);
+      }
+
+      .tab-btn {
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 7px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 140ms ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .tab-btn:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .tab-btn.active {
+        color: #000000;
+        background: var(--accent);
+        font-weight: 600;
+      }
+
+      .direct-link {
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        padding: 6px 10px;
+        border-radius: 6px;
+        transition: color 120ms;
+      }
+      .direct-link:hover {
+        color: var(--text);
+      }
+
+      /* --- Scène principale --- */
+      main.stage {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px 60px;
+        gap: 48px;
+        flex-wrap: wrap;
+      }
+
+      .phone-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        transform-origin: top center;
+        transition: transform 180ms ease;
+      }
+
+      .phone-label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      /* --- Châssis iPhone 15 Pro --- */
+      .iphone-15-pro {
+        position: relative;
+        width: calc(var(--screen-w) + 22px);
+        height: calc(var(--screen-h) + 22px);
+        background: linear-gradient(
+          135deg,
+          #44454d 0%,
+          #1f2024 45%,
+          #2a2a30 100%
+        );
+        border-radius: 54px;
+        padding: 11px;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.12),
+          0 25px 60px -15px rgba(0, 0, 0, 0.85),
+          0 40px 90px -25px rgba(0, 216, 255, 0.15);
+        user-select: none;
+      }
+
+      /* Boutons matériels sur les côtés */
+      /* Action button */
+      .iphone-15-pro::before {
+        content: '';
+        position: absolute;
+        left: -3px;
+        top: 115px;
+        width: 3px;
+        height: 26px;
+        background: #3a3b42;
+        border-radius: 2px 0 0 2px;
+        box-shadow: inset 1px 0 1px rgba(255, 255, 255, 0.2);
+      }
+
+      /* Volume buttons & Power button */
+      .btn-vol-up,
+      .btn-vol-down,
+      .btn-power {
+        position: absolute;
+        background: #3a3b42;
+        box-shadow: inset 1px 0 1px rgba(255, 255, 255, 0.2);
+      }
+      .btn-vol-up {
+        left: -3px;
+        top: 160px;
+        width: 3px;
+        height: 50px;
+        border-radius: 2px 0 0 2px;
+      }
+      .btn-vol-down {
+        left: -3px;
+        top: 220px;
+        width: 3px;
+        height: 50px;
+        border-radius: 2px 0 0 2px;
+      }
+      .btn-power {
+        right: -3px;
+        top: 175px;
+        width: 3px;
+        height: 75px;
+        border-radius: 0 2px 2px 0;
+      }
+
+      /* Écran interne 393 × 852 px */
+      .screen-container {
+        position: relative;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        border-radius: 46px;
+        overflow: hidden;
+        background: #fefaef; /* couleur crème de Needed en mode clair */
+        border: 1px solid rgba(0, 0, 0, 0.5);
+        transition:
+          background-color 0.2s ease,
+          border-color 0.2s ease;
+      }
+
+      /* Synchronisation parfaite du fond de l'écran en mode nuit */
+      .screen-container.dark-theme {
+        background: #16181b; /* Même teinte sombre que le thème nuit de Needed */
+        border-color: rgba(255, 255, 255, 0.15);
+      }
+
+      .screen-container.dark-theme .status-bar {
+        color: #f0f3f6;
+      }
+
+      .screen-container.dark-theme .home-indicator {
+        background: rgba(255, 255, 255, 0.75);
+      }
+
+      /* Dynamic Island */
+      .dynamic-island {
+        position: absolute;
+        top: 11px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 124px;
+        height: 35px;
+        background: #000000;
+        border-radius: 20px;
+        z-index: 50;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+      }
+      .di-camera {
+        width: 11px;
+        height: 11px;
+        background: #11141c;
+        border: 1.5px solid #20242f;
+        border-radius: 50%;
+        margin-left: auto;
+      }
+
+      /* Status Bar iOS */
+      .status-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 26px 0;
+        color: #0a0a0a;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        z-index: 40;
+        pointer-events: none;
+      }
+
+      .status-icons {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .status-icons svg {
+        fill: currentColor;
+      }
+
+      /* Home Indicator (barre de balayage iOS) */
+      .home-indicator {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 136px;
+        height: 5px;
+        background: rgba(10, 10, 10, 0.85);
+        border-radius: 4px;
+        z-index: 50;
+        pointer-events: none;
+      }
+
+      /* Iframe hébergeant l'application */
+      .screen-frame {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: block;
+        /* Marge haute pour que la Dynamic Island ne masque pas le haut de page */
+        padding-top: 24px;
+        background: transparent;
+      }
+
+      /* --- Écran Éteint / Verrouillé (Lock Screen) --- */
+      .lock-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+          circle at 50% 25%,
+          #222733 0%,
+          #0b0c10 100%
+        );
+        color: #f0f3f6;
+        z-index: 60;
+        display: none;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 56px 20px 28px;
+        box-sizing: border-box;
+        user-select: none;
+        cursor: pointer;
+        animation: lockFadeIn 0.25s ease-out;
+      }
+
+      .lock-screen.active {
+        display: flex;
+      }
+
+      @keyframes lockFadeIn {
+        from {
+          opacity: 0;
+          transform: scale(1.02);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      .lock-header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        margin-top: 10px;
+      }
+
+      .lock-icon {
+        font-size: 14px;
+        opacity: 0.85;
+        margin-bottom: 2px;
+      }
+
+      .lock-date {
+        font-size: 1.05rem;
+        font-weight: 500;
+        color: #c4c8d8;
+        letter-spacing: -0.01em;
+      }
+
+      .lock-clock {
+        font-size: 4.8rem;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.03em;
+        margin: 0;
+        color: #ffffff;
+      }
+
+      .lock-notifs-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 20px 0;
+        overflow-y: auto;
+      }
+
+      .lock-notifs-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.74rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #8c909e;
+        padding: 0 4px;
+      }
+
+      .lock-notif-card {
+        background: rgba(36, 40, 52, 0.76);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 18px;
+        padding: 12px 14px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        transition:
+          transform 0.15s ease,
+          background 0.15s ease;
+      }
+
+      .lock-notif-card:hover {
+        background: rgba(45, 50, 68, 0.9);
+        transform: translateY(-1px);
+      }
+
+      .lock-notif-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.74rem;
+        color: #a4a9b8;
+      }
+
+      .lock-notif-app-badge {
+        background: #00d8ff;
+        color: #000000;
+        font-weight: 800;
+        font-size: 0.65rem;
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .lock-notif-app-name {
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #e0e4ef;
+      }
+
+      .lock-notif-title {
+        font-size: 0.92rem;
+        font-weight: 650;
+        color: #ffffff;
+      }
+
+      .lock-notif-body {
+        font-size: 0.82rem;
+        line-height: 1.35;
+        color: #b5bad0;
+        margin: 0;
+      }
+
+      .lock-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 10px;
+      }
+
+      .lock-circle-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: rgba(40, 44, 56, 0.65);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        font-size: 1.15rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+
+      .lock-swipe-hint {
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: #9094a6;
+        animation: pulseHint 2s infinite ease-in-out;
+      }
+
+      @keyframes pulseHint {
+        0%,
+        100% {
+          opacity: 0.45;
+        }
+        50% {
+          opacity: 0.95;
+        }
+      }
+
+      /* --- Bandeau Notification dans l'écran allumé (Drop Down Banner) --- */
+      .preview-inapp-banner {
+        position: absolute;
+        top: 54px;
+        left: 14px;
+        right: 14px;
+        background: rgba(26, 28, 34, 0.94);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 18px;
+        padding: 12px 14px;
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+        z-index: 55;
+        display: none;
+        flex-direction: column;
+        gap: 4px;
+        cursor: pointer;
+        animation: slideDownBanner 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+
+      .preview-inapp-banner.active {
+        display: flex;
+      }
+
+      .preview-inapp-banner .banner-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .preview-inapp-banner .banner-app-info {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .preview-inapp-banner .banner-icon-needed {
+        width: 16px;
+        height: 16px;
+        background: #00d8ff;
+        color: #000000;
+        font-weight: 800;
+        font-size: 0.65rem;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .preview-inapp-banner .banner-app-name {
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: #00d8ff;
+        letter-spacing: 0.05em;
+      }
+
+      .preview-inapp-banner .banner-app-time {
+        font-size: 0.72rem;
+        color: #8c909e;
+      }
+
+      .preview-inapp-banner .banner-close-btn {
+        font-size: 13px;
+        color: #8c909e;
+        padding: 0 4px;
+      }
+
+      .preview-inapp-banner .banner-title {
+        font-size: 0.9rem;
+        font-weight: 650;
+        color: #ffffff;
+      }
+
+      .preview-inapp-banner .banner-body {
+        font-size: 0.8rem;
+        line-height: 1.35;
+        color: #c4c8d6;
+        margin: 0;
+      }
+
+      /* Curseur interactif sur le bouton Power */
+      .btn-power {
+        cursor: pointer;
+      }
+      .btn-power:hover {
+        background: #60626b !important;
+      }
+
+      /* Barre de simulation de notifications */
+      .notif-sim-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        padding: 6px 12px;
+        background: #15161c;
+        border-radius: 10px;
+        border: 1px solid var(--border-studio);
+      }
+
+      .notif-sim-title {
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .notif-btn {
+        font: inherit;
+        font-size: 0.78rem;
+        padding: 5px 10px;
+        border-radius: 6px;
+        border: 1px solid #30333e;
+        background: #1f212a;
+        color: #e0e4ef;
+        cursor: pointer;
+        transition: all 120ms ease;
+      }
+
+      .notif-btn:hover {
+        background: #2b2e3b;
+        color: #ffffff;
+        border-color: var(--accent);
+      }
+
+      .notif-btn-power {
+        background: rgba(0, 216, 255, 0.15);
+        color: var(--accent);
+        border-color: rgba(0, 216, 255, 0.4);
+        font-weight: 600;
+      }
+      .notif-btn-power:hover {
+        background: rgba(0, 216, 255, 0.25);
+      }
+
+      /* Pied de page informatif */
+      footer.info-bar {
+        border-top: 1px solid var(--border-studio);
+        padding: 12px 24px;
+        text-align: center;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        background: #121317;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Barre d'outils -->
+    <header class="toolbar">
+      <div class="brand-meta">
+        <span class="device-badge">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="5" y="2" width="14" height="20" rx="4"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          iPhone 15 Pro
+        </span>
+        <span class="dim-tag">393 × 852 px (19.5:9)</span>
+      </div>
+
+      <!-- Route selector -->
+      <nav class="nav-tabs" aria-label="Application routes">
+        <button class="tab-btn active" data-hash="">🏠 Home</button>
+        <button class="tab-btn" data-hash="helper">🤝 Helper App</button>
+        <button class="tab-btn" data-hash="patient">🌱 Patient App</button>
+        <button class="tab-btn" data-hash="demo">🔁 Loop Demo</button>
+        <button class="tab-btn" data-hash="clinician">🩺 Clinician</button>
+        <button class="tab-btn" data-hash="admin">🛡️ Admin</button>
+        <button class="tab-btn" data-hash="settings">⚙️ Settings</button>
+        <button class="tab-btn" id="btn-duo">👥 Duo Mode (2 Phones)</button>
+      </nav>
+
+      <!-- Zoom controls -->
+      <div class="zoom-controls">
+        <button class="tab-btn" data-scale="0.8">80%</button>
+        <button class="tab-btn active" data-scale="0.92">92%</button>
+        <button class="tab-btn" data-scale="1">100% (1:1)</button>
+      </div>
+
+      <!-- Notification simulator & power button -->
+      <div class="notif-sim-bar" aria-label="Notification simulator">
+        <span class="notif-sim-title">Notifications:</span>
+        <button
+          type="button"
+          class="notif-btn notif-btn-power"
+          id="btn-toggle-power"
+          title="Turn screen on or off (same as side button)"
+        >
+          ⚡ Screen On/Off
+        </button>
+        <button type="button" class="notif-btn" id="btn-notif-request">
+          🔔 +Request
+        </button>
+        <button type="button" class="notif-btn" id="btn-notif-message">
+          💬 +Message
+        </button>
+        <button type="button" class="notif-btn" id="btn-notif-24h">
+          ⏳ +Pending (24h)
+        </button>
+        <button type="button" class="notif-btn" id="btn-notif-declined">
+          🛑 +3 Declined
+        </button>
+      </div>
+
+      <a href="/#/" class="direct-link" target="_blank" rel="noreferrer"
+        >Open full app ↗</a
+      >
+    </header>
+
+    <!-- Preview Stage -->
+    <main class="stage" id="stage">
+      <!-- Phone 1 (Primary) -->
+      <div
+        class="phone-wrapper"
+        id="phone-1-wrap"
+        style="transform: scale(0.92)"
+      >
+        <span class="phone-label" id="phone-1-label">Current view</span>
+
+        <div class="iphone-15-pro">
+          <div class="btn-vol-up"></div>
+          <div class="btn-vol-down"></div>
+          <div class="btn-power"></div>
+
+          <div class="screen-container">
+            <!-- Dynamic Island -->
+            <div class="dynamic-island">
+              <div class="di-camera"></div>
+            </div>
+
+            <!-- In-app notification banner when screen is on -->
+            <div class="preview-inapp-banner" id="preview-inapp-banner-1">
+              <div class="banner-top">
+                <div class="banner-app-info">
+                  <div class="banner-icon-needed">N</div>
+                  <span class="banner-app-name">NEEDED</span>
+                  <span class="banner-app-time" id="banner-time-1"
+                    >· just now</span
+                  >
+                </div>
+                <span class="banner-close-btn" id="banner-close-1">✕</span>
+              </div>
+              <strong class="banner-title" id="banner-title-1"
+                >New notification</strong
+              >
+              <p class="banner-body" id="banner-body-1">
+                Notification content.
+              </p>
+            </div>
+
+            <!-- Lock screen / Screen off -->
+            <div class="lock-screen" id="lock-screen-1">
+              <div class="lock-header">
+                <span class="lock-icon">🔒</span>
+                <span class="lock-date" id="lock-date-1"
+                  >Friday, November 14</span
+                >
+                <h1 class="lock-clock" id="lock-clock-1">09:41</h1>
+              </div>
+
+              <!-- Notification Center on lock screen -->
+              <div class="lock-notifs-container">
+                <div class="lock-notifs-title">
+                  <span>Notification Center</span>
+                </div>
+                <div class="lock-notifs-list" id="lock-notifs-list-1">
+                  <!-- Notifications injected by script -->
+                </div>
+              </div>
+
+              <!-- Lock screen footer -->
+              <div class="lock-footer">
+                <button
+                  type="button"
+                  class="lock-circle-btn"
+                  aria-label="Flashlight"
+                >
+                  🔦
+                </button>
+                <span class="lock-swipe-hint">Tap or click to wake screen</span>
+                <button
+                  type="button"
+                  class="lock-circle-btn"
+                  aria-label="Camera"
+                >
+                  📷
+                </button>
+              </div>
+            </div>
+
+            <!-- Status Bar iOS -->
+            <div class="status-bar">
+              <span>9:41</span>
+              <div class="status-icons">
+                <!-- Signal cellulaire -->
+                <svg width="16" height="12" viewBox="0 0 16 12">
+                  <rect x="0" y="8" width="2.5" height="4" rx="0.5"></rect>
+                  <rect x="4" y="6" width="2.5" height="6" rx="0.5"></rect>
+                  <rect x="8" y="3" width="2.5" height="9" rx="0.5"></rect>
+                  <rect x="12" y="0" width="2.5" height="12" rx="0.5"></rect>
+                </svg>
+                <!-- Wi-Fi -->
+                <svg
+                  width="15"
+                  height="11"
+                  viewBox="0 0 16 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                >
+                  <path d="M1 3a13 13 0 0 1 14 0"></path>
+                  <path d="M4 6.5a8.5 8.5 0 0 1 8 0"></path>
+                  <circle cx="8" cy="10" r="1" fill="currentColor"></circle>
+                </svg>
+                <!-- Batterie -->
+                <svg
+                  width="22"
+                  height="11"
+                  viewBox="0 0 24 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  rx="3"
+                >
+                  <rect x="1" y="1" width="19" height="10" rx="2.5"></rect>
+                  <rect
+                    x="2.5"
+                    y="2.5"
+                    width="14"
+                    height="7"
+                    rx="1.5"
+                    fill="currentColor"
+                  ></rect>
+                  <path d="M22 4.5v3" stroke-linecap="round"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Contenu iframe -->
+            <iframe id="app-frame-1" class="screen-frame" src="/#/"></iframe>
+
+            <!-- Home indicator -->
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Téléphone 2 (visible uniquement en Mode Duo) -->
+      <div
+        class="phone-wrapper"
+        id="phone-2-wrap"
+        style="display: none; transform: scale(0.92)"
+      >
+        <span class="phone-label">Patient (Aino)</span>
+
+        <div class="iphone-15-pro">
+          <div class="btn-vol-up"></div>
+          <div class="btn-vol-down"></div>
+          <div class="btn-power"></div>
+
+          <div class="screen-container">
+            <div class="dynamic-island">
+              <div class="di-camera"></div>
+            </div>
+
+            <div class="status-bar">
+              <span>9:41</span>
+              <div class="status-icons">
+                <svg width="16" height="12" viewBox="0 0 16 12">
+                  <rect x="0" y="8" width="2.5" height="4" rx="0.5"></rect>
+                  <rect x="4" y="6" width="2.5" height="6" rx="0.5"></rect>
+                  <rect x="8" y="3" width="2.5" height="9" rx="0.5"></rect>
+                  <rect x="12" y="0" width="2.5" height="12" rx="0.5"></rect>
+                </svg>
+                <svg
+                  width="15"
+                  height="11"
+                  viewBox="0 0 16 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                >
+                  <path d="M1 3a13 13 0 0 1 14 0"></path>
+                  <path d="M4 6.5a8.5 8.5 0 0 1 8 0"></path>
+                  <circle cx="8" cy="10" r="1" fill="currentColor"></circle>
+                </svg>
+                <svg
+                  width="22"
+                  height="11"
+                  viewBox="0 0 24 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  rx="3"
+                >
+                  <rect x="1" y="1" width="19" height="10" rx="2.5"></rect>
+                  <rect
+                    x="2.5"
+                    y="2.5"
+                    width="14"
+                    height="7"
+                    rx="1.5"
+                    fill="currentColor"
+                  ></rect>
+                  <path d="M22 4.5v3" stroke-linecap="round"></path>
+                </svg>
+              </div>
+            </div>
+
+            <iframe
+              id="app-frame-2"
+              class="screen-frame"
+              src="/#/patient"
+            ></iframe>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="info-bar">
+      Faithful Apple iPhone 15 Pro viewport simulator (Logic Resolution 393 ×
+      852 pt, ratio 19.5:9, iOS 17/18).
+    </footer>
+
+    <script>
+      const frame1 = document.getElementById('app-frame-1')
+      const frame2 = document.getElementById('app-frame-2')
+      const phone1Wrap = document.getElementById('phone-1-wrap')
+      const phone2Wrap = document.getElementById('phone-2-wrap')
+      const phone1Label = document.getElementById('phone-1-label')
+      const tabBtns = document.querySelectorAll('.tab-btn[data-hash]')
+      const btnDuo = document.getElementById('btn-duo')
+      const zoomBtns = document.querySelectorAll('.zoom-controls .tab-btn')
+
+      let isDuo = false
+
+      // Gestion du changement de route
+      tabBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          tabBtns.forEach((b) => b.classList.remove('active'))
+          btnDuo.classList.remove('active')
+          btn.classList.add('active')
+
+          isDuo = false
+          phone2Wrap.style.display = 'none'
+          phone1Label.textContent = btn.textContent
+
+          const hash = btn.dataset.hash
+          frame1.src = hash ? `/#/${hash}` : '/#/'
+        })
+      })
+
+      // Mode Duo (Aidant + Patient côte à côte)
+      btnDuo.addEventListener('click', () => {
+        tabBtns.forEach((b) => b.classList.remove('active'))
+        btnDuo.classList.add('active')
+
+        isDuo = true
+        phone1Label.textContent = 'Aidant (Mikko)'
+        frame1.src = '/#/helper'
+        frame2.src = '/#/patient'
+        phone2Wrap.style.display = 'flex'
+      })
+
+      // Gestion du zoom / échelle
+      zoomBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          zoomBtns.forEach((b) => b.classList.remove('active'))
+          btn.classList.add('active')
+          const scale = btn.dataset.scale
+          phone1Wrap.style.transform = `scale(${scale})`
+          phone2Wrap.style.transform = `scale(${scale})`
+        })
+      })
+
+      // Synchronisation du thème sombre entre l'application et le cadre du téléphone
+      function syncThemeWithApp() {
+        let isDark = false
+        try {
+          const doc1 = frame1.contentDocument || frame1.contentWindow?.document
+          if (
+            doc1 &&
+            doc1.documentElement.getAttribute('data-theme') === 'dark'
+          ) {
+            isDark = true
+          } else if (
+            doc1 &&
+            doc1.documentElement.getAttribute('data-theme') === 'light'
+          ) {
+            isDark = false
+          } else {
+            const pref = localStorage.getItem('needed.theme') || 'auto'
+            isDark =
+              pref === 'dark' ||
+              (pref === 'auto' &&
+                window.matchMedia &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches)
+          }
+        } catch {
+          const pref = localStorage.getItem('needed.theme') || 'auto'
+          isDark =
+            pref === 'dark' ||
+            (pref === 'auto' &&
+              window.matchMedia &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+        }
+
+        document.querySelectorAll('.screen-container').forEach((el) => {
+          if (isDark) {
+            el.classList.add('dark-theme')
+          } else {
+            el.classList.remove('dark-theme')
+          }
+        })
+      }
+
+      window.addEventListener('storage', syncThemeWithApp)
+      frame1.addEventListener('load', syncThemeWithApp)
+      if (frame2) frame2.addEventListener('load', syncThemeWithApp)
+      setInterval(syncThemeWithApp, 250)
+      syncThemeWithApp()
+
+      // =========================================================================
+      // SYSTÈME DE NOTIFICATIONS & ÉCRAN DE VEILLE / VERROUILLÉ (POWER ON/OFF)
+      // =========================================================================
+      const lockScreen1 = document.getElementById('lock-screen-1')
+      const btnTogglePower = document.getElementById('btn-toggle-power')
+      const physicalPowerBtn1 = document.querySelector(
+        '#phone-1-wrap .btn-power',
+      )
+      const lockNotifsList1 = document.getElementById('lock-notifs-list-1')
+      const lockClock1 = document.getElementById('lock-clock-1')
+      const lockDate1 = document.getElementById('lock-date-1')
+
+      const inAppBanner1 = document.getElementById('preview-inapp-banner-1')
+      const bannerTitle1 = document.getElementById('banner-title-1')
+      const bannerBody1 = document.getElementById('banner-body-1')
+      const bannerTime1 = document.getElementById('banner-time-1')
+      const bannerClose1 = document.getElementById('banner-close-1')
+
+      let isPhoneLocked = false
+      let bannerTimer = null
+
+      // Horloge dynamique sur l'écran verrouillé
+      function updateLockClock() {
+        const now = new Date()
+        const hours = String(now.getHours()).padStart(2, '0')
+        const mins = String(now.getMinutes()).padStart(2, '0')
+        if (lockClock1) lockClock1.textContent = `${hours}:${mins}`
+
+        if (lockDate1) {
+          const formattedDate = now.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+          })
+          lockDate1.textContent = formattedDate
+        }
+      }
+      setInterval(updateLockClock, 1000)
+      updateLockClock()
+
+      // Toggle phone power (Locked/Off <-> Screen On)
+      function togglePhonePower() {
+        isPhoneLocked = !isPhoneLocked
+        if (isPhoneLocked) {
+          lockScreen1.classList.add('active')
+          if (btnTogglePower) {
+            btnTogglePower.textContent = '⚡ Screen Off (Locked)'
+            btnTogglePower.style.background = 'rgba(255, 80, 80, 0.2)'
+            btnTogglePower.style.borderColor = 'rgba(255, 80, 80, 0.5)'
+            btnTogglePower.style.color = '#ff6b6b'
+          }
+          renderLockNotifications()
+        } else {
+          lockScreen1.classList.remove('active')
+          if (btnTogglePower) {
+            btnTogglePower.textContent = '⚡ Screen On'
+            btnTogglePower.style.background = 'rgba(0, 216, 255, 0.15)'
+            btnTogglePower.style.borderColor = 'rgba(0, 216, 255, 0.4)'
+            btnTogglePower.style.color = 'var(--accent)'
+          }
+        }
+      }
+
+      if (btnTogglePower)
+        btnTogglePower.addEventListener('click', togglePhonePower)
+      if (physicalPowerBtn1)
+        physicalPowerBtn1.addEventListener('click', togglePhonePower)
+      if (lockScreen1) {
+        // Click anywhere on locked screen to wake
+        lockScreen1.addEventListener('click', () => {
+          if (isPhoneLocked) togglePhonePower()
+        })
+      }
+
+      // Read and render notifications on locked screen
+      function getNotificationsFromStorage() {
+        try {
+          const raw = localStorage.getItem('needed.notifications')
+          if (raw) return JSON.parse(raw)
+        } catch {}
+        return [
+          {
+            id: 'notif-req-default',
+            type: 'new_request',
+            title: 'New request received',
+            body: 'Julien Mercier reached out for autumn gardening advice.',
+            timestamp: '10m ago',
+          },
+          {
+            id: 'notif-24h-default',
+            type: 'pending_24h',
+            title: 'Pending request (24h)',
+            body: 'A request from Thomas Lindqvist is waiting for your response (accept or decline).',
+            timestamp: '1h ago',
+          },
+          {
+            id: 'notif-declined-default',
+            type: 'declined_limit',
+            title: 'Rest & pacing reminder',
+            body: 'You have declined more than 3 requests. Take some time for yourself—your recovery comes first.',
+            timestamp: '3h ago',
+          },
+        ]
+      }
+
+      function renderLockNotifications() {
+        if (!lockNotifsList1) return
+        const notifs = getNotificationsFromStorage()
+        lockNotifsList1.innerHTML = ''
+
+        if (notifs.length === 0) {
+          lockNotifsList1.innerHTML =
+            '<p style="color:#8c909e;font-size:0.8rem;text-align:center;padding:12px;">No recent notifications.</p>'
+          return
+        }
+
+        notifs.forEach((n) => {
+          const card = document.createElement('div')
+          card.className = 'lock-notif-card'
+          card.innerHTML = `
+            <div class="lock-notif-head">
+              <span class="lock-notif-app-badge">N</span>
+              <span class="lock-notif-app-name">NEEDED</span>
+              <span>· ${n.timestamp || 'just now'}</span>
+            </div>
+            <strong class="lock-notif-title">${n.title}</strong>
+            <p class="lock-notif-body">${n.body}</p>
+          `
+          card.addEventListener('click', (e) => {
+            e.stopPropagation()
+            togglePhonePower()
+            if (n.linkHash) frame1.src = n.linkHash
+          })
+          lockNotifsList1.appendChild(card)
+        })
+      }
+
+      // Display in-app drop-down banner when screen is awake
+      function displayInAppBanner(notif) {
+        if (!inAppBanner1) return
+        if (bannerTimer) clearTimeout(bannerTimer)
+
+        bannerTitle1.textContent = notif.title
+        bannerBody1.textContent = notif.body
+        bannerTime1.textContent = '· ' + (notif.timestamp || 'just now')
+
+        inAppBanner1.classList.add('active')
+
+        bannerTimer = setTimeout(() => {
+          inAppBanner1.classList.remove('active')
+        }, 6000)
+      }
+
+      if (bannerClose1) {
+        bannerClose1.addEventListener('click', (e) => {
+          e.stopPropagation()
+          inAppBanner1.classList.remove('active')
+        })
+      }
+
+      if (inAppBanner1) {
+        inAppBanner1.addEventListener('click', () => {
+          inAppBanner1.classList.remove('active')
+        })
+      }
+
+      // Dispatch notification (saves to storage and alerts based on power state)
+      function dispatchNotification(type, title, body, linkHash) {
+        const notif = {
+          id: 'notif-' + Date.now(),
+          type: type,
+          title: title,
+          body: body,
+          timestamp: 'just now',
+          linkHash: linkHash || '#/',
+          read: false,
+        }
+
+        const existing = getNotificationsFromStorage()
+        const updated = [
+          notif,
+          ...existing.filter((item) => item.id !== notif.id),
+        ]
+        try {
+          localStorage.setItem('needed.notifications', JSON.stringify(updated))
+        } catch {}
+
+        if (isPhoneLocked) {
+          renderLockNotifications()
+        } else {
+          displayInAppBanner(notif)
+        }
+
+        try {
+          const win = frame1.contentWindow
+          if (win) {
+            win.dispatchEvent(
+              new CustomEvent('needed:notification', { detail: notif }),
+            )
+          }
+        } catch {}
+      }
+
+      // Simulator buttons for the 4 required cases
+      const btnNotifRequest = document.getElementById('btn-notif-request')
+      const btnNotifMessage = document.getElementById('btn-notif-message')
+      const btnNotif24h = document.getElementById('btn-notif-24h')
+      const btnNotifDeclined = document.getElementById('btn-notif-declined')
+
+      // 1. Someone makes a request
+      if (btnNotifRequest) {
+        btnNotifRequest.addEventListener('click', () => {
+          dispatchNotification(
+            'new_request',
+            'New request received',
+            'Julien Mercier: "Would you have advice on repotting indoor plants in autumn?"',
+            '#/helper',
+          )
+        })
+      }
+
+      // 2. Someone receives a message
+      if (btnNotifMessage) {
+        btnNotifMessage.addEventListener('click', () => {
+          dispatchNotification(
+            'new_message',
+            'New message from Clara Fontaine',
+            '"Hello! Did you get a chance to try the cinnamon rolls recipe?"',
+            '#/patient',
+          )
+        })
+      }
+
+      // 3. Unanswered request for >24h
+      if (btnNotif24h) {
+        btnNotif24h.addEventListener('click', () => {
+          dispatchNotification(
+            'pending_24h',
+            'Pending request (24h)',
+            'A request from Thomas Lindqvist is waiting for your response (accept or decline).',
+            '#/patient',
+          )
+        })
+      }
+
+      // 4. More than 3 declined requests
+      if (btnNotifDeclined) {
+        btnNotifDeclined.addEventListener('click', () => {
+          dispatchNotification(
+            'declined_limit',
+            'Rest & pacing reminder',
+            'You have declined more than 3 requests. Take time for yourself—your recovery comes first.',
+            '#/patient',
+          )
+        })
+      }
+
+      // Initial render on lock screen
+      renderLockNotifications()
+    </script>
+  </body>
+</html>
