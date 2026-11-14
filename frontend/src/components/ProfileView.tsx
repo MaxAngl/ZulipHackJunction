@@ -14,6 +14,20 @@ type ProfileViewProps = {
   children?: ReactNode
 }
 
+const SUGGESTED_HOBBIES = [
+  'gardening',
+  'cooking',
+  'reading',
+  'baking',
+  'knitting',
+  'jazz',
+  'photography',
+  'cycling',
+  'hiking',
+  'chess',
+  'woodworking',
+  'board games',
+]
 function ProfileView({
   user,
   token,
@@ -32,17 +46,79 @@ function ProfileView({
   const [allowProfileView, setAllowProfileView] = useState(
     user.allow_profile_view,
   )
+  const [interestsInput, setInterestsInput] = useState<string[]>(user.interests)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user.avatar_url)
+  const [newHobby, setNewHobby] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  function handleStartEditing() {
+    setBioInput(user.bio)
+    setPassionPhotos(user.passion_photos)
+    setAllowProfileView(user.allow_profile_view)
+    setInterestsInput(user.interests)
+    setAvatarUrl(user.avatar_url)
+    setNewHobby('')
+    setError(null)
+    setIsEditing(true)
+  }
+
+  function handleRemoveInterest(hobby: string) {
+    if (interestsInput.length <= 1) {
+      setError('Please keep at least one interest or hobby.')
+      return
+    }
+    setError(null)
+    setInterestsInput((prev) => prev.filter((h) => h !== hobby))
+  }
+
+  function handleAddCustomInterest() {
+    const clean = newHobby.trim().toLowerCase()
+    if (!clean) return
+    if (interestsInput.includes(clean)) {
+      setNewHobby('')
+      return
+    }
+    if (interestsInput.length >= 8) {
+      setError('Maximum 8 interests allowed.')
+      return
+    }
+    setError(null)
+    setInterestsInput((prev) => [...prev, clean])
+    setNewHobby('')
+  }
+
+  function handleAddSuggestedInterest(hobby: string) {
+    if (interestsInput.includes(hobby)) return
+    if (interestsInput.length >= 8) {
+      setError('Maximum 8 interests allowed.')
+      return
+    }
+    setError(null)
+    setInterestsInput((prev) => [...prev, hobby])
+  }
+
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !file.type.startsWith('image/')) return
+    const photo = await pickedImage(file, 400)
+    setAvatarUrl(photo)
+  }
+
   async function handleSaveProfileExtras() {
+    if (interestsInput.length === 0) {
+      setError('Please keep at least one interest or hobby.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
       const updated = await updateMe(token, {
         bio: bioInput.trim(),
+        interests: interestsInput,
         passion_photos: passionPhotos,
         allow_profile_view: allowProfileView,
+        avatar_url: avatarUrl,
       })
       onUpdated(updated)
       setIsEditing(false)
@@ -70,7 +146,9 @@ function ProfileView({
     setPassionPhotos((prev) => prev.filter((_, i) => i !== idx))
   }
 
-  const avatarUrl = user.avatar_url
+  const availableSuggestions = SUGGESTED_HOBBIES.filter(
+    (h) => !interestsInput.includes(h),
+  )
 
   return (
     <section className="stack profile-view">
@@ -83,6 +161,20 @@ function ProfileView({
             <div className="profile-avatar-fallback">
               {name.charAt(0).toUpperCase()}
             </div>
+          )}
+          {isEditing && (
+            <label
+              className="profile-avatar-edit-badge"
+              title="Change profile picture"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                className="visually-hidden"
+                onChange={(e) => void handleAvatarChange(e)}
+              />
+              📷
+            </label>
           )}
         </div>
         <h2 className="profile-display-name">{name}</h2>
@@ -106,12 +198,7 @@ function ProfileView({
             <button
               type="button"
               className="button button-ghost button-small"
-              onClick={() => {
-                setBioInput(user.bio)
-                setPassionPhotos(user.passion_photos)
-                setAllowProfileView(user.allow_profile_view)
-                setIsEditing(true)
-              }}
+              onClick={handleStartEditing}
             >
               Edit
             </button>
@@ -143,6 +230,20 @@ function ProfileView({
             ) : (
               <p className="quiet font-small italic">No bio provided yet.</p>
             )}
+
+            {/* Hobbies / Interests */}
+            <div className="profile-hobbies-section">
+              <span className="font-small quiet block mb-1">
+                Hobbies & centres d’intérêt :
+              </span>
+              <div className="profile-hobbies-display">
+                {user.interests.map((hobby) => (
+                  <span key={hobby} className="hobby-chip-view">
+                    #{hobby}
+                  </span>
+                ))}
+              </div>
+            </div>
 
             {/* Passion photos */}
             <div className="profile-passion-photos-section">
@@ -182,7 +283,7 @@ function ProfileView({
           <div className="stack-compact">
             <label className="field">
               <span className="font-small">
-                A few words about you & your passions
+                A few words about you & your passions (Description / Bio)
               </span>
               <textarea
                 rows={3}
@@ -192,6 +293,79 @@ function ProfileView({
                 onChange={(e) => setBioInput(e.target.value)}
               />
             </label>
+
+            {/* Hobbies / Interests editor */}
+            <div className="field">
+              <div className="flex-between">
+                <span className="font-small font-bold">
+                  Hobbies & centres d’intérêt ({interestsInput.length}/8)
+                </span>
+                <span className="quiet font-small">1 à 8 hobbies</span>
+              </div>
+
+              <div className="profile-hobbies-edit-wrap">
+                {interestsInput.map((hobby) => (
+                  <span key={hobby} className="hobby-edit-pill">
+                    #{hobby}
+                    <button
+                      type="button"
+                      className="hobby-edit-remove"
+                      onClick={() => handleRemoveInterest(hobby)}
+                      title={`Retirer ${hobby}`}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {interestsInput.length < 8 && (
+                <div className="add-hobby-input-row">
+                  <input
+                    type="text"
+                    value={newHobby}
+                    placeholder="Ajouter un hobby..."
+                    maxLength={30}
+                    className="input-small"
+                    onChange={(e) => setNewHobby(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleAddCustomInterest()
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className="button button-small"
+                    disabled={!newHobby.trim()}
+                    onClick={handleAddCustomInterest}
+                  >
+                    + Ajouter
+                  </button>
+                </div>
+              )}
+
+              {availableSuggestions.length > 0 && interestsInput.length < 8 && (
+                <div className="hobby-quick-suggestions">
+                  <span className="quiet font-small">
+                    Suggestions rapides :
+                  </span>
+                  <div className="hobby-suggestions-pills">
+                    {availableSuggestions.slice(0, 6).map((sug) => (
+                      <button
+                        key={sug}
+                        type="button"
+                        className="hobby-suggestion-btn"
+                        onClick={() => handleAddSuggestedInterest(sug)}
+                      >
+                        + {sug}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="field">
               <div className="flex-between">

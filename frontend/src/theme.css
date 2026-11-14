@@ -675,3 +675,125 @@ button.chip.chip-on {
   padding-top: var(--space-2);
   border-top: var(--stroke-thin) solid var(--rule);
 }
+
+/* --- Édition des Hobbies & Photo dans le profil -------------------------------- */
+
+.profile-avatar-large-wrap {
+  position: relative;
+}
+
+.profile-avatar-edit-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  background: var(--ink);
+  color: var(--bg);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: var(--stroke-thin) solid var(--bg);
+  transition: transform 0.12s ease;
+}
+
+.profile-avatar-edit-badge:hover {
+  transform: scale(1.1);
+}
+
+.profile-hobbies-section {
+  margin-top: var(--space-2);
+}
+
+.profile-hobbies-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.hobby-chip-view {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius);
+  border: var(--stroke-thin) solid var(--rule);
+}
+
+.profile-hobbies-edit-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.hobby-edit-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: var(--radius);
+}
+
+.hobby-edit-remove {
+  background: transparent;
+  border: none;
+  color: var(--bg);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.8;
+}
+
+.hobby-edit-remove:hover {
+  opacity: 1;
+  color: #ff6b6b;
+}
+
+.add-hobby-input-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.add-hobby-input-row input {
+  flex: 1;
+}
+
+.hobby-quick-suggestions {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.hobby-suggestions-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.hobby-suggestion-btn {
+  background: transparent;
+  border: var(--stroke-thin) dashed var(--rule);
+  color: var(--ink);
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.hobby-suggestion-btn:hover {
+  background: var(--cyan);
+  border-style: solid;
+}
