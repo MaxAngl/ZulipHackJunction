@@ -13,7 +13,6 @@ type CategoryOption = {
   value: 'bug' | 'question' | 'suggestion' | 'other'
   icon: string
   label: string
-  description: string
 }
 
 const CATEGORIES: CategoryOption[] = [
@@ -21,25 +20,21 @@ const CATEGORIES: CategoryOption[] = [
     value: 'bug',
     icon: '🐞',
     label: 'Report a bug',
-    description: 'Notice an error, crash, or unexpected behavior',
   },
   {
     value: 'question',
     icon: '❓',
     label: 'Ask a question',
-    description: 'Need clarification on how peer exchanges work',
   },
   {
     value: 'suggestion',
     icon: '💡',
     label: 'Feature suggestion',
-    description: 'Share ideas to improve your daily recovery experience',
   },
   {
     value: 'other',
     icon: '📝',
-    label: 'General feedback',
-    description: 'Any other remark or thought for the administration',
+    label: 'Other feedback',
   },
 ]
 
@@ -173,8 +168,8 @@ function SettingsScreen() {
       </header>
 
       <main className="stack settings-main">
-        <section className="settings-hero">
-          <h1>Settings</h1>
+        <section className="settings-hero text-center">
+          <h1 className="text-center">Settings</h1>
         </section>
 
         {/* 1. Theme Mode: Light / Dark / Auto */}
@@ -259,14 +254,9 @@ function SettingsScreen() {
                     <span className="custom-select-icon">
                       {selectedCategory.icon}
                     </span>
-                    <div className="custom-select-labels">
-                      <strong className="custom-select-title">
-                        {selectedCategory.label}
-                      </strong>
-                      <span className="custom-select-subtitle quiet font-small">
-                        {selectedCategory.description}
-                      </span>
-                    </div>
+                    <strong className="custom-select-title">
+                      {selectedCategory.label}
+                    </strong>
                   </div>
 
                   <span
@@ -319,14 +309,9 @@ function SettingsScreen() {
                             <span className="custom-select-icon">
                               {cat.icon}
                             </span>
-                            <div>
-                              <strong className="custom-select-opt-label">
-                                {cat.label}
-                              </strong>
-                              <span className="quiet font-small block">
-                                {cat.description}
-                              </span>
-                            </div>
+                            <strong className="custom-select-opt-label">
+                              {cat.label}
+                            </strong>
                           </div>
                           {isSelected && (
                             <span

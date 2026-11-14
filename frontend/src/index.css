@@ -2095,6 +2095,14 @@ button.chip {
 
 /* --- Settings Screen Custom Dropdown & Centered Message --- */
 
+.settings-hero {
+  text-align: center;
+}
+
+.settings-hero h1 {
+  text-align: center;
+}
+
 .settings-section-header {
   margin-bottom: 2px;
 }
@@ -2148,24 +2156,10 @@ button.chip {
   flex-shrink: 0;
 }
 
-.custom-select-labels {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
 .custom-select-title {
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   color: var(--ink);
   font-weight: 600;
-}
-
-.custom-select-subtitle {
-  font-size: 0.78rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 250px;
 }
 
 .custom-select-chevron {
@@ -2220,7 +2214,7 @@ button.chip {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 12px;
+  padding: 10px 14px;
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -2239,12 +2233,13 @@ button.chip {
 .custom-select-option-info {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .custom-select-opt-label {
-  font-size: 0.9rem;
+  font-size: 0.94rem;
   color: var(--ink);
+  font-weight: 550;
 }
 
 .custom-select-check {
