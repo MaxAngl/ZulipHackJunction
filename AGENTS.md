@@ -119,6 +119,7 @@ ml/
   virtual.py         # patient virtuel SIMULÉ : tient lieu de montre tant qu'aucune n'est branchée
   pipeline.py        # générer -> mesurer λ -> filtrer -> choisir trois demandes
   matching.py        # appariement patient–aidant : profils d'intérêts, couverture, mariages stables
+  end_to_end.py      # rapport de bout en bout sur patients simulés (graphes dans ml/data/e2e)
   gemini.py          # client REST Gemini (génération JSON, embeddings)
   lexicon.py         # mode hors ligne : banque de demandes et mesure par mots-clés
   formats.py         # grille fixe des formats et de leur effort
@@ -212,6 +213,7 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Nouvelle dépendance de développement `matplotlib` — les graphes du rapport de bout en bout (`ml/end_to_end.py`) ; l'app ne l'importe pas.
 - 2026-11-14 — Comptes à e-mail et mot de passe (PBKDF2-SHA256 de la bibliothèque standard, un sel par compte), une session par connexion (table `sessions`, en-tête `X-Needed-Token`). **Cela remplace les comptes par jeton d'appareil décidés plus bas** — il fallait pouvoir se reconnecter depuis un autre téléphone ; aucune dépendance ajoutée.
 - 2026-11-14 — Tout ce que l'app affiche vient du backend : profils, fils, besoins des patients, notes du clinicien, messages à l'équipe. Le navigateur ne garde que les jetons, le thème, les notifications du bandeau et les fils lus — deux téléphones doivent voir la même chose.
 - 2026-11-14 — Quatre rôles de compte : aidant et patient s'inscrivent eux-mêmes ; clinicien et admin sont créés par l'équipe (`backend/seed.py`). Le clinicien voit les patients qui ont donné son e-mail, leur bien-être et leur activité, jamais le contenu de leurs échanges.
