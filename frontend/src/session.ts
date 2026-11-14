@@ -130,10 +130,13 @@ export function readNotifications(): AppNotification[] {
   return []
 }
 
+// Le bandeau affiche la notification tout de suite (l'événement). On la garde comme déjà lue :
+// au rechargement, le bandeau ne rejoue que les notifications non lues, et celle-ci a été vue.
 export function saveNotification(notif: AppNotification): void {
   try {
     const list = readNotifications()
-    const updated = [notif, ...list.filter((n) => n.id !== notif.id)].slice(
+    const seen = { ...notif, read: true }
+    const updated = [seen, ...list.filter((n) => n.id !== notif.id)].slice(
       0,
       20,
     )
