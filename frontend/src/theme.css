@@ -147,8 +147,11 @@
   color: #0a0a0a;
 }
 
+/* Le thème sombre compris : sa règle de survol cyan, déclarée plus bas, effaçait le bouton
+   sur le fond cyan de l'accueil (issue #66). */
 .hero .button-primary,
-.hero .button-primary:hover:not(:disabled) {
+.hero .button-primary:hover:not(:disabled),
+[data-theme='dark'] .hero .button-primary:hover:not(:disabled) {
   background: #0a0a0a;
   border-color: #0a0a0a;
   color: #faf8f2;
