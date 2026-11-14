@@ -84,6 +84,7 @@
   background: var(--cyan);
   color: #0a0a0a;
   border-bottom: var(--stroke) solid #0a0a0a;
+  padding-top: calc(14px + var(--safe-top, 0px));
 }
 
 .screen .topbar .brand-name {
@@ -123,6 +124,10 @@
 .hero .lead,
 .hero .brand-hero-name {
   color: #0a0a0a;
+}
+
+.hero {
+  padding-top: calc(3vh + var(--safe-top, 0px));
 }
 
 .hero h1 {
@@ -459,6 +464,11 @@ button.chip.chip-on {
   padding: var(--pad);
   border: var(--stroke) solid var(--glass-dock-border);
   border-radius: var(--radius);
+  bottom: calc(14px + var(--safe-bottom, 0px));
+}
+
+.has-bottom-nav .screen-body {
+  padding-bottom: calc(90px + var(--safe-bottom, 0px));
 }
 
 .bottom-nav-item {

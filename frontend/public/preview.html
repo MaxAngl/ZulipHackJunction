@@ -414,8 +414,8 @@
         height: 100%;
         border: none;
         display: block;
-        /* Marge haute pour que la Dynamic Island ne masque pas le haut de page */
-        padding-top: 24px;
+        padding-top: 0;
+        margin: 0;
         background: transparent;
       }
 
@@ -1230,6 +1230,20 @@
             el.classList.remove('dark-theme')
           }
         })
+
+        injectPhoneFrameStyles(frame1)
+        if (frame2) injectPhoneFrameStyles(frame2)
+      }
+
+      function injectPhoneFrameStyles(frame) {
+        try {
+          const doc = frame.contentDocument || frame.contentWindow?.document
+          if (doc && doc.documentElement) {
+            doc.documentElement.style.setProperty('--safe-top', '50px')
+            doc.documentElement.style.setProperty('--safe-bottom', '28px')
+            doc.documentElement.classList.add('in-phone-frame')
+          }
+        } catch {}
       }
 
       window.addEventListener('storage', syncThemeWithApp)
