@@ -4,10 +4,12 @@ Toute modification ici change contract/openapi.json et les types TS du front.
 Procédure obligatoire : voir AGENTS.md, section « Contrat d'API ».
 """
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
+Role = Literal["helper", "patient"]
+Interest = Annotated[str, Field(min_length=1, max_length=40)]
 Stage = Literal["idle", "proposed", "held", "sent", "answered"]
 Slot = Literal["best", "bridge", "explore"]
 Provider = Literal["gemini", "offline"]
@@ -149,6 +151,77 @@ class SendRequest(BaseModel):
 
 class RespondRequest(BaseModel):
     action: PatientAction
+
+
+# --- La vraie app : comptes, demandes et réponses entre de vraies personnes ---------------
+
+
+class JoinRequest(BaseModel):
+    role: Role
+    name: str = Field(min_length=1, max_length=40)
+    interests: list[Interest] = Field(min_length=1, max_length=8)
+
+
+class AppUser(BaseModel):
+    id: str
+    role: Role
+    name: str
+    interests: list[str]
+
+
+class SessionResponse(BaseModel):
+    """Le jeton identifie l'appareil. Il est renvoyé dans l'en-tête `X-Needed-Token`."""
+
+    token: str
+    user: AppUser
+
+
+class AppProposal(BaseModel):
+    """Une demande proposée à l'aidant. Ni position, ni effort : il ne voit que le texte."""
+
+    id: str
+    text: str
+    patient_interest: str
+    helper_interest: str
+
+
+class AppRequest(BaseModel):
+    """Une demande, vue par l'aidant ou par le patient."""
+
+    id: str
+    text: str
+    with_name: str = Field(description="Prénom de l'autre personne")
+    status: Literal["on_its_way", "to_answer", "answered"]
+    reply: str | None
+    thanks: str | None
+    created_at: float
+
+
+class HelperHome(BaseModel):
+    user: AppUser
+    patient_name: str | None = Field(description="La personne à qui s'adressent les propositions")
+    proposals: list[AppProposal]
+    requests: list[AppRequest]
+
+
+class PatientHome(BaseModel):
+    user: AppUser
+    inbox: list[AppRequest]
+    past: list[AppRequest]
+
+
+class ReplyRequest(BaseModel):
+    request_id: str
+    text: str = Field(min_length=1, max_length=1000)
+
+
+class DeclineRequest(BaseModel):
+    request_id: str
+
+
+class ThanksRequest(BaseModel):
+    request_id: str
+    text: str = Field(min_length=1, max_length=300)
 
 
 class ErrorDetail(BaseModel):

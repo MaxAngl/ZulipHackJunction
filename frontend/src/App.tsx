@@ -1,193 +1,64 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import {
-  ApiError,
-  getLoop,
-  propose,
-  reset,
-  respond,
-  send,
-  setTheta,
-  skip,
-  type LoopState,
-} from './api/client'
-import HelperPhone from './components/HelperPhone'
-import HistoryPanel from './components/HistoryPanel'
-import Logo from './components/Logo'
-import LoopConsole from './components/LoopConsole'
-import LoopSteps from './components/LoopSteps'
-import PatientPhone from './components/PatientPhone'
+import { useCallback, useEffect, useState } from 'react'
+import type { Role } from './api/client'
+import DemoScreen from './screens/DemoScreen'
+import HelperScreen from './screens/HelperScreen'
+import JoinForm from './screens/JoinForm'
+import Landing from './screens/Landing'
+import PatientScreen from './screens/PatientScreen'
+import ScreenFrame from './screens/ScreenFrame'
+import { clearToken, readToken } from './session'
 
-// `?view=helper` ou `?view=patient` affiche un seul téléphone, pour une démo sur deux appareils.
-type View = 'all' | 'helper' | 'patient' | 'console'
+// Quatre adresses : `#/` l'accueil, `#/helper` et `#/patient` la vraie app, `#/demo` la console.
+type Route = 'home' | 'helper' | 'patient' | 'demo'
 
-const POLL_MS = 2500
-const OFFLINE_MESSAGE = 'The server is not responding.'
-
-function readView(): View {
-  const value = new URLSearchParams(window.location.search).get('view')
-  return value === 'helper' || value === 'patient' || value === 'console'
-    ? value
-    : 'all'
+function readRoute(): Route {
+  const path = window.location.hash.replace(/^#\/?/, '')
+  return path === 'helper' || path === 'patient' || path === 'demo'
+    ? path
+    : 'home'
 }
 
 function App() {
-  const [state, setState] = useState<LoopState | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const [draftTheta, setDraftTheta] = useState<number | null>(null)
-  const busyRef = useRef(false)
-  const latestTheta = useRef<number | null>(null)
-  const sendingTheta = useRef(false)
-  const view = readView()
+  const [route, setRoute] = useState<Route>(readRoute)
+  const [tokens, setTokens] = useState<Record<Role, string | null>>(() => ({
+    helper: readToken('helper'),
+    patient: readToken('patient'),
+  }))
 
-  const run = useCallback(async (action: () => Promise<LoopState>) => {
-    busyRef.current = true
-    setBusy(true)
-    setError(null)
-    try {
-      setState(await action())
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : OFFLINE_MESSAGE)
-    } finally {
-      busyRef.current = false
-      setBusy(false)
-    }
-  }, [])
-
-  // Rafraîchit l'état régulièrement : plusieurs appareils restent ainsi synchronisés.
   useEffect(() => {
-    let cancelled = false
-    const idle = () => !busyRef.current && latestTheta.current === null
-    const refresh = () => {
-      if (!idle()) return
-      getLoop()
-        .then((next) => {
-          if (!cancelled && idle()) setState(next)
-        })
-        .catch(() => {
-          if (!cancelled) setError(OFFLINE_MESSAGE)
-        })
-    }
-    refresh()
-    const timer = window.setInterval(refresh, POLL_MS)
-    return () => {
-      cancelled = true
-      window.clearInterval(timer)
-    }
+    const onChange = () => setRoute(readRoute())
+    window.addEventListener('hashchange', onChange)
+    return () => window.removeEventListener('hashchange', onChange)
   }, [])
 
-  // Le curseur envoie la dernière valeur dès que la requête précédente est revenue :
-  // la zone suit le doigt sans inonder le serveur.
-  const pushTheta = useCallback(async () => {
-    if (sendingTheta.current) return
-    sendingTheta.current = true
-    try {
-      while (latestTheta.current !== null) {
-        const value = latestTheta.current
-        const next = await setTheta(value)
-        setState(next)
-        if (latestTheta.current === value) {
-          latestTheta.current = null
-          setDraftTheta(null)
-        }
-      }
-    } catch (err) {
-      latestTheta.current = null
-      setDraftTheta(null)
-      setError(err instanceof ApiError ? err.message : OFFLINE_MESSAGE)
-    } finally {
-      sendingTheta.current = false
-    }
+  const leave = useCallback((role: Role) => {
+    clearToken(role)
+    setTokens((current) => ({ ...current, [role]: null }))
   }, [])
+  const leaveHelper = useCallback(() => leave('helper'), [leave])
+  const leavePatient = useCallback(() => leave('patient'), [leave])
 
-  function slideTheta(value: number) {
-    latestTheta.current = value
-    setDraftTheta(value)
-    void pushTheta()
-  }
+  if (route === 'demo') return <DemoScreen />
+  if (route === 'home') return <Landing />
 
-  if (!state) {
-    return <main className="loading">{error ?? 'Loading…'}</main>
-  }
-
-  const showAll = view === 'all'
-  return (
-    <div className={`app view-${view}`}>
-      <header className="topbar">
-        <div className="brand">
-          <Logo />
-          <div className="brand-text">
-            <span className="brand-name">needed</span>
-            {(showAll || view === 'console') && (
-              <span className="brand-tagline">
-                A community where recovering patients are the ones who help.
-              </span>
-            )}
-          </div>
-        </div>
-        {(showAll || view === 'console') && (
-          <button
-            type="button"
-            className="button button-ghost"
-            disabled={busy}
-            onClick={() => void run(reset)}
-          >
-            Reset demo
-          </button>
-        )}
-      </header>
-
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-
-      {showAll && (
-        <LoopSteps
-          current={state.round.step}
-          complete={state.round.stage === 'answered'}
+  const token = tokens[route]
+  if (!token) {
+    return (
+      <ScreenFrame>
+        <JoinForm
+          key={route}
+          role={route}
+          onJoined={(joined) =>
+            setTokens((current) => ({ ...current, [route]: joined }))
+          }
         />
-      )}
-
-      <main className="board">
-        {(showAll || view === 'helper') && (
-          <HelperPhone
-            state={state}
-            busy={busy}
-            onSend={(body) => void run(() => send(body))}
-            onSkip={() => void run(skip)}
-          />
-        )}
-        {(showAll || view === 'console') && (
-          <LoopConsole
-            state={state}
-            theta={draftTheta ?? state.theta}
-            busy={busy}
-            onTheta={slideTheta}
-            onRun={() => void run(propose)}
-          />
-        )}
-        {(showAll || view === 'patient') && (
-          <PatientPhone
-            state={state}
-            busy={busy}
-            onRespond={(action) => void run(() => respond(action))}
-          />
-        )}
-      </main>
-
-      {(showAll || view === 'console') && (
-        <>
-          <HistoryPanel history={state.history} />
-          <footer className="disclaimer">
-            Demo with simulated data: the patient state comes from a simulated
-            sensor and the zone model is a hand-written stand-in. Not a medical
-            device.
-          </footer>
-        </>
-      )}
-    </div>
+      </ScreenFrame>
+    )
+  }
+  return route === 'helper' ? (
+    <HelperScreen token={token} onLeave={leaveHelper} />
+  ) : (
+    <PatientScreen token={token} onLeave={leavePatient} />
   )
 }
 

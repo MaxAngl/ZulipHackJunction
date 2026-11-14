@@ -6,8 +6,9 @@ Chaque ligne dit où le changer. Ce qui avait été validé en discussion n'est 
 ## À faire en premier
 
 1. **Mettre une clé Gemini** dans `.env` à la racine (`GEMINI_API_KEY=...`), puis lancer `uv run python -m ml.check_gemini`. **La connexion à Gemini n'a jamais été testée en réel** : il n'y avait pas de clé sur la machine. Sans clé, l'app tourne avec une banque de secours.
-2. Lancer la démo : `uv run uvicorn backend.main:app --port 8000` et `npm --prefix frontend run dev`, puis ouvrir http://localhost:5173.
+2. Lancer : `uv run uvicorn backend.main:app --port 8000` et `npm --prefix frontend run dev`, puis ouvrir http://localhost:5173. L'accueil mène à la **vraie app** (`#/helper`, `#/patient`) ; la **console de démo** est sur `#/demo`.
 3. Trancher les trois premières lignes du tableau « Produit ».
+4. **Ne pas y mettre de vrais patients en l'état** : la vraie app n'a ni mot de passe, ni chiffrement, ni recueil de consentement (voir « La vraie app »).
 
 ## Produit et démo
 
@@ -46,6 +47,25 @@ Chaque ligne dit où le changer. Ce qui avait été validé en discussion n'est 
 | « Pas maintenant » côté aidant : rien n'est enregistré | `backend/loop.py` |
 | Le patient a deux boutons : aider, ou pas maintenant | `frontend/src/components/PatientPhone.tsx` |
 
+## La vraie app (ajoutée le 14 novembre au matin)
+
+De vraies personnes, sur leur téléphone, avec une base de données. La même boucle tourne derrière.
+
+| Décision | Où |
+|---|---|
+| Deux rôles : « Join the community » (l'aidant) et « My clinic invited me » (le patient). Inscription avec un prénom et des centres d'intérêt, rien d'autre | `frontend/src/screens/` |
+| **Pas de mot de passe** : un jeton par appareil, gardé dans le navigateur. Suffisant pour une démo, pas pour de vraies données de santé | `backend/community.py`, `frontend/src/session.ts` |
+| Base **SQLite** dans `data/needed.db` (ignoré par git), sans dépendance ajoutée. Le journal des demandes garde l'état avant et après, la position, l'effort et la récompense : c'est le futur jeu d'entraînement | `backend/store.py` |
+| **L'état θ n'est plus simulé ici** : il est estimé d'après le comportement. Réponse = score 0,6, +0,2 si elle arrive en moins d'une heure, +0,2 si elle fait au moins 80 caractères ; « pas maintenant » = 0,3. θ fait 30 % du chemin vers ce score. Règle non validée | `backend/community.py` |
+| θ de départ = 0,6 à l'inscription, faute de mesure faite à la clinique. θ attendu = θ avant (pas de dérive modélisée) | `backend/community.py` |
+| Un capteur externe peut pousser θ : `POST /api/app/patient/state` | `backend/main.py` |
+| **Un patient n'a jamais plus d'une demande à la fois.** Les suivantes attendent leur tour, et l'aidant ne voit aucune différence | `backend/community.py` |
+| Choix du patient pour un aidant : celui qui est libre et sollicité depuis le plus longtemps. Rien n'est appris | `backend/community.py`, `_pick_patient` |
+| L'aidant voit le prénom du patient, jamais son état, sa zone ni la difficulté d'une demande | `backend/schemas.py`, `AppProposal` |
+| Le patient répond par écrit. L'aidant peut dire ce qu'il a fait de la réponse : c'est la preuve d'utilité, affichée chez le patient | `frontend/src/screens/PatientScreen.tsx` |
+| Pas de notifications : chaque écran se rafraîchit toutes les 4 secondes | `frontend/src/screens/useHome.ts` |
+| `learn` reste la règle simulée, réglée pour le capteur de la démo : avec l'estimation par comportement, ses seuils sont à revoir | `ml/model.py` |
+
 ## Ce qui est faux ou simulé
 
 | Quoi | Comment |
@@ -74,5 +94,6 @@ Chaque ligne dit où le changer. Ce qui avait été validé en discussion n'est 
 - **Un vrai besoin sans lien avec les intérêts du patient n'est jamais transmis** : le centre de la zone ne descend pas sous 0,4. Il faut soit une zone qui descend plus bas quand le patient va bien, soit une règle à part pour les vrais besoins.
 - Hors ligne, à θ très bas, la zone ne contient parfois que deux demandes.
 - Le choix de l'aidant parmi les trois n'est pas enregistré.
-- Non construits : le retour de l'aidant (preuve d'utilité), la vue clinicien, l'alerte de dérive.
+- Non construits : la vue clinicien, l'alerte de dérive, les notifications, la modération humaine.
+- Avant tout usage réel : comptes protégés, consentement, hébergement et chiffrement adaptés à des données de santé.
 - La page des challenges affichait un compte à rebours qui tombe vers 11 h le 14 novembre : à vérifier.

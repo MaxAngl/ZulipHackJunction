@@ -9,7 +9,7 @@ Le guide pratique pour les humains (installation, boucle de travail, prompts typ
 ## Projet
 
 **Sujet :** Needed (nom provisoire), pour le challenge Junction sur le maintien à domicile après un traitement de la dépression par TMS. Une communauté où ce sont les patients en rémission qui rendent service : une IA décide quoi leur demander, quand et de la part de qui, selon leur état.
-**Démo attendue :** la boucle fermée pour un patient, sur un écran. L'état θ bouge, la zone λ(θ) se déplace, Gemini génère des demandes, elles sont mesurées et filtrées, l'aidant en choisit une, le patient répond, la zone s'ajuste.
+**Démo attendue :** deux choses. La **vraie app** (`#/helper`, `#/patient`) : deux personnes s'inscrivent sur leur téléphone, l'une demande un service, l'autre répond, la première remercie. Et la **console** (`#/demo`) : la boucle fermée pour un patient simulé, où l'on voit l'état θ bouger, la zone λ(θ) se déplacer, les demandes générées, mesurées et filtrées, puis la zone s'ajuster.
 **À lire :** [HYPOTHESES.md](HYPOTHESES.md) liste ce qui a été décidé sans validation de l'équipe et ce qui est simulé.
 
 ## Règles d'or (pour chaque agent, à chaque tâche)
@@ -90,8 +90,10 @@ gh pr merge --squash --delete-branch       # merger quand la CI est verte
 backend/
   main.py            # routes FastAPI (toutes sous /api)
   schemas.py         # CONTRAT : modèles Pydantic requête/réponse
-  loop.py            # la boucle en 12 étapes, pour un patient de démo (état en mémoire)
-  sensor.py          # capteur d'état θ SIMULÉ
+  loop.py            # console de démo : la boucle en 12 étapes, un patient simulé, état en mémoire
+  sensor.py          # capteur d'état θ SIMULÉ (console de démo seulement)
+  community.py       # vraie app : comptes, demandes, réponses, θ estimé d'après le comportement
+  store.py           # vraie app : stockage SQLite (data/needed.db, ignoré par git)
   errors.py          # ApiError + format d'erreur unique
   export_openapi.py  # schemas -> contract/openapi.json
   tests/             # tests du contrat d'API
@@ -109,8 +111,10 @@ contract/
 frontend/
   src/api/schema.d.ts  # GÉNÉRÉ depuis contract/openapi.json, ne pas éditer
   src/api/client.ts    # seul endroit qui appelle fetch()
-  src/components/      # un composant par fichier (téléphones, console, plan des demandes)
-  src/App.tsx
+  src/components/      # console de démo : un composant par fichier (téléphones, plan des demandes)
+  src/screens/         # vraie app (accueil, inscription, aidant, patient) et écran de la console
+  src/session.ts       # jeton de l'appareil, par rôle
+  src/App.tsx          # routes : #/ accueil, #/helper, #/patient, #/demo
 ```
 
 ## Contrat d'API
@@ -178,6 +182,10 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Vraie app à côté de la console de démo : comptes par jeton d'appareil, sans mot de passe — assez pour une démo sur deux téléphones ; à remplacer avant tout usage avec de vrais patients.
+- 2026-11-14 — Stockage SQLite avec la bibliothèque standard (`data/needed.db`, ignoré par git) — persistance sans dépendance ni service à installer.
+- 2026-11-14 — Dans la vraie app, θ est estimé d'après le comportement du patient, et un capteur externe peut le pousser par l'API — pas de capteur réel disponible ; la règle n'est pas validée.
+- 2026-11-14 — Charte minimaliste : noir sur blanc, traits fins, un seul accent cyan vif `#00D8FF` — demande de l'équipe.
 - 2026-11-14 — Challenge technique visé : Best Use of Gemini API — Gemini écrit les demandes, ses embeddings les mesurent, et il relit les messages de l'aidant.
 - 2026-11-14 — Gemini appelé en REST avec la bibliothèque standard, sans SDK — aucune dépendance à ajouter, et un repli hors ligne si l'API échoue.
 - 2026-11-14 — Modèle de zone et capteur d'état simulés derrière `ml/model.py` et `backend/sensor.py` — pas de données pour entraîner ; les signatures resteront quand le vrai modèle arrivera.

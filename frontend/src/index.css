@@ -742,6 +742,118 @@ td.request {
   color: var(--muted);
 }
 
+/* --- Vraie app : une colonne étroite, pensée pour le téléphone --------------------- */
+
+.screen {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 20px 20px 56px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hero {
+  padding-top: 12vh;
+  gap: 22px;
+}
+
+.hero h1 {
+  font-size: 2.5rem;
+  letter-spacing: -0.04em;
+}
+
+.lead {
+  font-size: 1.08rem;
+  color: var(--muted);
+}
+
+.link {
+  font: inherit;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.link:hover {
+  color: var(--ink);
+}
+
+.who {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.who .link {
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+button.chip {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 5px 13px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.chip-off {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+.chip-on {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: var(--on-cyan);
+  font-weight: 600;
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+}
+
+.thread-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+
+.bubble-big {
+  font-size: 1.15rem;
+  font-weight: 550;
+  max-width: 100%;
+}
+
+.note {
+  padding-left: 12px;
+  border-left: 2px solid var(--cyan);
+}
+
 /* --- Petits écrans ----------------------------------------------------------------- */
 
 @media (max-width: 1080px) {

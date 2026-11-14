@@ -32,3 +32,6 @@ Thumbs.db
 
 # Réglages locaux des agents
 .claude/settings.local.json
+
+# Base locale de la vraie app (SQLite)
+data/

@@ -27,7 +27,12 @@ uv run uvicorn backend.main:app --reload --port 8000
 npm --prefix frontend run dev
 ```
 
-Ouvrir http://localhost:5173.
+Ouvrir http://localhost:5173 :
+
+- `#/` : l'accueil de la vraie app. `#/helper` pour demander un service, `#/patient` pour y répondre. Les comptes et les échanges sont gardés dans `data/needed.db`.
+- `#/demo` : la console de démo, avec un patient simulé, où l'on voit toute la boucle sur un écran.
+
+Pour essayer sur deux téléphones du même réseau : `npm --prefix frontend run dev -- --host`.
 
 Pour brancher Gemini, copier `.env.example` en `.env`, y mettre `GEMINI_API_KEY`, puis vérifier :
 

@@ -1,6 +1,11 @@
 """Réglages communs à tous les tests."""
 
+import os
+
 import pytest
+
+# La vraie app écrit dans une base en mémoire pendant les tests, jamais dans data/needed.db.
+os.environ["NEEDED_DB"] = ":memory:"
 
 
 @pytest.fixture(autouse=True)
