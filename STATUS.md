@@ -51,13 +51,16 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 
 ## Adel (Claude Code)
 
-- **En cours :** #19, l'appariement patient–aidant par centres d'intérêt (PR ouverte). #5 et #23 sont mergées.
+- **En cours :** #37, les vraies demandes visibles chez le patient (PR ouverte). #34, la bio dans l'appariement (PR ouverte, à rebaser après #30). #5, #19 et #23 sont mergées.
 - **Bloqué :** —
 - **Notes pour la suite :**
   - Le commentaire libre de l'inscription n'est pas encore dans l'API. Quand il arrive, le passer à `build_profile(tags, comment)` : chaque phrase devient un élément d'intérêt, comparé à tous ceux de l'autre personne.
   - Le bonus d'attente (`WAIT_WEIGHT`, `WAIT_FULL_DAYS` dans `ml/matching.py`) est un premier réglage, à ajuster avec l'équipe.
   - Le repli hors ligne (trigrammes de lettres) ne comprend pas le sens : « ski » et « montagne » n'y sont pas proches. Il ne sert qu'à ne jamais casser sans clé Gemini.
   - Un profil enregistré n'est pas recalculé si les intérêts changent : supprimer sa ligne dans la table `profiles` pour le recalculer.
+  - Test de l'appariement le 14/11 avec 11 patients et 11 aidants (base `NEEDED_DB=data/test-appariement.db`) : les 10 patients de test ont reçu l'aidant attendu, rivalités comprises.
+  - Côté patient, l'onglet Messages affiche les vraies demandes (`PatientRequests`) au-dessus des conversations d'exemple de `ChatView`. Les remplacer ou les fusionner relève de la refonte de l'interface (#31).
+  - Après #30, une réponse du patient met 20 à 40 secondes à revenir, et l'écran semble figé pendant ce temps. À voir avec Max.
 
 ## Rami (Antigravity)
 
