@@ -121,6 +121,7 @@ ml/
   matching.py        # appariement patient–aidant : profils d'intérêts, couverture, mariages stables
   gemini.py          # client REST Gemini (génération JSON, embeddings)
   lexicon.py         # mode hors ligne : banque de demandes et mesure par mots-clés
+  embedding.py       # vecteurs de texte : Gemini, modèle local (sans clé), ou mots-clés
   formats.py         # grille fixe des formats et de leur effort
   check_gemini.py    # vérification de la clé Gemini
   watch.py           # θ provisoire à partir d'un relevé de la montre, en attendant l'autoencodeur
@@ -211,6 +212,8 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 ## Décisions
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
+
+- 2026-11-14 — Nouvelle dépendance `transformers` : sans Gemini, λ et les profils d'appariement sont mesurés par un modèle d'embeddings local (`paraphrase-multilingual-MiniLM-L12-v2`, ~120 Mo, CPU, téléchargé au premier usage), recalé sur les niveaux de mélange de la banque ; la mesure par mots-clés ne reste qu'en dernier recours (issue #69) — par mots-clés, un intérêt hors des 9 de la banque ne donnait que λ = 0, 0,5 ou 1, et un patient « moyen » ne recevait aucune proposition ; le modèle local est gratuit, sans clé ni quota, et comprend le français. `NEEDED_LOCAL_EMBEDDINGS=off` le coupe (les tests le font).
 
 - 2026-11-14 — Le patient ne publie plus de besoin à la communauté : plus d'onglet « New Request » chez lui, plus de « Direct patient requests » chez l'aidant (issue #53) — cela brouillait la lecture du concept, où c'est le patient qui rend service. Décision de Max.
 - 2026-11-14 — Comptes à e-mail et mot de passe (PBKDF2-SHA256 de la bibliothèque standard, un sel par compte), une session par connexion (table `sessions`, en-tête `X-Needed-Token`). **Cela remplace les comptes par jeton d'appareil décidés plus bas** — il fallait pouvoir se reconnecter depuis un autre téléphone ; aucune dépendance ajoutée.

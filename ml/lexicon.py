@@ -236,13 +236,29 @@ def compose(patient_interest: str, helper_interest: str) -> list[list[tuple[str,
     ]
 
 
+LEVELS = len(_SAMPLE_PLAN)
+
+
+def sample_levels(
+    patient_interest: str, helper_interest: str, rng: random.Random, skip: set[str]
+) -> list[tuple[int, str, str]]:
+    """Un tirage qui couvre tout l'axe, sans reprendre les textes de `skip`.
+
+    Chaque demande vient avec son niveau de mélange (0 = tout patient, 5 = tout aidant).
+    """
+    picked: list[tuple[int, str, str]] = []
+    levels = compose(patient_interest, helper_interest)
+    for level, (requests, count) in enumerate(zip(levels, _SAMPLE_PLAN, strict=True)):
+        fresh = [request for request in requests if request[1] not in skip]
+        rng.shuffle(fresh)
+        picked += [(level, fmt, text) for fmt, text in fresh[:count]]
+    return picked
+
+
 def sample(
     patient_interest: str, helper_interest: str, rng: random.Random, skip: set[str]
 ) -> list[tuple[str, str]]:
-    """Un tirage qui couvre tout l'axe, sans reprendre les textes de `skip`."""
-    picked: list[tuple[str, str]] = []
-    for level, count in zip(compose(patient_interest, helper_interest), _SAMPLE_PLAN, strict=True):
-        fresh = [request for request in level if request[1] not in skip]
-        rng.shuffle(fresh)
-        picked += fresh[:count]
-    return picked
+    """Comme `sample_levels`, sans les niveaux."""
+    return [
+        (fmt, text) for _, fmt, text in sample_levels(patient_interest, helper_interest, rng, skip)
+    ]

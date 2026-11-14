@@ -20,7 +20,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from ml import gemini
+from ml import embedding, gemini
 
 logger = logging.getLogger(__name__)
 
@@ -71,19 +71,36 @@ def interest_items(tags: Sequence[str], comment: str = "") -> list[str]:
 
 
 def build_profile(tags: Sequence[str], comment: str = "") -> InterestProfile:
-    """Calcule le profil d'une personne. Gemini si possible, sinon le repli hors ligne."""
+    """Calcule le profil d'une personne : Gemini, sinon le modèle local, sinon les trigrammes."""
     items = interest_items(tags, comment)
     if not items:
         return InterestProfile((), (), OFFLINE_PROVIDER)
     try:
         vectors = gemini.embed(items)
     except gemini.GeminiError as exc:
-        logger.info("Embeddings Gemini indisponibles, repli hors ligne : %s", exc)
-        return offline_profile(items)
+        logger.info("Embeddings Gemini indisponibles, repli local : %s", exc)
+        return fallback_profile(items)
     return InterestProfile(
         items=tuple(items),
         vectors=tuple(_normalize(vector) for vector in vectors),
         provider=f"gemini:{gemini.embedding_model()}",
+    )
+
+
+def fallback_profile(items: Sequence[str]) -> InterestProfile:
+    """Sans Gemini : le modèle d'embeddings local s'il est là (« ski » et « snowboard » se
+    ressemblent, « jardinage » et « gardening » aussi), sinon les trigrammes."""
+    if not items or not embedding.local_available():
+        return offline_profile(items)
+    try:
+        vectors = embedding.local_embed(list(items))
+    except RuntimeError as exc:
+        logger.info("Modèle local indisponible, repli trigrammes : %s", exc)
+        return offline_profile(items)
+    return InterestProfile(
+        items=tuple(items),
+        vectors=tuple(_normalize(vector) for vector in vectors),
+        provider=f"local:{embedding.LOCAL_MODEL}",
     )
 
 
@@ -151,15 +168,16 @@ def stable_match(
 def _comparable(
     patients: dict[str, InterestProfile], helpers: dict[str, InterestProfile]
 ) -> tuple[dict[str, InterestProfile], dict[str, InterestProfile]]:
-    """Si les profils ne viennent pas tous du même endroit, tout le monde passe hors ligne."""
+    """Si les profils ne viennent pas tous du même endroit, tout le monde est recalculé sans
+    réseau : modèle local s'il est là, trigrammes sinon."""
     providers = {profile.provider for profile in [*patients.values(), *helpers.values()]}
     if len(providers) <= 1:
         return patients, helpers
 
-    def offline(group: dict[str, InterestProfile]) -> dict[str, InterestProfile]:
-        return {key: offline_profile(profile.items) for key, profile in group.items()}
+    def recompute(group: dict[str, InterestProfile]) -> dict[str, InterestProfile]:
+        return {key: fallback_profile(profile.items) for key, profile in group.items()}
 
-    return offline(patients), offline(helpers)
+    return recompute(patients), recompute(helpers)
 
 
 def _offline_vector(text: str) -> tuple[float, ...]:
