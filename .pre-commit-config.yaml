@@ -3,16 +3,24 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
+    # `entry` lance chaque hook via `python -m` plutôt que via son .exe généré par pip :
+    # Smart App Control (Windows 11) bloque ces .exe non signés (WinError 4551).
     hooks:
       - id: check-merge-conflict
+        entry: python -m pre_commit_hooks.check_merge_conflict
       - id: check-added-large-files
+        entry: python -m pre_commit_hooks.check_added_large_files
         args: [--maxkb=5000] # pas de poids de modèle ni de dataset dans git
       - id: check-yaml
+        entry: python -m pre_commit_hooks.check_yaml
       - id: check-json
+        entry: python -m pre_commit_hooks.check_json
         exclude: ^frontend/tsconfig.*\.json$ # tsconfig accepte les commentaires
       - id: end-of-file-fixer
+        entry: python -m pre_commit_hooks.end_of_file_fixer
         exclude: ^frontend/src/api/schema\.d\.ts$
       - id: trailing-whitespace
+        entry: python -m pre_commit_hooks.trailing_whitespace_fixer
         exclude: ^frontend/src/api/schema\.d\.ts$
 
   - repo: local

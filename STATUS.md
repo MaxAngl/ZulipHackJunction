@@ -21,6 +21,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 07:00] La console de démo est maintenant sur `#/demo`. L'accueil `#/` mène à la vraie app. Base locale dans `data/` (ignorée par git), aucune dépendance ajoutée.
 - [14/11 12:30] **Modèle cible fixé dans `docs/modele.md`** (issue #12) : objets, axes d'une demande, trois réseaux, entraînement, évaluation. `AGENTS.md` est modifié : un lien et cinq décisions. Aucun code ni contrat touché. À lire avant tout travail dans `ml/`.
 - [14/11 13:30] **Nouvelle dépendance `numpy`** (issue #15) : relancer `uv sync` après le prochain `git pull`. Nouveau paquet `ml/simulation` qui génère les données d'entraînement. `pyproject.toml`, `uv.lock` et `AGENTS.md` sont modifiés. Aucun contrat touché, rien n'est branché sur l'app.
+- [14/11 12:51] `.pre-commit-config.yaml` : les hooks de `pre-commit-hooks` passent par `python -m` (Smart App Control de Windows 11 bloquait leurs .exe, WinError 4551). Mêmes vérifications, aucune dépendance ajoutée.
 
 ## Max (Claude Code)
 
