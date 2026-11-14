@@ -91,7 +91,7 @@ Le réseau B sort donc 11 nombres en phase 1 (cinq intervalles et un plafond), e
 
 **A n'intervient jamais dans la décision.** B décide seul. A reste en coulisses : il apprend de la réalité, et B apprend de lui.
 
-Pourquoi B a besoin de A : B sort onze nombres, et le patient renvoie une seule note. Avec cette note seule, B ne sait pas lequel de ses nombres corriger. Sans A, il faudrait essayer des zones au hasard sur des centaines de demandes, alors qu'un patient en reçoit une trentaine par mois.
+Pourquoi B a besoin de A : B sort onze nombres, et le patient renvoie une seule note. Avec cette note seule, B ne sait pas lequel de ses nombres corriger. Sans A, il faudrait essayer des zones au hasard sur des centaines de demandes. Au rythme supposé d'une demande par jour, cela prendrait des mois, en envoyant exprès de mauvaises demandes à un patient fragile.
 
 Décidé pour l'autoencodeur : θ est pris à un instant ; une partie de θ est masquée à l'entraînement ; θ est normalisé par personne ; une tête supervisée oriente le code latent.
 
