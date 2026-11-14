@@ -1,5 +1,6 @@
 /* La mascotte (issue #64) : un petit singe bleu, au trait d'encre comme la charte.
-   Ses couleurs sont fixes : c'est un personnage, il ne change pas avec le thème. */
+   Ses couleurs sont fixes : c'est un personnage, il ne change pas avec le thème.
+   Sa position est écrite par Mascot.tsx, image par image ; ici, ses postures. */
 
 .mascot-track {
   --monkey-blue: #1ab4f0;
@@ -7,31 +8,33 @@
   --monkey-cream: #faf8f2;
   --monkey-ink: #0a0a0a;
   position: fixed;
+  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
-  bottom: 12px;
   margin: 0 auto;
   max-width: 460px;
-  height: 72px;
   pointer-events: none;
   z-index: 40;
 }
 
-/* Au-dessus de la barre du bas, quand l'écran en a une. */
-body:has(.bottom-nav) .mascot-track {
-  bottom: 84px;
-}
-
 .mascot {
   position: absolute;
+  top: 0;
   left: 0;
-  bottom: 0;
   width: 64px;
-  transition-property: transform;
-  transition-timing-function: linear;
+  opacity: 0;
+  will-change: transform;
+}
+
+/* Visible une fois posé au sol (évite un éclair en haut à gauche au chargement). */
+.mascot.mascot-ready {
+  opacity: 1;
+  transition: opacity 300ms ease;
 }
 
 .mascot-body {
+  --facing: 1;
   display: block;
   padding: 0;
   border: 0;
@@ -51,7 +54,7 @@ body:has(.bottom-nav) .mascot-track {
   display: block;
   overflow: visible;
   transform: scaleX(var(--facing));
-  transition: transform 220ms ease;
+  transition: transform 240ms cubic-bezier(0.3, 1.4, 0.5, 1);
 }
 
 /* --- Le dessin --- */
@@ -118,6 +121,7 @@ body:has(.bottom-nav) .mascot-track {
 .mascot-head,
 .mascot-eyes {
   transform-box: fill-box;
+  transition: transform 220ms ease;
 }
 
 .mascot-tail {
@@ -142,30 +146,80 @@ body:has(.bottom-nav) .mascot-track {
   animation: mascot-blink 4.2s ease-in-out infinite;
 }
 
-/* --- Marcher : jambes et bras en balancier, le corps qui sautille --- */
-
-.mascot-walk svg {
-  animation: mascot-bob 0.4s ease-in-out infinite;
-}
-
-.mascot-walk .mascot-leg-left,
-.mascot-walk .mascot-arm-right {
-  animation: mascot-swing 0.4s ease-in-out infinite alternate;
-}
-
-.mascot-walk .mascot-leg-right,
-.mascot-walk .mascot-arm-left {
-  animation: mascot-swing 0.4s ease-in-out infinite alternate-reverse;
-}
-
-.mascot-walk .mascot-tail {
-  animation-duration: 0.8s;
-}
-
 /* --- Assis : il regarde autour de lui --- */
 
 .mascot-sit .mascot-head {
   animation: mascot-look 5s ease-in-out infinite;
+}
+
+/* --- Petits bonds : jambes et bras qui battent vite --- */
+
+.mascot-hop .mascot-leg-left,
+.mascot-hop .mascot-arm-right {
+  animation: mascot-swing 0.17s ease-in-out infinite alternate;
+}
+
+.mascot-hop .mascot-leg-right,
+.mascot-hop .mascot-arm-left {
+  animation: mascot-swing 0.17s ease-in-out infinite alternate-reverse;
+}
+
+.mascot-hop .mascot-tail {
+  animation-duration: 0.6s;
+}
+
+/* --- En l'air : bras levés, jambes repliées, queue qui s'enroule --- */
+
+.mascot-air .mascot-arm-left {
+  transform: rotate(140deg);
+}
+
+.mascot-air .mascot-arm-right {
+  transform: rotate(-140deg);
+}
+
+.mascot-air .mascot-leg-left {
+  transform: rotate(-28deg);
+}
+
+.mascot-air .mascot-leg-right {
+  transform: rotate(28deg);
+}
+
+.mascot-air .mascot-tail {
+  animation: none;
+  transform: rotate(-30deg);
+}
+
+/* --- Suspendu par la queue à la barre du haut, la tête en bas, qui se balance --- */
+
+.mascot-hang {
+  transform-origin: 50% 6px;
+  animation: mascot-pendulum 1.9s ease-in-out infinite alternate;
+}
+
+.mascot-hang svg {
+  transform: scaleX(var(--facing)) rotate(180deg);
+}
+
+.mascot-hang .mascot-arm-left {
+  animation: mascot-dangle 1.9s ease-in-out infinite alternate;
+  transform: rotate(160deg);
+}
+
+.mascot-hang .mascot-arm-right {
+  animation: mascot-dangle 1.9s ease-in-out infinite alternate-reverse;
+  transform: rotate(-160deg);
+}
+
+.mascot-hang .mascot-tail {
+  animation: none;
+}
+
+/* --- Réception : écrasé puis rebond --- */
+
+.mascot-land {
+  animation: mascot-land 260ms ease-out;
 }
 
 /* --- Coucou : le bras droit s'agite --- */
@@ -178,7 +232,7 @@ body:has(.bottom-nav) .mascot-track {
   animation: mascot-look 2s ease-in-out infinite;
 }
 
-/* --- Touché : un saut, écrasé puis étiré --- */
+/* --- Touché : un saut sur place, écrasé puis étiré --- */
 
 .mascot-jump {
   animation: mascot-jump 700ms cubic-bezier(0.3, 0.7, 0.4, 1);
@@ -243,22 +297,12 @@ body:has(.bottom-nav) .mascot-track {
   }
 }
 
-@keyframes mascot-bob {
-  0%,
-  100% {
-    transform: scaleX(var(--facing)) translateY(0);
-  }
-  50% {
-    transform: scaleX(var(--facing)) translateY(-2.5px);
-  }
-}
-
 @keyframes mascot-swing {
   from {
-    transform: rotate(-22deg);
+    transform: rotate(-26deg);
   }
   to {
-    transform: rotate(22deg);
+    transform: rotate(26deg);
   }
 }
 
@@ -275,6 +319,36 @@ body:has(.bottom-nav) .mascot-track {
   70%,
   85% {
     transform: rotate(7deg);
+  }
+}
+
+@keyframes mascot-pendulum {
+  from {
+    transform: rotate(-14deg);
+  }
+  to {
+    transform: rotate(14deg);
+  }
+}
+
+@keyframes mascot-dangle {
+  from {
+    transform: rotate(150deg);
+  }
+  to {
+    transform: rotate(175deg);
+  }
+}
+
+@keyframes mascot-land {
+  0% {
+    transform: scale(1.18, 0.8) translateY(4px);
+  }
+  60% {
+    transform: scale(0.94, 1.06) translateY(-2px);
+  }
+  100% {
+    transform: scale(1, 1) translateY(0);
   }
 }
 
@@ -313,8 +387,8 @@ body:has(.bottom-nav) .mascot-track {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mascot-track,
-  .mascot-track * {
+  .mascot-track *,
+  .mascot-track *::after {
     animation: none !important;
     transition: none !important;
   }

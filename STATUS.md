@@ -47,7 +47,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 15:30] Pour réentraîner : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`, puis `uv run python -m ml.nets.train` et `uv run python -m ml.nets.evaluate`. Une dizaine de minutes sur CPU.
 - **Bloqué :** —
 - [14/11 19:30] Profil (#61) : le tableau de bord ne garde que les badges, propres à chaque rôle et calculés sur les fils, avec animations (`components/BadgesPanel.tsx` et sa feuille). Un badge tout neuf est fêté une fois (mémoire du navigateur).
-- [14/11 19:45] Mascotte (#64) : un petit singe bleu (`components/Mascot.tsx`, dessin SVG original) se promène en bas des écrans de la communauté ; touché, il saute et dit un mot. Pas sur les portails ni la console.
+- [14/11 19:45] Mascotte (#64) : un petit singe bleu (`components/Mascot.tsx`, dessin SVG original) se promène par bonds en bas des écrans de la communauté, fait de grands sauts et va se suspendre par la queue à la barre du haut ; touché, il saute et dit un mot. Pas sur les portails ni la console.
 - [14/11 18:10] #51 : une notification déjà vue ne revient plus à chaque rechargement (`saveNotification` la garde comme lue).
 - [14/11 17:00] Gemini testé en réel dans la console, avec la zone du réseau B (#36) : trois propositions à plusieurs états du patient, message libre retenu, demande d'argent refusée. Le modèle léger par défaut et le repli vers un autre modèle viennent de #33 (Rami) ; #36 ajoute les formats permis dans le prompt et une nouvelle tentative sur les embeddings. La clé va dans `.env` (jamais dans git) ; la demander à Max. Vérifier chez soi : `uv run python -m ml.check_gemini`.
 - **Notes pour la suite :**
