@@ -131,12 +131,11 @@ export const SIMULATION_ACCOUNTS: SimulationAccount[] = [
 export function readToken(role: Role): string | null {
   try {
     const t = window.localStorage.getItem(key(role))
-    if (t) return t
+    if (t && t.trim() !== '') return t
   } catch {
     // ignore
   }
-  const defaultAcc = SIMULATION_ACCOUNTS.find((a) => a.role === role)
-  return defaultAcc ? defaultAcc.token : null
+  return null
 }
 
 export function saveToken(role: Role, token: string): void {
@@ -150,9 +149,139 @@ export function saveToken(role: Role, token: string): void {
 export function clearToken(role: Role): void {
   try {
     window.localStorage.removeItem(key(role))
+    window.localStorage.removeItem(`needed.profile.${role}`)
+    const active = readActiveRole()
+    if (active === role) {
+      saveActiveRole(null)
+    }
   } catch {
     // Rien à effacer.
   }
+}
+
+export function readActiveRole(): Role | null {
+  try {
+    const r = window.localStorage.getItem('needed.active_role')
+    if (r === 'helper' || r === 'patient') return r
+  } catch {
+    // ignore
+  }
+  const helperToken = readToken('helper')
+  if (helperToken) return 'helper'
+  const patientToken = readToken('patient')
+  if (patientToken) return 'patient'
+  return null
+}
+
+export function saveActiveRole(role: Role | null): void {
+  try {
+    if (role) {
+      window.localStorage.setItem('needed.active_role', role)
+    } else {
+      window.localStorage.removeItem('needed.active_role')
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export type SavedAccount = {
+  id: string
+  role: Role
+  token: string
+  name: string
+  firstName: string
+  lastName?: string
+  avatarUrl?: string
+  city?: string
+  interests?: string[]
+  bio?: string
+  lastUsed: number
+}
+
+const SAVED_ACCOUNTS_KEY = 'needed.saved_accounts'
+
+export function readSavedAccounts(): SavedAccount[] {
+  try {
+    const raw = window.localStorage.getItem(SAVED_ACCOUNTS_KEY)
+    if (raw) return JSON.parse(raw) as SavedAccount[]
+  } catch {
+    // ignore
+  }
+  return []
+}
+
+export function saveAccountToDevice(account: SavedAccount): void {
+  try {
+    const list = readSavedAccounts().filter(
+      (a) => a.token !== account.token && a.id !== account.id,
+    )
+    list.unshift(account)
+    window.localStorage.setItem(
+      SAVED_ACCOUNTS_KEY,
+      JSON.stringify(list.slice(0, 15)),
+    )
+  } catch {
+    // ignore
+  }
+}
+
+export function removeSavedAccount(id: string): void {
+  try {
+    const list = readSavedAccounts().filter((a) => a.id !== id)
+    window.localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify(list))
+  } catch {
+    // ignore
+  }
+}
+
+export function loginToAccount(
+  account: SavedAccount | SimulationAccount,
+): void {
+  saveToken(account.role, account.token)
+  saveUserProfile(account.role, {
+    firstName: account.firstName,
+    lastName: account.lastName ?? '',
+    birthDate: 'birthDate' in account ? account.birthDate : '',
+    city: account.city ?? '',
+    interests: account.interests,
+    bio: account.bio,
+    avatarUrl: account.avatarUrl,
+    passionPhotos:
+      'passionPhotos' in account ? account.passionPhotos : undefined,
+    allowProfileView: true,
+  })
+  saveActiveRole(account.role)
+  saveAccountToDevice({
+    id: account.id,
+    role: account.role,
+    token: account.token,
+    name: `${account.firstName} ${account.lastName ?? ''}`.trim(),
+    firstName: account.firstName,
+    lastName: account.lastName,
+    avatarUrl: account.avatarUrl,
+    city: account.city,
+    interests: account.interests,
+    bio: account.bio,
+    lastUsed: Date.now(),
+  })
+}
+
+export function loginWithToken(role: Role, token: string, name?: string): void {
+  saveToken(role, token)
+  saveActiveRole(role)
+  saveAccountToDevice({
+    id: `custom-${role}-${Date.now()}`,
+    role,
+    token,
+    name: name || (role === 'helper' ? 'Helper account' : 'Patient account'),
+    firstName: name
+      ? name.split(' ')[0]
+      : role === 'helper'
+        ? 'Helper'
+        : 'Patient',
+    lastUsed: Date.now(),
+  })
 }
 
 export function saveClinicianEmail(email: string): void {
@@ -198,18 +327,7 @@ export function saveUserProfile(role: Role, profile: UserProfile): void {
 export function setSimulationAccount(accountId: string): void {
   const acc = SIMULATION_ACCOUNTS.find((a) => a.id === accountId)
   if (!acc) return
-  saveToken(acc.role, acc.token)
-  saveUserProfile(acc.role, {
-    firstName: acc.firstName,
-    lastName: acc.lastName,
-    birthDate: acc.birthDate,
-    city: acc.city,
-    interests: acc.interests,
-    bio: acc.bio,
-    avatarUrl: acc.avatarUrl,
-    passionPhotos: acc.passionPhotos,
-    allowProfileView: true,
-  })
+  loginToAccount(acc)
 }
 
 export function readUserProfile(role: Role): UserProfile | null {
@@ -219,19 +337,7 @@ export function readUserProfile(role: Role): UserProfile | null {
   } catch {
     return null
   }
-  const defaultAcc = SIMULATION_ACCOUNTS.find((a) => a.role === role)
-  if (!defaultAcc) return null
-  return {
-    firstName: defaultAcc.firstName,
-    lastName: defaultAcc.lastName,
-    birthDate: defaultAcc.birthDate,
-    city: defaultAcc.city,
-    avatarUrl: defaultAcc.avatarUrl,
-    bio: defaultAcc.bio,
-    interests: defaultAcc.interests,
-    passionPhotos: defaultAcc.passionPhotos,
-    allowProfileView: true,
-  }
+  return null
 }
 
 export type ClinicianNotes = {

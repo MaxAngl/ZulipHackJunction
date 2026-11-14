@@ -4013,3 +4013,318 @@ button.chip {
     transition: none !important;
   }
 }
+
+/* --- Sign In & Saved Accounts Modal ------------------------------------------- */
+
+.landing-signin-btn {
+  border: 1.5px dashed var(--border, #cbd5e1);
+  color: var(--ink);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.landing-signin-btn:hover {
+  border-color: var(--primary, #0d9488);
+  background: rgba(13, 148, 136, 0.05);
+}
+
+.modal-card-large {
+  max-width: 520px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.signin-modal-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.signin-modal-body {
+  overflow-y: auto;
+  padding-right: 4px;
+  gap: 18px;
+}
+
+.signin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--surface, #f8fafc);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.signin-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.signin-section-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.signin-count-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--border, #e2e8f0);
+  color: var(--muted, #64748b);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.signin-empty-card {
+  padding: 12px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 8px;
+}
+
+.saved-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.saved-account-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.saved-account-card:hover {
+  border-color: var(--primary, #0d9488);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.saved-account-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.saved-account-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.saved-account-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.saved-account-name-row strong {
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.saved-account-meta {
+  color: var(--muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.role-pill {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: capitalize;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.role-pill-helper {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.role-pill-patient {
+  background: #f3e8fd;
+  color: #7b1fa2;
+}
+
+.saved-account-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.saved-account-delete-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted, #94a3b8);
+  font-size: 1.1rem;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 6px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.saved-account-delete-btn:hover {
+  color: #e11d48;
+}
+
+/* Filter tabs for demo accounts */
+.demo-filter-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.demo-filter-pill {
+  background: var(--bg, #ffffff);
+  border: 1px solid var(--border, #cbd5e1);
+  color: var(--ink);
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.demo-filter-pill:hover {
+  border-color: var(--primary, #0d9488);
+}
+
+.demo-filter-pill.active {
+  background: var(--ink);
+  color: var(--bg, #ffffff);
+  border-color: var(--ink);
+}
+
+.demo-accounts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.demo-account-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.demo-account-item:hover {
+  border-color: var(--primary, #0d9488);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.demo-account-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.demo-account-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.demo-account-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.demo-account-top strong {
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.demo-account-city {
+  font-size: 0.78rem;
+  color: var(--muted, #64748b);
+}
+
+.demo-account-tags {
+  display: flex;
+  gap: 4px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.demo-tag {
+  font-size: 0.7rem;
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--muted, #475569);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.demo-login-btn {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  padding: 4px 10px;
+}
+
+/* Manual login button and form */
+.button-toggle-manual {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--muted, #64748b);
+  cursor: pointer;
+  padding: 6px 0;
+  text-align: left;
+}
+
+.button-toggle-manual:hover {
+  color: var(--ink);
+}
+
+.toggle-chevron {
+  font-size: 0.75rem;
+}
+
+.manual-login-form {
+  padding-top: 8px;
+  border-top: 1px dashed var(--border, #e2e8f0);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
