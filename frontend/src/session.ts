@@ -105,6 +105,31 @@ export function markSeen(userId: string, threadId: string, at: number): void {
   }
 }
 
+// --- Badges déjà vus ---------------------------------------------------------------------
+
+// Les badges débloqués que le profil a déjà montrés : un nouveau badge n'est fêté qu'une fois.
+function badgesKey(userId: string): string {
+  return `needed.badges.${userId}`
+}
+
+export function readUnlockedBadges(userId: string): string[] {
+  try {
+    const raw = window.localStorage.getItem(badgesKey(userId))
+    if (raw) return JSON.parse(raw) as string[]
+  } catch {
+    // ignore
+  }
+  return []
+}
+
+export function saveUnlockedBadges(userId: string, keys: string[]): void {
+  try {
+    window.localStorage.setItem(badgesKey(userId), JSON.stringify(keys))
+  } catch {
+    // ignore
+  }
+}
+
 // --- Bandeau de notification -------------------------------------------------------------
 
 export type NotificationType =

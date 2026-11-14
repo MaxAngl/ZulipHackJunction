@@ -1,38 +1,17 @@
 import { type ReactNode, useState } from 'react'
 import { ApiError, type AppUser, type Thread, updateMe } from '../api/client'
 import { pickedImage } from '../images'
+import BadgesPanel from './BadgesPanel'
 
 type ProfileViewProps = {
   user: AppUser
   token: string
-  // Les fils de la personne : ses échanges des sept derniers jours en sont tirés.
+  // Les fils de la personne : ses badges en sont tirés.
   threads: Thread[]
   onUpdated: (user: AppUser) => void
   onLeave?: () => void
   // Cartes en plus, affichées avant les réglages (ex. la montre Garmin du patient).
   children?: ReactNode
-}
-
-const DAY_MS = 24 * 60 * 60 * 1000
-
-// Les réponses données (patient) ou reçues (aidant), jour par jour sur la dernière semaine.
-function lastSevenDays(threads: Thread[]) {
-  const replies = threads.flatMap((thread) =>
-    thread.messages.filter((message) => message.kind === 'reply'),
-  )
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return Array.from({ length: 7 }, (_, index) => {
-    const start = today.getTime() - (6 - index) * DAY_MS
-    const count = replies.filter((message) => {
-      const at = message.created_at * 1000
-      return at >= start && at < start + DAY_MS
-    }).length
-    const day = new Date(start).toLocaleDateString('en-GB', {
-      weekday: 'short',
-    })
-    return { day, count }
-  })
 }
 
 function ProfileView({
@@ -91,12 +70,6 @@ function ProfileView({
     setPassionPhotos((prev) => prev.filter((_, i) => i !== idx))
   }
 
-  // Services rendus (patient) ou reçus (aidant) : les demandes qui ont une réponse.
-  const servicesCount = threads.filter(
-    (thread) => thread.status === 'answered',
-  ).length
-  const historyData = lastSevenDays(threads)
-  const maxVal = Math.max(...historyData.map((d) => d.count), 1)
   const avatarUrl = user.avatar_url
 
   return (
@@ -120,138 +93,9 @@ function ProfileView({
         </span>
       </div>
 
-      {/* --- ACHIEVEMENTS & IMPACT CARD --- */}
+      {/* Tableau de bord : les badges seulement (issue #61) */}
       <div className="profile-achievements-card stack">
-        <div className="achievements-header">
-          <div>
-            <span className="eyebrow">Impact Dashboard</span>
-            <h3>Mutual Support & Reciprocity</h3>
-          </div>
-          <div className="achievements-counter-badge">
-            <span className="achievements-number">{servicesCount}</span>
-            <span className="achievements-sub">acts</span>
-          </div>
-        </div>
-
-        {/* Support evolution chart */}
-        <div className="achievements-graph-wrap">
-          <span className="quiet font-small block mb-1">
-            Answers {role === 'patient' ? 'you gave' : 'you received'} over the
-            last 7 days:
-          </span>
-          <div className="achievements-chart">
-            {historyData.map((d, idx) => {
-              const heightPct = Math.round((d.count / maxVal) * 100)
-              return (
-                <div key={idx} className="chart-bar-col">
-                  <div className="chart-bar-track">
-                    <div
-                      className="chart-bar-fill"
-                      style={{ height: `${heightPct}%` }}
-                      title={`${d.count} act(s) on ${d.day}`}
-                    />
-                  </div>
-                  <span className="chart-bar-label">{d.day}</span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Milestone badges */}
-        <div className="achievements-badges-section">
-          <span className="eyebrow">Milestones & Badges</span>
-          <div className="badges-grid">
-            {/* Badge 1 */}
-            <div
-              className={`badge-card ${servicesCount >= 1 ? 'badge-unlocked' : 'badge-locked'}`}
-            >
-              <div className="badge-icon-circle">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <circle cx="12" cy="8" r="6" />
-                  <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
-                </svg>
-              </div>
-              <strong className="badge-title">1st Support Act</strong>
-              <span className="badge-desc">First step in peer support</span>
-              {servicesCount >= 1 && (
-                <span className="badge-status-tag">Unlocked</span>
-              )}
-            </div>
-
-            {/* Badge 2 */}
-            <div
-              className={`badge-card ${servicesCount >= 5 ? 'badge-unlocked' : 'badge-locked'}`}
-            >
-              <div className="badge-icon-circle">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                </svg>
-              </div>
-              <strong className="badge-title">5th Support Act</strong>
-              <span className="badge-desc">Pillar of kindness</span>
-              {servicesCount >= 5 ? (
-                <span className="badge-status-tag">Unlocked</span>
-              ) : (
-                <span className="badge-status-tag tag-locked">
-                  {servicesCount}/5
-                </span>
-              )}
-            </div>
-
-            {/* Badge 3 */}
-            <div
-              className={`badge-card ${servicesCount >= 10 ? 'badge-unlocked' : 'badge-locked'}`}
-            >
-              <div className="badge-icon-circle">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                  <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                  <path d="M4 22h16" />
-                  <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-                  <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-                  <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-                </svg>
-              </div>
-              <strong className="badge-title">10th Support Act</strong>
-              <span className="badge-desc">Community champion</span>
-              {servicesCount >= 10 ? (
-                <span className="badge-status-tag">Unlocked</span>
-              ) : (
-                <span className="badge-status-tag tag-locked">
-                  {servicesCount}/10
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+        <BadgesPanel role={role} userId={user.id} threads={threads} />
       </div>
 
       {/* Passions, Bio and Hobbies Photos */}
