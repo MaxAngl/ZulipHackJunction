@@ -704,6 +704,38 @@ button.chip.chip-on {
   transform: scale(1.1);
 }
 
+.profile-edit-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  padding: 4px 10px;
+  border: var(--stroke-thin) solid var(--rule);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.14s ease;
+  line-height: 1.2;
+}
+
+.profile-edit-trigger:hover {
+  border-color: var(--cyan);
+  color: var(--ink);
+  background: rgba(0, 216, 255, 0.08);
+}
+
+.profile-edit-trigger:active {
+  transform: scale(0.97);
+}
+
+[data-theme='dark'] .profile-edit-trigger:hover {
+  background: rgba(0, 216, 255, 0.15);
+  border-color: var(--cyan);
+}
+
 .profile-hobbies-section {
   margin-top: var(--space-2);
 }
