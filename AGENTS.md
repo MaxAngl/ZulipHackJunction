@@ -11,7 +11,7 @@ Le guide pratique pour les humains (installation, boucle de travail, prompts typ
 **Sujet :** Needed (nom provisoire), pour le challenge Junction sur le maintien à domicile après un traitement de la dépression par TMS. Une communauté où ce sont les patients en rémission qui rendent service : une IA décide quoi leur demander, quand et de la part de qui, selon leur état.
 **Démo attendue :** deux choses. La **vraie app** (`#/helper`, `#/patient`) : deux personnes s'inscrivent sur leur téléphone, l'une demande un service, l'autre répond, la première remercie. Et la **console** (`#/demo`) : la boucle fermée pour un patient simulé, où l'on voit l'état θ bouger, la zone λ(θ) se déplacer, les demandes générées, mesurées et filtrées, puis la zone s'ajuster.
 **À lire :** [HYPOTHESES.md](HYPOTHESES.md) liste ce qui a été décidé sans validation de l'équipe et ce qui est simulé dans le code actuel.
-**Modèle cible :** [docs/modele.md](docs/modele.md) définit les objets, les axes d'une demande, les trois réseaux, leur entraînement et leur évaluation. Il n'est pas encore codé : avant de toucher à `ml/`, lire ce document et sa section « Écarts avec le code actuel ».
+**Modèle cible :** [docs/modele.md](docs/modele.md) définit les objets, les axes d'une demande, les trois réseaux, leur entraînement et leur évaluation. Les trois réseaux sont codés et entraînés (`ml/nets`, poids dans `ml/weights`, résultats en section 14) ; l'app, elle, tourne encore avec l'ancienne règle tant que le branchement n'est pas mergé. Avant de toucher à `ml/`, lire ce document et sa section « Écarts avec le code actuel ».
 
 ## Règles d'or (pour chaque agent, à chaque tâche)
 
@@ -42,7 +42,7 @@ Pour ne pas se marcher dessus :
 ## Stack
 
 - **Backend** : Python 3.12, FastAPI, Pydantic v2, uvicorn. Gestionnaire : **uv** (jamais `pip install`).
-- **ML** : Python 3.12, dans le même environnement uv que le backend. `numpy` pour les données simulées.
+- **ML** : Python 3.12, dans le même environnement uv que le backend. `numpy` pour les données simulées, `torch` en version CPU pour les réseaux (l'index PyTorch CPU est déclaré dans `pyproject.toml` : `uv sync` suffit, ne pas installer torch à la main).
 - **IA générative** : API Gemini appelée en REST avec la bibliothèque standard (`ml/gemini.py`), sans SDK. Clé dans `.env` (`GEMINI_API_KEY`). Sans clé, ou si Gemini échoue, `ml/lexicon.py` prend le relais.
 - **Frontend** : React 19, TypeScript 7, Vite 8. Gestionnaire : **npm 11.19 ou plus** (comme la CI). Un npm plus ancien écrit un `package-lock.json` incomplet que la CI refuse (« Missing: … from lock file »). Mise à jour : `npm install -g npm@latest`.
 - **Qualité** : ruff (lint + format Python), prettier (format front), oxlint (lint front), pytest, pre-commit, CI GitHub Actions.
@@ -68,6 +68,11 @@ uv run pre-commit run --all-files          # tous les hooks (format, lint, tests
 
 uv run python -m ml.check_gemini           # vérifie la clé Gemini et la mesure λ
 uv run python -m ml.simulation             # génère les données simulées dans ml/data/sim (hors git)
+
+# Réseaux (docs/modele.md, sections 13 et 14). Sur CPU : sept minutes d'entraînement, deux d'évaluation.
+uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big   # le jeu d'entraînement
+uv run python -m ml.nets.train             # entraîne l'autoencodeur, A et B, écrit ml/weights
+uv run python -m ml.nets.evaluate          # compare B à ses références sur les patients de test
 
 # Contrat d'API (voir plus bas)
 uv run python -m backend.export_openapi    # régénère contract/openapi.json
@@ -108,10 +113,12 @@ ml/
   formats.py         # grille fixe des formats et de leur effort
   check_gemini.py    # vérification de la clé Gemini
   simulation/        # données simulées : θ, état caché, patient simulé, journal d'épisodes (docs/modele.md, 11 et 12)
-  tests/             # tests du contrat ML et des données simulées
-  data/, models/     # données et poids : ignorés par git (trop lourds)
+  nets/              # les trois réseaux : features, models, train, policy, evaluate, runtime (docs/modele.md, 13 et 14)
+  weights/           # poids entraînés et leurs mesures, VERSIONNÉS (moins d'1 Mo) : personne n'a à réentraîner
+  tests/             # tests du contrat ML, des données simulées et des réseaux
+  data/, models/     # données et essais : ignorés par git (trop lourds)
 docs/
-  modele.md          # le modèle cible : objets, axes, réseaux, entraînement (pas encore codé)
+  modele.md          # le modèle : objets, axes, réseaux, entraînement, résultats
 contract/
   openapi.json       # GÉNÉRÉ, commité : la référence partagée front/back
 frontend/
@@ -186,6 +193,10 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Nouvelle dépendance `torch`, en version CPU — les trois réseaux font 82 000 paramètres et s'entraînent en sept minutes sur un portable ; la version GPU pèserait plusieurs Go pour rien.
+- 2026-11-14 — Les poids entraînés sont versionnés dans `ml/weights` — moins d'1 Mo ; l'app et les coéquipiers les utilisent sans réentraîner. Les réentraîner si les signaux de θ changent (un test le signale).
+- 2026-11-14 — Le réseau A est un comité de cinq petits réseaux, qui prédit aussi si le patient répondra, et B s'entraîne sur son avis prudent. **Cela dépasse les 45 000 paramètres décidés plus bas (82 000)** — un seul A, seul, laissait B aller chercher de bonnes notes là où A n'avait pas de données ; mesures en section 14 de `docs/modele.md`.
+- 2026-11-14 — θ passe à 25 signaux, rangés par modalité (montre, app, frappe) : taux de correction, délai d'ouverture, délai avant la première touche — demandé par l'équipe ; l'autoencodeur a un encodeur par modalité, pour en ajouter sans toucher à A ni à B.
 - 2026-11-14 — Appariement patient–aidant : un vecteur par élément d'intérêt (chaque tag, chaque phrase du commentaire libre), tout comparé à tout ; score = moyenne, sur les éléments du patient, de leur meilleur cosinus chez l'aidant ; puis mariages stables où les patients proposent et où les aidants ajoutent un bonus d'attente — un intérêt écrit en tag chez l'un et en commentaire chez l'autre doit se retrouver, seule compte la couverture des intérêts du patient, et ceux qui attendent depuis longtemps passent devant.
 - 2026-11-14 — Hooks `pre-commit-hooks` lancés via `python -m` (champ `entry`) — Smart App Control de Windows 11 bloque les .exe non signés que pip génère, ce qui rendait tout commit impossible.
 - 2026-11-14 — La partie personnelle se réduit à un vecteur de 8 nombres par patient, lu par A et par B. **Cela remplace la dernière couche par patient décidée plus bas** — 715 nombres pour B, c'était trop pour une trentaine de réactions par mois.

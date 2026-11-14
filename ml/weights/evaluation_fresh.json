@@ -1,0 +1,118 @@
+{
+  "test_patients": 927,
+  "days": 84,
+  "population_seed": 2026,
+  "fresh_people": true,
+  "policies": {
+    "random": {
+      "requests": 56309,
+      "reward": 49.15,
+      "reward_counterfactual": 49.8,
+      "reply_rate": 0.542,
+      "overload_rate": 0.546,
+      "fit": 0.28,
+      "state_lift": -1.06,
+      "reward_counterfactual_by_week": [
+        50.36,
+        50.25,
+        50.44,
+        50.28,
+        50.16,
+        49.55,
+        49.54,
+        49.23,
+        49.36,
+        49.26,
+        49.26
+      ]
+    },
+    "fixed_rule": {
+      "requests": 56309,
+      "reward": 50.22,
+      "reward_counterfactual": 54.52,
+      "reply_rate": 0.745,
+      "overload_rate": 0.466,
+      "fit": 0.54,
+      "state_lift": 4.17,
+      "reward_counterfactual_by_week": [
+        55.26,
+        55.19,
+        55.38,
+        55.09,
+        54.86,
+        54.66,
+        54.22,
+        53.81,
+        53.6,
+        53.72,
+        53.79
+      ]
+    },
+    "learned_general": {
+      "requests": 56309,
+      "reward": 51.67,
+      "reward_counterfactual": 60.1,
+      "reply_rate": 0.915,
+      "overload_rate": 0.346,
+      "fit": 0.817,
+      "state_lift": 11.49,
+      "reward_counterfactual_by_week": [
+        62.84,
+        61.35,
+        61.03,
+        60.64,
+        60.12,
+        59.91,
+        59.55,
+        59.14,
+        58.88,
+        58.75,
+        58.6
+      ]
+    },
+    "learned": {
+      "requests": 56309,
+      "reward": 51.66,
+      "reward_counterfactual": 60.06,
+      "reply_rate": 0.918,
+      "overload_rate": 0.313,
+      "fit": 0.814,
+      "state_lift": 11.42,
+      "reward_counterfactual_by_week": [
+        62.84,
+        61.31,
+        60.98,
+        60.67,
+        60.05,
+        59.91,
+        59.48,
+        59.09,
+        58.8,
+        58.78,
+        58.56
+      ]
+    },
+    "oracle": {
+      "requests": 56309,
+      "reward": 51.84,
+      "reward_counterfactual": 59.77,
+      "reply_rate": 0.962,
+      "overload_rate": 0.0,
+      "fit": 0.957,
+      "state_lift": 15.76,
+      "reward_counterfactual_by_week": [
+        65.47,
+        61.64,
+        60.45,
+        60.08,
+        59.31,
+        59.11,
+        58.94,
+        58.56,
+        58.12,
+        57.93,
+        57.61
+      ]
+    }
+  }
+}
