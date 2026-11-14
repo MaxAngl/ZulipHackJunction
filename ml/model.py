@@ -40,6 +40,7 @@ from ml.types import (
     ZoneParams,
 )
 from ml.virtual import VirtualPatient
+from ml.watch import theta_from_watch
 
 __all__ = [
     "AXIS_KEYS",
@@ -75,6 +76,7 @@ __all__ = [
     "request_axes",
     "select_three",
     "stable_match",
+    "theta_from_watch",
     "zone_for",
 ]
 

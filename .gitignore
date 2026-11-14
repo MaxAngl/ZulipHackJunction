@@ -38,3 +38,9 @@ Thumbs.db
 
 # Base locale de la vraie app (SQLite)
 data/
+
+# App montre (Connect IQ) : builds et clé de développeur (secrète, jamais dans git)
+watch/bin/
+*.prg
+*.iq
+developer_key*

@@ -48,7 +48,7 @@ repos:
         name: pytest (contrat API + ML)
         entry: uv run pytest -q
         language: system
-        files: ^(backend|ml|contract)/
+        files: ^(backend|ml|garmin|contract)/
         pass_filenames: false
 
       # --- Frontend ---

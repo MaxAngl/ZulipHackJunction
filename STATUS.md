@@ -28,6 +28,8 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 13:30] **Nouvelle dépendance `numpy`** (issue #15) : relancer `uv sync` après le prochain `git pull`. Nouveau paquet `ml/simulation` qui génère les données d'entraînement. `pyproject.toml`, `uv.lock` et `AGENTS.md` sont modifiés. Aucun contrat touché, rien n'est branché sur l'app.
 - [14/11 12:51] `.pre-commit-config.yaml` : les hooks de `pre-commit-hooks` passent par `python -m` (Smart App Control de Windows 11 bloquait leurs .exe, WinError 4551). Mêmes vérifications, aucune dépendance ajoutée.
 - [14/11 13:46] **Contrat ML étendu** (issue #19) : `ml.model` exporte `InterestProfile`, `build_profile` et `stable_match` (`ml/matching.py`). Dans la vraie app, l'aidant reçoit le patient qui lui est apparié par centres d'intérêt et temps d'attente. Nouvelle table SQLite `profiles`, créée toute seule. Rien n'est retiré, contrat d'API inchangé, aucune dépendance ajoutée.
+- [14/11 14:45] **Nouvelle dépendance `garminconnect`** (issue #24) : relancer `uv sync` après le prochain `git pull`. Nouveau dossier `garmin/` qui pousse θ sur la route existante `POST /api/app/patient/state`. `pyproject.toml` (dépendance, `testpaths`), `.pre-commit-config.yaml` (pytest sur `garmin/`), `uv.lock`, `.env.example` et `AGENTS.md` sont modifiés. Aucun contrat touché.
+- [14/11 15:45] **Contrat d'API étendu** (issue #27) : routes `/api/watch/*` (la montre) et `GET/POST/DELETE /api/app/patient/watch` (l'écran patient). Rien n'est retiré. **Contrat ML étendu** : `ml.model` exporte `theta_from_watch`. Nouvelle app Connect IQ dans `watch/`, nouveau bloc « Your watch » dans l'onglet Profil du patient (composant `WatchLink.tsx`). L'estimation de θ passe de `garmin/state.py` à `ml/watch.py`.
 
 ## Max (Claude Code)
 
@@ -44,6 +46,9 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Pour entraîner, générer plus gros que le réglage par défaut : `uv run python -m ml.simulation --people 5000 --days 84`, puis séparer par personne.
   - La récompense simulée est bruitée (écart-type 14,8 pour des écarts de quelques points) : c'est voulu, l'état bouge tout seul d'un jour à l'autre. Le journal contient aussi `reward_counterfactual`, plus net, pour comparer.
   - #13 reste ouverte : `docs/modele.md` en couvre l'essentiel, sauf les définitions encore ouvertes de la section 10.
+  - Montre (#24) : `uv run python -m garmin login` une fois, puis `uv run python -m garmin read --push`. Champs Garmin vérifiés sur une vraie réponse le 14/11 ; SpO2 absente si la mesure est coupée sur la montre. Quand l'autoencodeur existera, remplacer `ml/watch.py` par L(θ).
+  - App montre (#27) : voir `watch/README.md`. Testée le 14/11 dans le simulateur et sur une vraie Forerunner 965, installée en beta depuis le compte Garmin de Max. HTTPS obligatoire, même dans le simulateur : tunnel `cloudflared` en dev. La clé qui signe la beta est sur le PC de Max, hors du repo (`C:\dev\garmin-keys`) : la garder, les mises à jour de la beta doivent être signées avec elle.
+  - Dans la refonte, la messagerie du patient (`ChatView`) ne lit pas les demandes du backend : une demande d'aidant arrive sur la montre mais pas dans la messagerie web. À brancher pour la démo « dans les deux sens ».
   - Si Gemini donne des λ tassés ou incohérents, regarder `lambda_position` dans `ml/pipeline.py` et les trois phrases de référence de `ml/check_gemini.py`.
   - Démo sur deux téléphones : `?view=helper` et `?view=patient`, avec `npm --prefix frontend run dev -- --host`.
   - La console de démo garde son état en mémoire : un redémarrage la remet à zéro. La vraie app, elle, garde tout dans `data/needed.db` ; supprimer ce fichier repart de zéro.

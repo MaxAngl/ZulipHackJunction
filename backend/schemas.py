@@ -301,6 +301,70 @@ class ThanksRequest(BaseModel):
     text: str = Field(min_length=1, max_length=300)
 
 
+# --- Montre Garmin (app Connect IQ) ---------------------------------------------------------
+
+
+class WatchPairing(BaseModel):
+    """La montre demande à être liée : elle affiche le code, le patient le saisit dans l'app."""
+
+    pairing_id: str
+    code: str = Field(description="Six chiffres, à saisir dans l'écran patient")
+    expires_in: int = Field(description="Secondes avant que le code ne soit plus valable")
+
+
+class WatchPairingStatus(BaseModel):
+    status: Literal["waiting", "linked", "expired"]
+    token: str | None = Field(description="Jeton de la montre, une fois liée")
+    patient_name: str | None
+
+
+class WatchLinkRequest(BaseModel):
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class WatchReading(BaseModel):
+    """Mesures du moment envoyées par la montre. Noms de ml/simulation/spec.py ; absente = null."""
+
+    local_hour: float = Field(ge=0, lt=24, description="Heure locale de la montre, décimale")
+    heart_rate: float | None = None
+    stress: float | None = None
+    body_battery: float | None = None
+    respiration: float | None = None
+    steps_today: float | None = None
+    intensity_minutes_today: float | None = None
+    floors_today: float | None = None
+    resting_hr: float | None = None
+
+
+class WatchStatus(BaseModel):
+    """Ce que l'écran patient montre de sa montre."""
+
+    linked: bool
+    linked_at: float | None
+    last_seen: float | None
+    last_reading: WatchReading | None
+    theta: float = Field(ge=0, le=1, description="État du patient tel que l'app l'estime")
+
+
+class WatchRequest(BaseModel):
+    id: str
+    text: str
+    from_name: str
+
+
+class WatchHome(BaseModel):
+    """Ce que la montre affiche : l'état estimé et la demande à traiter, s'il y en a une."""
+
+    name: str
+    theta: float = Field(ge=0, le=1)
+    request: WatchRequest | None
+
+
+class WatchAnswer(BaseModel):
+    request_id: str
+    accept: bool
+
+
 class ErrorDetail(BaseModel):
     code: str = Field(description="Identifiant machine en snake_case, ex. validation_error")
     message: str = Field(description="Message lisible par un humain")
