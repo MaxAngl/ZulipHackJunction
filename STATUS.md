@@ -30,6 +30,8 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Données simulées : `uv run python -m ml.simulation` écrit `ml/data/sim` (hors git). Le sens de chaque colonne est dans `meta.json`, les règles dans `docs/modele.md`, section 12.
   - Prochaine étape : l'autoencodeur (section 6, étape 1). Il lit `people.npz` : `theta` et `mask` en entrée, `state` comme cible de la tête supervisée. Il demandera une nouvelle dépendance pour les réseaux, à annoncer.
   - Les choix de θ, de L et de la récompense sont délégués à Claude et attendent une relecture de l'équipe (section 11).
+  - Changement décidé le 14/11 : la partie personnelle est un vecteur de 8 nombres par patient, lu par A et par B, et non plus une dernière couche par patient. B ne reçoit pas le texte des centres d'intérêt. Tailles et quantité de données : section 13.
+  - Pour entraîner, générer plus gros que le réglage par défaut : `uv run python -m ml.simulation --people 5000 --days 84`, puis séparer par personne.
   - La récompense simulée est bruitée (écart-type 14,8 pour des écarts de quelques points) : c'est voulu, l'état bouge tout seul d'un jour à l'autre. Le journal contient aussi `reward_counterfactual`, plus net, pour comparer.
   - Le modèle cible n'est pas codé. Le code actuel est décrit par `HYPOTHESES.md` ; les écarts sont en section 8 de `docs/modele.md`. Le coder changera les deux contrats (API et ML).
   - #13 reste ouverte : `docs/modele.md` en couvre l'essentiel, sauf les définitions encore ouvertes de la section 10.

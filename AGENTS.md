@@ -185,6 +185,9 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — La partie personnelle se réduit à un vecteur de 8 nombres par patient, lu par A et par B. **Cela remplace la dernière couche par patient décidée plus bas** — 715 nombres pour B, c'était trop pour une trentaine de réactions par mois.
+- 2026-11-14 — B ne reçoit pas le texte des centres d'intérêt — sa sortie sur cet axe est une position entre les deux sujets, quels qu'ils soient ; le texte sert au choix de la paire, à Gemini et à la mesure.
+- 2026-11-14 — Les réseaux restent petits, environ 45 000 paramètres au total, et la taille de B se choisit par un essai de capacité — peu d'entrées, un générateur simple ; un petit modèle s'explique et tourne sur un téléphone.
 - 2026-11-14 — Nouvelle dépendance `numpy` — générer et enregistrer les données simulées ; les réseaux en auront besoin de toute façon.
 - 2026-11-14 — θ compte 22 signaux : ceux d'une montre Garmin Forerunner 965 utiles au suivi, plus le comportement dans l'app. L a 6 composantes : sommeil, rythme, énergie, calme, activité, engagement — choix délégués à Claude, à relire (`docs/modele.md`, section 11).
 - 2026-11-14 — Récompense = 50 + 150 × l'amélioration relative de la distance à L_ref, entre 0 et 100, mesurée 24 heures après la demande — L_ref est une moyenne et une dispersion des personnes saines, donc une région.

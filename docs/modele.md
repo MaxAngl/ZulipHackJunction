@@ -17,7 +17,7 @@ On mesure l'état du patient, on en déduit quel genre de demande lui convient, 
 
 1. **Mesurer.** On relève les données brutes du patient à cet instant : θ.
 2. **Résumer.** L'autoencodeur transforme θ en un vecteur d'état, L(θ).
-3. **Rassembler le contexte.** Plusieurs L(θ) relevés à des moments fixes de la journée et de la semaine, les centres d'intérêt du patient, ceux de l'aidant, et le comportement récent du patient dans l'app.
+3. **Rassembler le contexte.** Plusieurs L(θ) relevés à des moments fixes de la journée et de la semaine, le comportement récent du patient dans l'app, et son vecteur personnel.
 4. **Définir la zone.** Le réseau B lit ce contexte et sort la zone : pour chaque axe, ce qui est acceptable maintenant.
 5. **Générer.** Gemini écrit une dizaine de demandes qui visent cette zone.
 6. **Trier.** Chaque demande est mesurée sur les axes. Celles qui sortent de la zone sont écartées. On en garde trois.
@@ -98,30 +98,37 @@ Pourquoi B a besoin de A : B sort onze nombres, et le patient renvoie une seule 
 
 Décidé pour l'autoencodeur : θ est pris à un instant ; une partie de θ est masquée à l'entraînement ; θ est normalisé par personne ; une tête supervisée oriente le code latent.
 
-Décidé pour B : il reçoit un nombre fixe de L(θ), relevés à des moments différents de la journée et de la semaine, les centres d'intérêt du patient et de l'aidant, et le comportement en direct du patient, que L contient déjà mais de façon brouillée.
+Décidé pour B : il reçoit un nombre fixe de L(θ), relevés à des moments différents de la journée et de la semaine, le comportement en direct du patient, que L contient déjà mais de façon brouillée, et le vecteur personnel du patient.
+
+**B ne reçoit pas le texte des centres d'intérêt** (décidé). Sa sortie sur l'axe des intérêts est une position entre les deux sujets, quels qu'ils soient : il n'a pas besoin de les connaître. Le texte sert ailleurs : au choix de la paire, à Gemini qui écrit la demande, et à la mesure qui vérifie sa position. Si des sujets trop proches posent un jour problème, la distance entre les deux pourra devenir une entrée de B : un seul nombre, pas du texte.
 
 ### Ce qui est général, ce qui est personnel
 
-Un seul jeu de poids général pour tout le monde, et une petite partie par patient. Jamais un réseau entier par patient : il n'aurait pas assez de données.
+Un seul jeu de poids pour tout le monde, et un petit vecteur par patient. Jamais un réseau entier par patient, ni même une couche entière : un patient fournit une trentaine de réactions par mois, ce qui ne permet de régler qu'une poignée de nombres.
 
-| Réseau | Partie générale | Partie personnelle |
+| Élément | Général ou personnel | Taille |
 |---|---|---|
-| Autoencodeur | Tous ses poids | Aucun poids : seulement la normale du patient, qui sert à normaliser θ |
-| A | Le corps et une dernière couche commune | Une dernière couche par patient |
-| B | Le corps et une dernière couche commune | Une dernière couche par patient |
+| Poids de l'autoencodeur, de A et de B | Général | Environ 45 000 nombres au total (section 13) |
+| Vecteur du patient | Personnel | 8 nombres, lus par A et par B comme une entrée de plus |
+| Normale du patient | Personnel | La moyenne et la dispersion de chacun de ses 22 signaux, pour normaliser θ. Ce sont des statistiques, pas des poids appris |
 
-| | Partie générale | Partie personnelle |
+Décidé : la partie personnelle est réduite à un petit vecteur partagé par A et B. Sa taille, 8, est déléguée. Ce choix remplace une première version, qui donnait à A et à B une dernière couche par patient : 715 nombres pour B, bien trop pour si peu de réactions.
+
+| | Poids généraux | Vecteur du patient |
 |---|---|---|
 | Données | Tous les patients, simulés puis réels | Celles du patient seulement |
 | Moment | Hors ligne : avant le déploiement, puis chaque nuit ou chaque semaine | Après chaque réaction |
-| Ce qu'elle apprend | Ce qui vaut pour tous | L'écart de ce patient par rapport à la moyenne |
+| Ce qu'il apprend | Ce qui vaut pour tous, dont la façon de lire un vecteur | L'écart de ce patient par rapport à la moyenne |
+| Appris à partir de | Le journal de tous | L'erreur de prédiction de A sur ce patient |
 | Vérification | Sur des patients jamais vus | Sur les semaines suivantes du même patient |
 
-Un nouveau patient n'a pas de partie personnelle : il reçoit exactement le modèle général.
+Un nouveau patient part d'un vecteur nul : il reçoit exactement le modèle général.
+
+Le vecteur est appris à travers A, à partir de réactions réelles, et B se contente de le lire. B n'a donc aucune partie personnelle à entraîner, et A reste hors de la décision.
 
 ## 5. La décision : B seul
 
-1. B, avec ses poids généraux et la couche personnelle du patient, sort la zone.
+1. B, avec ses poids généraux et le vecteur du patient, sort la zone.
 2. Gemini génère dans cette zone.
 3. Les demandes sont mesurées sur les axes. Celles hors zone sont écartées.
 4. Trois propositions sont choisies par leur position dans la zone : la plus centrale, une autre paire de centres d'intérêt, un bord pour explorer.
@@ -139,11 +146,11 @@ On normalise θ par personne et on en masque une partie. L'encodeur produit L(θ
 **2. Un journal d'épisodes simulés.**
 Pour chaque patient simulé, on choisit des zones au hasard, on tire une demande dedans, le patient simulé réagit, et on calcule la récompense. On enregistre le contexte, les positions de la demande et la note.
 
-**3. Le réseau A.**
-Régression sur ce journal : contexte et demande en entrée, note en sortie.
+**3. Le réseau A, et les vecteurs des patients.**
+Régression sur ce journal : contexte, demande et vecteur du patient en entrée, note en sortie. Les poids de A et le vecteur de chaque patient simulé s'apprennent ensemble.
 
 **4. Le réseau B.**
-Pour chaque contexte, B propose une zone, on tire des demandes dedans, A les note, et on ajuste B pour faire monter la note moyenne. Les plafonds de sécurité restent fixes.
+Pour chaque contexte, B lit le vecteur du patient et propose une zone. On tire des demandes dedans, A les note, et on ajuste B pour faire monter la note moyenne. Les plafonds de sécurité restent fixes.
 
 **5. On recommence les étapes 2 à 4** quelques fois, en laissant B choisir une partie des zones, pour que A voie les régions où B va réellement.
 
@@ -152,17 +159,17 @@ Pour chaque contexte, B propose une zone, on tire des demandes dedans, A les not
 Après chaque réaction :
 
 1. On calcule la récompense.
-2. La couche personnelle de A est mise à jour.
-3. La couche personnelle de B fait quelques pas vers les zones que le A de ce patient note le mieux.
+2. Le vecteur du patient fait quelques pas pour réduire l'erreur de prédiction de A sur tout l'historique de ce patient. Les poids de A et de B ne bougent pas.
+3. B lit le nouveau vecteur à la décision suivante.
 
-Régulièrement : A général est réentraîné sur tous les patients, puis B général est réajusté contre **A général**, puis les couches personnelles sont recalculées en rejouant l'historique de chaque patient.
+Régulièrement : A est réentraîné sur le journal de tous, puis B est réajusté contre A, puis le vecteur de chaque patient est recalculé en rejouant son historique.
 
-B général s'entraîne contre A général, et non contre les A personnels : ceux-ci envoient des signaux qui se contredisent d'un patient à l'autre, et qu'un réseau partagé ne peut que moyenner.
+Deux patients ne se contredisent plus dans B : ils n'ont pas le même vecteur, donc B les distingue.
 
-Trois précautions pour la couche personnelle de B :
+Trois précautions :
 
-- la retenir près de la couche générale ;
-- ne l'activer qu'après une vingtaine de réactions, quand le A du patient est fiable ;
+- retenir le vecteur près de zéro, d'autant plus fort que le patient a peu de réactions ;
+- pour un patient jamais vu, partir de zéro : c'est aussi ainsi qu'on évalue, en apprenant son vecteur sur ses premières semaines et en mesurant sur les suivantes ;
 - laisser les plafonds de sécurité hors de tout apprentissage.
 
 ## 7. L'évaluation
@@ -191,7 +198,7 @@ Les points 1 à 4 montrent que la machinerie apprend. Seuls les points 6 et 7 di
 | Zone sur 6 à 8 axes | Zone sur 2 axes : un intervalle sur λ, un plafond d'effort | `ml/types.py`, `ml/model.py` |
 | Axes mesurés séparément | Une grille de formats avec un seul effort | `ml/formats.py` |
 | Zone sortie par le réseau B | Règle `1 − 0,6·θ` et `0,25 + 0,75·θ` | `ml/model.py`, `zone_for` |
-| A et B appris, avec une couche par patient | `learn`, une règle écrite à la main, avec un décalage par patient | `ml/model.py` |
+| A et B appris, avec un vecteur de 8 nombres par patient | `learn`, une règle écrite à la main, avec un seul décalage par patient | `ml/model.py` |
 | Récompense de 0 à 100 sur des vecteurs | Différence signée de deux nombres | `backend/loop.py`, `backend/community.py` |
 | Journal avec les positions sur tous les axes | Table `requests` avec `lam` et `effort` | `backend/store.py` |
 
@@ -369,3 +376,37 @@ Parmi les demandes supportables, la récompense suit bien la qualité du placeme
 | Proche de ce qui convient | 90 % | 56,6 | 59,8 |
 
 L'écart-type de 14,8 est du même ordre que ces différences : l'état d'un patient bouge tout seul d'un jour à l'autre, et une seule récompense dit peu. Le réseau A aura besoin de beaucoup d'épisodes, ce qui est aussi vrai dans la réalité.
+
+## 13. Tailles des réseaux et quantité de données
+
+Ces tailles sont des points de départ, **décidés** dans leur principe (rester petit) et **délégués** dans le détail. Aucun réseau n'est encore construit.
+
+| Réseau | Architecture de départ | Paramètres |
+|---|---|---|
+| Autoencodeur | 48 → 64 → 32 → 6, puis 6 → 32 → 64 → 22, plus la tête supervisée | Environ 9 200 |
+| B, le Transformer | 28 relevés, largeur 32, 2 couches, 4 têtes, puis une tête dense vers 11 sorties | Environ 30 000 |
+| A | Réseau dense à deux couches de 64 | Environ 6 000 |
+| **Total général** | | **Environ 45 000** |
+
+L'entrée de l'autoencodeur fait 48 valeurs : les 22 signaux, leurs 22 indicateurs de présence, et 4 valeurs pour l'heure et le jour. Au moment de décider, seuls l'encodeur et B tournent, soit environ 35 000 paramètres : cela tient sur un téléphone.
+
+Pourquoi rester petit : les entrées sont peu nombreuses et le générateur est simple. Un réseau dix fois plus gros atteindrait la même erreur de validation, le reste étant du bruit.
+
+**Essai de capacité**, à faire avant de fixer une taille : entraîner B en largeur 16, 32, 64 et 128, tracer l'erreur sur des patients jamais vus, et garder le plus petit réseau à partir duquel la courbe ne descend plus.
+
+Il faudra grossir si les entrées s'enrichissent : le flux brut de la montre minute par minute, le texte des demandes et des réponses, ou des milliers de patients réels suivis pendant des mois.
+
+### Quantité de données
+
+L'unité qui compte est la personne, pas la ligne : les relevés d'une même personne se ressemblent, et le réseau doit marcher sur des gens qu'il n'a jamais vus.
+
+- **Séparer par personne**, jamais par ligne : 70 % pour l'entraînement, 15 % pour la validation, 15 % pour le test, qui n'est regardé qu'une fois.
+- **Le réglage par défaut est trop petit pour A et B** : 383 patients et 14 700 épisodes. Il sert aux essais rapides.
+- **Pour entraîner** : 5 000 personnes sur 84 jours, soit 2 994 patients et 181 773 épisodes avec la graine 0. La commande prend une douzaine de secondes et écrit 85 Mo. Puis laisser les courbes dire s'il en faut plus.
+
+```bash
+uv run python -m ml.simulation --people 5000 --days 84
+```
+
+- **Le plancher de bruit de A** : l'état bouge tout seul, et cette part pèse environ 14 points d'écart-type sur la récompense (mesuré sur le jeu de 5 000 personnes). Même un réseau parfait garde donc une erreur de cet ordre. Un réseau qui descend nettement en dessous sur l'entraînement mémorise du bruit.
+- **Plus de données ne règle pas tout** : un réseau peut surapprendre le simulateur lui-même, sa forme et ses liens simples. La parade est de garder un jeu de test produit avec des règles différentes.
