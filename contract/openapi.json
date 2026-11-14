@@ -549,7 +549,7 @@
     "/api/app/join": {
       "post": {
         "summary": "Join",
-        "description": "Inscription : un prénom, des centres d'intérêt, et un jeton pour cet appareil.",
+        "description": "Inscription : un prénom, des centres d'intérêt, une bio facultative, et un jeton.",
         "operationId": "join_api_app_join_post",
         "requestBody": {
           "content": {
@@ -2280,6 +2280,12 @@
             "maxItems": 8,
             "minItems": 1,
             "title": "Interests"
+          },
+          "bio": {
+            "type": "string",
+            "maxLength": 300,
+            "title": "Bio",
+            "default": ""
           }
         },
         "type": "object",

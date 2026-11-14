@@ -84,12 +84,15 @@ class Community:
 
     # --- Comptes -------------------------------------------------------------------------
 
-    def join(self, role: schemas.Role, name: str, interests: list[str]) -> schemas.SessionResponse:
+    def join(
+        self, role: schemas.Role, name: str, interests: list[str], bio: str = ""
+    ) -> schemas.SessionResponse:
         cleaned = _clean(interests)
         if not name.strip() or not cleaned:
             raise ApiError(422, "missing_profile", "Give a first name and at least one interest.")
         user = self.store.add_user(role, name.strip(), cleaned, INITIAL_THETA)
-        self._profile(user)  # vecteurs d'intérêts calculés une fois, ici
+        # Vecteurs d'intérêts calculés une fois, ici : les tags et chaque phrase de la bio.
+        self.store.save_profile(user.id, build_profile(cleaned, bio).to_dict())
         return schemas.SessionResponse(token=user.token, user=_user(user))
 
     def signed_in(self, token: str | None, role: schemas.Role | None = None) -> User:
@@ -370,7 +373,7 @@ class Community:
         return requests[-1].created_at if requests else patient.created_at
 
     def _profile(self, user: User) -> InterestProfile:
-        """Profil d'intérêts enregistré, ou calculé et enregistré (comptes plus anciens)."""
+        """Profil d'intérêts enregistré, ou calculé sur les seuls tags (comptes plus anciens)."""
         saved = self.store.profile(user.id)
         if saved is not None:
             return InterestProfile.from_dict(saved)
