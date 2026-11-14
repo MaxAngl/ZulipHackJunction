@@ -1,0 +1,395 @@
+/* La mascotte (issue #64) : un petit singe bleu, au trait d'encre comme la charte.
+   Ses couleurs sont fixes : c'est un personnage, il ne change pas avec le thème.
+   Sa position est écrite par Mascot.tsx, image par image ; ici, ses postures. */
+
+.mascot-track {
+  --monkey-blue: #1ab4f0;
+  --monkey-deep: #0b86c4;
+  --monkey-cream: #faf8f2;
+  --monkey-ink: #0a0a0a;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  max-width: 460px;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.mascot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 64px;
+  opacity: 0;
+  will-change: transform;
+}
+
+/* Visible une fois posé au sol (évite un éclair en haut à gauche au chargement). */
+.mascot.mascot-ready {
+  opacity: 1;
+  transition: opacity 300ms ease;
+}
+
+.mascot-body {
+  --facing: 1;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mascot-body:focus-visible {
+  outline: 2px solid var(--monkey-blue);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+.mascot-body svg {
+  display: block;
+  overflow: visible;
+  transform: scaleX(var(--facing));
+  transition: transform 240ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+
+/* --- Le dessin --- */
+
+.mascot-fur,
+.mascot-leg rect,
+.mascot-arm rect {
+  fill: var(--monkey-blue);
+  stroke: var(--monkey-ink);
+  stroke-width: 2;
+}
+
+.mascot-cream,
+.mascot-belly,
+.mascot-face,
+.mascot-ear-in {
+  fill: var(--monkey-cream);
+}
+
+.mascot-cream,
+.mascot-face {
+  stroke: var(--monkey-ink);
+  stroke-width: 1.6;
+}
+
+.mascot-tail {
+  fill: none;
+  stroke: var(--monkey-deep);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+}
+
+.mascot-tuft {
+  fill: none;
+  stroke: var(--monkey-ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.mascot-eyes ellipse {
+  fill: var(--monkey-ink);
+}
+
+.mascot-glint {
+  fill: #fff;
+}
+
+.mascot-blush {
+  fill: #ff9ec4;
+  opacity: 0.75;
+}
+
+.mascot-mouth {
+  fill: none;
+  stroke: var(--monkey-ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* Chaque partie tourne autour de son attache. */
+.mascot-tail,
+.mascot-leg,
+.mascot-arm,
+.mascot-head,
+.mascot-eyes {
+  transform-box: fill-box;
+  transition: transform 220ms ease;
+}
+
+.mascot-tail {
+  transform-origin: 100% 85%;
+  animation: mascot-tail 2.8s ease-in-out infinite;
+}
+
+.mascot-leg {
+  transform-origin: 50% 0%;
+}
+
+.mascot-arm {
+  transform-origin: 50% 8%;
+}
+
+.mascot-head {
+  transform-origin: 50% 90%;
+}
+
+.mascot-eyes {
+  transform-origin: 50% 50%;
+  animation: mascot-blink 4.2s ease-in-out infinite;
+}
+
+/* --- Assis : il regarde autour de lui --- */
+
+.mascot-sit .mascot-head {
+  animation: mascot-look 5s ease-in-out infinite;
+}
+
+/* --- Petits bonds : jambes et bras qui battent vite --- */
+
+.mascot-hop .mascot-leg-left,
+.mascot-hop .mascot-arm-right {
+  animation: mascot-swing 0.17s ease-in-out infinite alternate;
+}
+
+.mascot-hop .mascot-leg-right,
+.mascot-hop .mascot-arm-left {
+  animation: mascot-swing 0.17s ease-in-out infinite alternate-reverse;
+}
+
+.mascot-hop .mascot-tail {
+  animation-duration: 0.6s;
+}
+
+/* --- En l'air : bras levés, jambes repliées, queue qui s'enroule --- */
+
+.mascot-air .mascot-arm-left {
+  transform: rotate(140deg);
+}
+
+.mascot-air .mascot-arm-right {
+  transform: rotate(-140deg);
+}
+
+.mascot-air .mascot-leg-left {
+  transform: rotate(-28deg);
+}
+
+.mascot-air .mascot-leg-right {
+  transform: rotate(28deg);
+}
+
+.mascot-air .mascot-tail {
+  animation: none;
+  transform: rotate(-30deg);
+}
+
+/* --- Suspendu par la queue à la barre du haut, la tête en bas, qui se balance --- */
+
+.mascot-hang {
+  transform-origin: 50% 6px;
+  animation: mascot-pendulum 1.9s ease-in-out infinite alternate;
+}
+
+.mascot-hang svg {
+  transform: scaleX(var(--facing)) rotate(180deg);
+}
+
+.mascot-hang .mascot-arm-left {
+  animation: mascot-dangle 1.9s ease-in-out infinite alternate;
+  transform: rotate(160deg);
+}
+
+.mascot-hang .mascot-arm-right {
+  animation: mascot-dangle 1.9s ease-in-out infinite alternate-reverse;
+  transform: rotate(-160deg);
+}
+
+.mascot-hang .mascot-tail {
+  animation: none;
+}
+
+/* --- Réception : écrasé puis rebond --- */
+
+.mascot-land {
+  animation: mascot-land 260ms ease-out;
+}
+
+/* --- Coucou : le bras droit s'agite --- */
+
+.mascot-wave .mascot-arm-right {
+  animation: mascot-wave 0.5s ease-in-out 4 alternate;
+}
+
+.mascot-wave .mascot-head {
+  animation: mascot-look 2s ease-in-out infinite;
+}
+
+/* --- Touché : un saut sur place, écrasé puis étiré --- */
+
+.mascot-jump {
+  animation: mascot-jump 700ms cubic-bezier(0.3, 0.7, 0.4, 1);
+}
+
+/* --- La bulle --- */
+
+.mascot-bubble {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  width: max-content;
+  max-width: 180px;
+  padding: 6px 10px;
+  border: 2px solid var(--monkey-ink);
+  border-radius: 12px;
+  background: var(--monkey-cream);
+  color: var(--monkey-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  transform: translateX(-50%);
+  animation: mascot-bubble 260ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+.mascot-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  margin-top: -5px;
+  background: var(--monkey-cream);
+  border-right: 2px solid var(--monkey-ink);
+  border-bottom: 2px solid var(--monkey-ink);
+  transform: rotate(45deg);
+}
+
+/* --- Images clés --- */
+
+@keyframes mascot-tail {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-14deg);
+  }
+}
+
+@keyframes mascot-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes mascot-swing {
+  from {
+    transform: rotate(-26deg);
+  }
+  to {
+    transform: rotate(26deg);
+  }
+}
+
+@keyframes mascot-look {
+  0%,
+  35%,
+  100% {
+    transform: rotate(0deg);
+  }
+  45%,
+  60% {
+    transform: rotate(-9deg);
+  }
+  70%,
+  85% {
+    transform: rotate(7deg);
+  }
+}
+
+@keyframes mascot-pendulum {
+  from {
+    transform: rotate(-14deg);
+  }
+  to {
+    transform: rotate(14deg);
+  }
+}
+
+@keyframes mascot-dangle {
+  from {
+    transform: rotate(150deg);
+  }
+  to {
+    transform: rotate(175deg);
+  }
+}
+
+@keyframes mascot-land {
+  0% {
+    transform: scale(1.18, 0.8) translateY(4px);
+  }
+  60% {
+    transform: scale(0.94, 1.06) translateY(-2px);
+  }
+  100% {
+    transform: scale(1, 1) translateY(0);
+  }
+}
+
+@keyframes mascot-wave {
+  from {
+    transform: rotate(-150deg);
+  }
+  to {
+    transform: rotate(-110deg);
+  }
+}
+
+@keyframes mascot-jump {
+  0% {
+    transform: translateY(0) scale(1, 1);
+  }
+  15% {
+    transform: translateY(0) scale(1.12, 0.86);
+  }
+  45% {
+    transform: translateY(-30px) scale(0.92, 1.1);
+  }
+  75% {
+    transform: translateY(0) scale(1.08, 0.92);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+@keyframes mascot-bubble {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px) scale(0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-track *,
+  .mascot-track *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
