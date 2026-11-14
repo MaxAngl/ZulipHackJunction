@@ -1,28 +1,32 @@
 import { useEffect, useState } from 'react'
 import Logo from '../components/Logo'
 import {
-  SIMULATION_ACCOUNTS,
-  clearToken,
-  readClinicianEmail,
-  readThemePreference,
-  readToken,
-  readUserProfile,
-  saveThemePreference,
-  setSimulationAccount,
+  type AdminContactMessage,
   type ThemePreference,
+  readThemePreference,
+  readUserProfile,
+  saveAdminContactMessage,
+  saveThemePreference,
 } from '../session'
 
 function SettingsScreen() {
-  const patientProfile = readUserProfile('patient')
-  const helperProfile = readUserProfile('helper')
-  const hasPatient = readToken('patient') !== null
-  const hasHelper = readToken('helper') !== null
-  const clinicianEmail = readClinicianEmail() ?? 'dr.virtanen@helsinki-tms.fi'
-
   const [theme, setTheme] = useState<ThemePreference>(readThemePreference)
-  const [telemetryEnabled, setTelemetryEnabled] = useState(true)
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [smartGuardrail, setSmartGuardrail] = useState(true)
+
+  // Utilisateur connecté pour pré-remplir le nom
+  const helperProfile = readUserProfile('helper')
+  const patientProfile = readUserProfile('patient')
+  const activeProfile = helperProfile || patientProfile
+
+  const [senderName, setSenderName] = useState(
+    activeProfile
+      ? `${activeProfile.firstName} ${activeProfile.lastName}`.trim()
+      : '',
+  )
+  const [category, setCategory] = useState<
+    'bug' | 'question' | 'suggestion' | 'other'
+  >('bug')
+  const [message, setMessage] = useState('')
+  const [sentSuccess, setSentSuccess] = useState(false)
 
   useEffect(() => {
     document.title = 'Needed · Paramètres'
@@ -36,17 +40,33 @@ function SettingsScreen() {
     saveThemePreference(newTheme)
   }
 
-  function handleLeaveAll() {
-    if (
-      confirm(
-        'Voulez-vous vous déconnecter de tous vos comptes sur cet appareil ?',
-      )
-    ) {
-      clearToken('helper')
-      clearToken('patient')
-      window.location.hash = '#/'
-      window.location.reload()
+  function handleSendMessage(e: React.FormEvent) {
+    e.preventDefault()
+    if (!message.trim()) return
+
+    const newMessage: AdminContactMessage = {
+      id: `admin-msg-${Date.now()}`,
+      senderName: senderName.trim() || 'Utilisateur anonyme',
+      senderRole: helperProfile
+        ? 'helper'
+        : patientProfile
+          ? 'patient'
+          : 'visitor',
+      category,
+      message: message.trim(),
+      timestamp: new Date().toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      resolved: false,
     }
+
+    saveAdminContactMessage(newMessage)
+    setMessage('')
+    setSentSuccess(true)
+    setTimeout(() => {
+      setSentSuccess(false)
+    }, 4000)
   }
 
   return (
@@ -98,15 +118,11 @@ function SettingsScreen() {
 
       <main className="stack settings-main">
         <section className="settings-hero">
-          <p className="eyebrow">Préférences de l'application</p>
+          <p className="eyebrow">Préférences &amp; Assistance</p>
           <h1>Paramètres</h1>
-          <p className="quiet">
-            Gérez vos comptes, votre confort visuel et votre confidentialité
-            médicale.
-          </p>
         </section>
 
-        {/* Section Apparence & Thème */}
+        {/* 1. Mode Jour / Nuit / Auto */}
         <section className="settings-card stack">
           <h2>Apparence</h2>
           <div
@@ -149,206 +165,152 @@ function SettingsScreen() {
           </div>
         </section>
 
-        {/* Section Comptes actifs */}
+        {/* 2. Formulaire pour envoyer un message à l'administrateur */}
         <section className="settings-card stack">
-          <h2>Profils & Comptes actifs</h2>
-          {hasHelper && (
-            <div className="settings-account-row">
-              <div className="settings-avatar-wrap">
-                {helperProfile?.avatarUrl ? (
-                  <img
-                    src={helperProfile.avatarUrl}
-                    alt="Helper"
-                    className="topbar-avatar"
-                  />
-                ) : (
-                  <div className="avatar-preview-placeholder">A</div>
-                )}
-              </div>
-              <div className="settings-account-info">
-                <strong>
-                  {helperProfile
-                    ? `${helperProfile.firstName} ${helperProfile.lastName}`
-                    : 'Aidant actif'}
-                </strong>
-                <span className="quiet font-small">
-                  Rôle : Aidant (Helper) · {helperProfile?.city || 'Helsinki'}
-                </span>
-              </div>
-              <a href="#/helper" className="button button-ghost button-small">
-                Ouvrir
-              </a>
-            </div>
-          )}
+          <h2>Message à l'administrateur</h2>
+          <p className="quiet font-small">
+            Un bug, une anomalie ou une suggestion ? Transmettez directement
+            votre message à l'équipe d'administration.
+          </p>
 
-          {hasPatient && (
-            <div className="settings-account-row">
-              <div className="settings-avatar-wrap">
-                <img
-                  src={patientProfile?.avatarUrl ?? '/moomins/Muumipeikko2.jpg'}
-                  alt="Patient"
-                  className="topbar-avatar"
-                />
-              </div>
-              <div className="settings-account-info">
-                <strong>
-                  {patientProfile
-                    ? `${patientProfile.firstName} ${patientProfile.lastName}`
-                    : 'Patient suivi'}
-                </strong>
-                <span className="quiet font-small">
-                  Rôle : Patient · Suivi :{' '}
-                  {patientProfile?.clinicianEmail || clinicianEmail}
-                </span>
-              </div>
-              <a href="#/patient" className="button button-ghost button-small">
-                Ouvrir
-              </a>
+          <form
+            onSubmit={handleSendMessage}
+            className="stack"
+            style={{ gap: '12px' }}
+          >
+            <div>
+              <label
+                htmlFor="admin-msg-category"
+                className="field-label block font-small"
+                style={{ marginBottom: '6px' }}
+              >
+                Motif
+              </label>
+              <select
+                id="admin-msg-category"
+                value={category}
+                onChange={(e) =>
+                  setCategory(
+                    e.target.value as
+                      'bug' | 'question' | 'suggestion' | 'other',
+                  )
+                }
+                className="select-field"
+                style={{ width: '100%' }}
+              >
+                <option value="bug">🐛 Signaler un bug</option>
+                <option value="question">❓ Poser une question</option>
+                <option value="suggestion">💡 Suggestion d'amélioration</option>
+                <option value="other">💬 Autre remarque</option>
+              </select>
             </div>
-          )}
 
-          {!hasHelper && !hasPatient && (
-            <p className="quiet font-small">
-              Aucun profil connecté sur cet appareil.
-            </p>
-          )}
+            <div>
+              <label
+                htmlFor="admin-msg-sender"
+                className="field-label block font-small"
+                style={{ marginBottom: '6px' }}
+              >
+                Votre nom
+              </label>
+              <input
+                id="admin-msg-sender"
+                type="text"
+                value={senderName}
+                placeholder="Votre nom ou pseudonyme"
+                className="input-field"
+                style={{ width: '100%' }}
+                onChange={(e) => setSenderName(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="admin-msg-text"
+                className="field-label block font-small"
+                style={{ marginBottom: '6px' }}
+              >
+                Message
+              </label>
+              <textarea
+                id="admin-msg-text"
+                rows={4}
+                value={message}
+                placeholder="Décrivez précisément le bug rencontré ou votre message..."
+                className="chat-input-field"
+                style={{
+                  width: '100%',
+                  resize: 'vertical',
+                  minHeight: '90px',
+                  boxSizing: 'border-box',
+                }}
+                onChange={(e) => setMessage(e.target.value)}
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="button button-wide"
+              disabled={!message.trim()}
+            >
+              Envoyer à l'administrateur
+            </button>
+
+            {sentSuccess && (
+              <div
+                className="feedback-badge"
+                role="status"
+                style={{
+                  background: '#e8f5e9',
+                  color: '#0b6938',
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  textAlign: 'center',
+                  fontWeight: 600,
+                }}
+              >
+                ✓ Votre message a bien été transmis à l'administrateur !
+              </div>
+            )}
+          </form>
         </section>
 
-        {/* Section Simulation complète - 3 Aidants & 3 Patients */}
+        {/* 3. Numéro de version de l'app */}
         <section className="settings-card stack">
-          <h2>Simulation · 3 Aidants &amp; 3 Patients</h2>
-          <p className="quiet font-small">
-            Sélectionnez un profil pour tester les interactions, les fils de
-            discussion et l’annuaire communautaire sous son identité.
-          </p>
-          <div className="stack" style={{ gap: '8px' }}>
-            {SIMULATION_ACCOUNTS.map((acc) => (
-              <div key={acc.id} className="settings-account-row">
-                <div className="settings-avatar-wrap">
-                  <img
-                    src={acc.avatarUrl ?? '/moomins/Nuuskamuikkunen.png'}
-                    alt={acc.firstName}
-                    className="topbar-avatar"
-                  />
-                </div>
-                <div className="settings-account-info">
-                  <strong>
-                    {acc.firstName} {acc.lastName}
-                  </strong>
-                  <span className="quiet font-small">
-                    {acc.role === 'helper' ? 'Aidant(e)' : 'Patient(e)'} ·{' '}
-                    {acc.city}
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  className="button button-ghost button-small"
-                  onClick={() => {
-                    setSimulationAccount(acc.id)
-                    window.location.hash =
-                      acc.role === 'helper' ? '#/helper' : '#/patient'
-                    window.location.reload()
-                  }}
-                >
-                  Tester
-                </button>
-              </div>
-            ))}
+          <h2>Version de l'application</h2>
+          <div
+            className="version-info-box"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 14px',
+              background: 'var(--bg)',
+              border: '1px solid var(--line)',
+              borderRadius: '10px',
+            }}
+          >
+            <div>
+              <strong style={{ fontSize: '0.95rem' }}>Needed</strong>
+              <p className="quiet font-small" style={{ margin: 0 }}>
+                Réseau d'entraide post-rTMS · Junction 2026
+              </p>
+            </div>
+            <span
+              style={{
+                fontWeight: 700,
+                padding: '4px 10px',
+                background: 'rgba(0, 216, 255, 0.15)',
+                color: 'var(--cyan-deep)',
+                borderRadius: '999px',
+                fontSize: '0.85rem',
+              }}
+            >
+              v1.2.0
+            </span>
           </div>
         </section>
-
-        {/* Confidentialité & Télémétrie clinique */}
-        <section className="settings-card stack">
-          <h2>Confidentialité & Suivi post-TMS</h2>
-          <label className="toggle-row">
-            <div>
-              <strong>Télémétrie passive discrète</strong>
-              <p className="quiet font-small">
-                Transmet les signaux de réciprocité positive (θ) à votre
-                clinicien sans questionnaires invasifs.
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={telemetryEnabled}
-              onChange={(e) => setTelemetryEnabled(e.target.checked)}
-            />
-          </label>
-
-          <label className="toggle-row">
-            <div>
-              <strong>Garde-fou d'effort (Safety Zone)</strong>
-              <p className="quiet font-small">
-                Filtre automatiquement les demandes exigeantes si votre réserve
-                d'énergie baisse.
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={smartGuardrail}
-              onChange={(e) => setSmartGuardrail(e.target.checked)}
-            />
-          </label>
-        </section>
-
-        {/* Notifications */}
-        <section className="settings-card stack">
-          <h2>Notifications & Entraide</h2>
-          <label className="toggle-row">
-            <div>
-              <strong>Demandes de la communauté</strong>
-              <p className="quiet font-small">
-                Recevoir une notification lorsqu'un voisin a besoin d'un coup de
-                main.
-              </p>
-            </div>
-            <input
-              type="checkbox"
-              checked={notificationsEnabled}
-              onChange={(e) => setNotificationsEnabled(e.target.checked)}
-            />
-          </label>
-        </section>
-
-        {/* Espace Clinicien direct */}
-        <section className="settings-card stack">
-          <h2>Espace Médical (Réservé soignants)</h2>
-          <p className="quiet font-small">
-            Accès sécurisé pour les médecins et thérapeutes chargés du suivi de
-            rémission post-TMS.
-          </p>
-          <a href="#/clinician" className="button button-ghost button-wide">
-            Accéder au Portail Clinicien
-          </a>
-        </section>
-
-        {/* Espace Administrateur direct */}
-        <section className="settings-card stack">
-          <h2>Administration & Supervision</h2>
-          <p className="quiet font-small">
-            Gestion globale des utilisateurs, supervision des liaisons d'aide et
-            suivi des questions en cours ou résolues.
-          </p>
-          <a href="#/admin" className="button button-ghost button-wide">
-            🛡️ Accéder à l'Espace Administrateur
-          </a>
-        </section>
-
-        {/* Actions de compte */}
-        <div className="settings-footer-actions stack">
-          {(hasHelper || hasPatient) && (
-            <button
-              type="button"
-              className="button button-wide"
-              onClick={handleLeaveAll}
-            >
-              Déconnexion complète de cet appareil
-            </button>
-          )}
-          <p className="quiet font-small text-center">
-            Needed v1.2 · Junction 2026 rTMS Recovery Network
-          </p>
-        </div>
       </main>
     </div>
   )

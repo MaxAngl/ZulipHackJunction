@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react'
 import Logo from '../components/Logo'
 import {
+  type AdminContactMessage,
   type ConversationThread,
   type PatientCommunityNeed,
   SIMULATION_ACCOUNTS,
+  readAdminContactMessages,
   readPatientCommunityNeeds,
   readThreads,
   readUserProfile,
+  updateAdminContactMessageStatus,
 } from '../session'
 
 type AdminUser = {
@@ -195,6 +198,9 @@ function AdminScreen() {
   const [data] = useState(() => getInitialAdminData())
   const users = data.users
   const questions = data.questions
+  const [adminMessages, setAdminMessages] = useState<AdminContactMessage[]>(
+    () => readAdminContactMessages(),
+  )
   const [filter, setFilter] = useState<'all' | 'in_progress' | 'resolved'>(
     'all',
   )
@@ -206,6 +212,14 @@ function AdminScreen() {
       document.title = 'Needed'
     }
   }, [])
+
+  function handleToggleMessageResolved(id: string, currentStatus: boolean) {
+    const nextStatus = !currentStatus
+    updateAdminContactMessageStatus(id, nextStatus)
+    setAdminMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, resolved: nextStatus } : m)),
+    )
+  }
 
   const filteredQuestions = questions.filter((q) => {
     if (filter === 'in_progress' && q.status !== 'in_progress') return false
@@ -267,6 +281,15 @@ function AdminScreen() {
               {resolvedCount}
             </span>
             <span className="admin-stat-label">Résolues</span>
+          </div>
+          <div className="admin-stat-card">
+            <span
+              className="admin-stat-number"
+              style={{ color: 'var(--cyan-deep)' }}
+            >
+              {adminMessages.length}
+            </span>
+            <span className="admin-stat-label">Messages</span>
           </div>
         </div>
 
@@ -465,6 +488,125 @@ function AdminScreen() {
                       </div>
                     )}
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+
+        {/* SECTION 3 : Messagerie & Signalements Administrateur */}
+        <section className="admin-card stack">
+          <div className="flex-between">
+            <h2>Messagerie Administrateur ({adminMessages.length})</h2>
+            <span className="quiet font-small">
+              {adminMessages.filter((m) => !m.resolved).length} non traité(s)
+            </span>
+          </div>
+
+          <div className="admin-messages-list stack" style={{ gap: '10px' }}>
+            {adminMessages.length === 0 ? (
+              <p className="quiet font-small text-center py-4">
+                Aucun message reçu pour le moment.
+              </p>
+            ) : (
+              adminMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`admin-msg-item ${
+                    msg.resolved ? 'msg-resolved' : 'msg-open'
+                  }`}
+                  style={{
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    background: msg.resolved
+                      ? 'var(--bg)'
+                      : 'rgba(0, 216, 255, 0.05)',
+                    border: msg.resolved
+                      ? '1px solid var(--line)'
+                      : '1px solid rgba(0, 216, 255, 0.35)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                  }}
+                >
+                  <div
+                    className="flex-between"
+                    style={{
+                      alignItems: 'flex-start',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                    }}
+                  >
+                    <div
+                      className="row-align-center-tight"
+                      style={{ gap: '8px', flexWrap: 'wrap' }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          background:
+                            msg.category === 'bug'
+                              ? '#ffebee'
+                              : msg.category === 'suggestion'
+                                ? '#e0f7fa'
+                                : '#f3e5f5',
+                          color:
+                            msg.category === 'bug'
+                              ? '#c62828'
+                              : msg.category === 'suggestion'
+                                ? '#00838f'
+                                : '#6a1b9a',
+                        }}
+                      >
+                        {msg.category === 'bug' && '🐛 Bug'}
+                        {msg.category === 'question' && '❓ Question'}
+                        {msg.category === 'suggestion' && '💡 Suggestion'}
+                        {msg.category === 'other' && '💬 Remarque'}
+                      </span>
+                      <strong>{msg.senderName}</strong>
+                      {msg.senderRole && (
+                        <span className="quiet font-small">
+                          (
+                          {msg.senderRole === 'helper'
+                            ? 'Aidant'
+                            : msg.senderRole === 'patient'
+                              ? 'Patient'
+                              : 'Visiteur'}
+                          )
+                        </span>
+                      )}
+                    </div>
+                    <div
+                      className="row-align-center-tight"
+                      style={{ gap: '8px' }}
+                    >
+                      <span className="quiet font-small">{msg.timestamp}</span>
+                      <button
+                        type="button"
+                        className="button button-ghost button-small"
+                        style={{ fontSize: '0.78rem', padding: '4px 8px' }}
+                        onClick={() =>
+                          handleToggleMessageResolved(msg.id, msg.resolved)
+                        }
+                      >
+                        {msg.resolved ? 'Rouvrir' : '✓ Marquer traité'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '0.92rem',
+                      lineHeight: 1.45,
+                      color: 'var(--ink)',
+                    }}
+                  >
+                    « {msg.message} »
+                  </p>
                 </div>
               ))
             )}

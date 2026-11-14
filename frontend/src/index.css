@@ -2926,15 +2926,6 @@ button.chip {
   color: var(--muted);
 }
 
-.peer-verified-tag {
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: #e8f5e9;
-  color: #0b6938;
-}
-
 .peer-profile-section {
   background: var(--surface-soft);
   border: 1px solid var(--line);

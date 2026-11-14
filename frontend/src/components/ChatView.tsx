@@ -602,7 +602,6 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
                       ? 'Patient en rémission'
                       : 'Aidant bénévole'}
                   </span>
-                  <span className="peer-verified-tag">✓ Membre vérifié</span>
                 </div>
               </div>
 

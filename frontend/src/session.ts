@@ -656,3 +656,73 @@ export function dismissPatientCommunityNeed(id: string): void {
     // ignore
   }
 }
+
+export type AdminContactMessage = {
+  id: string
+  senderName: string
+  senderRole?: 'helper' | 'patient' | 'visitor'
+  category: 'bug' | 'question' | 'suggestion' | 'other'
+  message: string
+  timestamp: string
+  resolved: boolean
+}
+
+export function saveAdminContactMessage(msg: AdminContactMessage): void {
+  try {
+    const list = readAdminContactMessages()
+    window.localStorage.setItem(
+      'needed.admin_contact_messages',
+      JSON.stringify([msg, ...list]),
+    )
+  } catch {
+    // ignore
+  }
+}
+
+export function readAdminContactMessages(): AdminContactMessage[] {
+  try {
+    const raw = window.localStorage.getItem('needed.admin_contact_messages')
+    if (raw) return JSON.parse(raw) as AdminContactMessage[]
+  } catch {
+    // ignore
+  }
+  return [
+    {
+      id: 'admin-msg-1',
+      senderName: 'Julien Mercier',
+      senderRole: 'patient',
+      category: 'bug',
+      message:
+        'Le temps de chargement des photos de passion a pris quelques secondes ce matin lors du passage au profil.',
+      timestamp: '14:05',
+      resolved: false,
+    },
+    {
+      id: 'admin-msg-2',
+      senderName: 'Clara Fontaine',
+      senderRole: 'helper',
+      category: 'suggestion',
+      message:
+        'Serait-il possible de rajouter un filtre par quartier pour l’entraide de proximité dans Helsinki ?',
+      timestamp: '11:45',
+      resolved: true,
+    },
+  ]
+}
+
+export function updateAdminContactMessageStatus(
+  id: string,
+  resolved: boolean,
+): void {
+  try {
+    const list = readAdminContactMessages().map((m) =>
+      m.id === id ? { ...m, resolved } : m,
+    )
+    window.localStorage.setItem(
+      'needed.admin_contact_messages',
+      JSON.stringify(list),
+    )
+  } catch {
+    // ignore
+  }
+}
