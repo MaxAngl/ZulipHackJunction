@@ -43,6 +43,7 @@ from ml.model import (
 
 INITIAL_THETA = 0.6  # niveau de fond à l'inscription, faute de mesure faite à la clinique
 PROPOSALS_WANTED = 3
+DEMO_DOMAIN = "@needed.demo"  # comptes fictifs de `backend/seed.py` : seuls montrés à l'accueil
 
 
 def suggestion_seed() -> int:
@@ -132,6 +133,21 @@ class Community:
         if user is None or not verify_password(password, user.password_hash):
             raise ApiError(401, "wrong_credentials", "Wrong email or password.")
         return self._session(user)
+
+    def demo_accounts(self) -> list[schemas.DemoAccount]:
+        """Les comptes de démo, dans leur ordre de création ; jamais un compte inscrit."""
+        return [
+            schemas.DemoAccount(
+                email=user.email,
+                role=user.role,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                city=user.city,
+                interests=user.interests,
+            )
+            for user in self.store.users()
+            if user.email.endswith(DEMO_DOMAIN)
+        ]
 
     def logout(self, token: str | None) -> None:
         if token:

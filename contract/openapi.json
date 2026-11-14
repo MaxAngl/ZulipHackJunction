@@ -724,6 +724,29 @@
         }
       }
     },
+    "/api/app/demo/accounts": {
+      "get": {
+        "summary": "Demo Accounts",
+        "description": "Comptes de démo (`@needed.demo`) pour la connexion rapide de l'accueil.",
+        "operationId": "demo_accounts_api_app_demo_accounts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DemoAccount"
+                  },
+                  "type": "array",
+                  "title": "Response Demo Accounts Api App Demo Accounts Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/app/logout": {
       "post": {
         "summary": "Logout",
@@ -4339,6 +4362,54 @@
           "request_id"
         ],
         "title": "DeclineRequest"
+      },
+      "DemoAccount": {
+        "properties": {
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "helper",
+              "patient",
+              "clinician",
+              "admin"
+            ],
+            "title": "Role"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "interests": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Interests"
+          }
+        },
+        "type": "object",
+        "required": [
+          "email",
+          "role",
+          "first_name",
+          "last_name",
+          "city",
+          "interests"
+        ],
+        "title": "DemoAccount",
+        "description": "Un compte de démo (`@needed.demo`), tel que la connexion rapide de l'accueil le montre."
       },
       "ErrorDetail": {
         "properties": {

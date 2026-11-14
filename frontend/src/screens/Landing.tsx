@@ -33,10 +33,10 @@ function Landing({ onSignedIn }: LandingProps) {
           {onSignedIn && (
             <button
               type="button"
-              className="button button-ghost button-wide button-quick-demo"
+              className="button-quick-demo"
               onClick={() => setShowQuickLogin(true)}
             >
-              ⚡ Connexion rapide (Démo)
+              Try a demo account
             </button>
           )}
         </div>

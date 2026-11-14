@@ -12,6 +12,7 @@ from backend.schemas import (
     AdminHome,
     AppUser,
     ClinicianHome,
+    DemoAccount,
     ErrorResponse,
     HelperHome,
     SessionResponse,
@@ -302,3 +303,22 @@ def test_the_demo_accounts_sign_in_and_tell_a_story(tmp_path: Path):
     assert (elena_thread.status, elena_thread.thanked) == ("answered", False)
     for email in ("clinic@needed.demo", "admin@needed.demo", "clara@needed.demo"):
         assert community.login(email, DEMO_PASSWORD).user.email == email
+
+
+def test_quick_login_lists_the_demo_accounts_and_never_a_real_one():
+    get_community().create_account(
+        role="patient",
+        email="aino@needed.demo",
+        password=PASSWORD,
+        first_name="Aino",
+        city="Helsinki",
+        interests=["gardening"],
+    )
+    _signup("helper", "Mikko", ["cooking"])
+
+    response = client.get("/api/app/demo/accounts")
+    assert response.status_code == 200, response.text
+    accounts = [DemoAccount.model_validate(item) for item in response.json()]
+    assert [(a.email, a.role, a.first_name, a.interests) for a in accounts] == [
+        ("aino@needed.demo", "patient", "Aino", ["gardening"])
+    ]

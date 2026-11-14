@@ -314,6 +314,17 @@ class PublicProfile(BaseModel):
     visible: bool = Field(description="Faux si la personne garde son profil privé")
 
 
+class DemoAccount(BaseModel):
+    """Un compte de démo (`@needed.demo`), tel que la connexion rapide de l'accueil le montre."""
+
+    email: str
+    role: AccountRole
+    first_name: str
+    last_name: str
+    city: str
+    interests: list[str]
+
+
 class SessionResponse(BaseModel):
     """Le jeton identifie la session. Il est renvoyé dans l'en-tête `X-Needed-Token`."""
 

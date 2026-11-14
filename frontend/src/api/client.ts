@@ -19,6 +19,7 @@ export type AppUser = Schemas['AppUser']
 export type AccountRole = AppUser['role']
 export type Role = Schemas['SignupRequest']['role']
 export type SessionResponse = Schemas['SessionResponse']
+export type DemoAccount = Schemas['DemoAccount']
 export type SignupRequest = Schemas['SignupRequest']
 export type ProfileUpdate = Schemas['ProfileUpdate']
 export type PublicProfile = Schemas['PublicProfile']
@@ -140,6 +141,11 @@ export function reset(): Promise<LoopState> {
 
 export function signup(body: SignupRequest): Promise<SessionResponse> {
   return post<SessionResponse>('/api/app/signup', body)
+}
+
+// Les comptes de démo (`@needed.demo`), pour la connexion rapide de l'accueil.
+export function getDemoAccounts(): Promise<DemoAccount[]> {
+  return request<DemoAccount[]>('/api/app/demo/accounts')
 }
 
 // Tout compte se connecte ici : aidant, patient, clinicien ou admin.

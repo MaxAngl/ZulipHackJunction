@@ -1,125 +1,66 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import {
   ApiError,
+  getDemoAccounts,
   login,
   type AccountRole,
+  type DemoAccount,
   type SessionResponse,
 } from '../api/client'
 
-export type QuickPerson = {
-  id: string
-  role: AccountRole
-  email: string
-  name: string
-  roleLabel: string
-  city?: string
-  avatarUrl: string
-  badgeClass: string
-  interests?: string[]
-  bio: string
+// Mot de passe commun des comptes de démo (`backend/seed.py`).
+const DEMO_PASSWORD = 'needed'
+
+type Group = 'all' | 'helper' | 'patient' | 'team'
+
+const GROUPS: { key: Group; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'helper', label: 'Helpers' },
+  { key: 'patient', label: 'Patients' },
+  { key: 'team', label: 'Team' },
+]
+
+const ROLE_LABELS: Record<AccountRole, string> = {
+  helper: 'Helper',
+  patient: 'Patient',
+  clinician: 'Clinician',
+  admin: 'Admin',
 }
 
-export const DEMO_PEOPLE: QuickPerson[] = [
-  // Aidants (Helpers)
-  {
-    id: 'clara',
-    role: 'helper',
-    email: 'clara@needed.demo',
-    name: 'Clara Fontaine',
-    roleLabel: 'Aidante',
-    city: 'Helsinki, Punavuori',
-    avatarUrl: '/moomins/Characters-04-2.svg',
-    badgeClass: 'badge-helper',
-    interests: ['gardening', 'cooking', 'reading'],
-    bio: 'Jardinière urbaine et cuisine saine. Ravie d’échanger graines et conseils.',
-  },
-  {
-    id: 'thomas',
-    role: 'helper',
-    email: 'thomas@needed.demo',
-    name: 'Thomas Lindqvist',
-    roleLabel: 'Aidant',
-    city: 'Espoo, Tapiola',
-    avatarUrl: '/moomins/Muumipappa2.jpg',
-    badgeClass: 'badge-helper',
-    interests: ['photography', 'cycling', 'hiking'],
-    bio: 'Photographe argentique et cycliste. Adore les sentiers côtiers et les parcs nationaux.',
-  },
-  {
-    id: 'elena',
-    role: 'helper',
-    email: 'elena@needed.demo',
-    name: 'Elena Sjöberg',
-    roleLabel: 'Aidante',
-    city: 'Vantaa, Tikkurila',
-    avatarUrl: '/moomins/Nuuskamuikkunen.png',
-    badgeClass: 'badge-helper',
-    interests: ['baking', 'knitting', 'jazz'],
-    bio: 'Brioches à la cannelle (korvapuusti) et collectionneuse de vinyles jazz.',
-  },
+function inGroup(account: DemoAccount, group: Group): boolean {
+  if (group === 'all') return true
+  if (group === 'team') {
+    return account.role === 'clinician' || account.role === 'admin'
+  }
+  return account.role === group
+}
 
-  // Patients (Clinique / Rémission)
-  {
-    id: 'julien',
-    role: 'patient',
-    email: 'julien@needed.demo',
-    name: 'Julien Mercier',
-    roleLabel: 'Patient',
-    city: 'Helsinki, Töölö',
-    avatarUrl: '/moomins/Muumipeikko2.jpg',
-    badgeClass: 'badge-patient',
-    interests: ['gardening', 'baking', 'reading'],
-    bio: 'Parcours de rétablissement doux. Herbes aromatiques et pain au levain.',
-  },
-  {
-    id: 'sofia',
-    role: 'patient',
-    email: 'sofia@needed.demo',
-    name: 'Sofia Hakala',
-    roleLabel: 'Patiente',
-    city: 'Helsinki, Kallio',
-    avatarUrl: '/moomins/Nuuskamuikkunen.png',
-    badgeClass: 'badge-patient',
-    interests: ['cooking', 'jazz', 'photography'],
-    bio: 'Musique acoustique, balades calmes au bord de l’eau et soupes réconfortantes.',
-  },
-  {
-    id: 'lucas',
-    role: 'patient',
-    email: 'lucas@needed.demo',
-    name: 'Lucas Virtanen',
-    roleLabel: 'Patient',
-    city: 'Helsinki, Ullanlinna',
-    avatarUrl: '/moomins/Characters-04-2.svg',
-    badgeClass: 'badge-patient',
-    interests: ['cycling', 'hiking', 'knitting'],
-    bio: 'Grand air et tricot scandinave pour garder les pensées légères et ancrées.',
-  },
+function fullName(account: DemoAccount): string {
+  return `${account.first_name} ${account.last_name}`.trim()
+}
 
-  // Clinicien & Admin
-  {
-    id: 'clinic',
-    role: 'clinician',
-    email: 'clinic@needed.demo',
-    name: 'Dr. Clinic',
-    roleLabel: 'Clinicien TMS',
-    city: 'Helsinki TMS Centre',
-    avatarUrl: '/moomins/Muumipappa2.jpg',
-    badgeClass: 'badge-staff',
-    bio: 'Suivi médical discret des patients en rémission et notes d’évolution clinique.',
-  },
-  {
-    id: 'admin',
-    role: 'admin',
-    email: 'admin@needed.demo',
-    name: 'Admin Needed',
-    roleLabel: 'Administrateur',
-    city: 'Support Communauté',
-    avatarUrl: '/moomins/Characters-04-2.svg',
-    badgeClass: 'badge-staff',
-    bio: 'Supervision de la communauté, traitement des signalements et sécurité.',
-  },
-]
+function initials(account: DemoAccount): string {
+  return `${account.first_name.charAt(0)}${account.last_name.charAt(0)}`.toUpperCase()
+}
+
+// Recherche sur ce qu'on voit d'une personne : nom, rôle, quartier, intérêts, e-mail.
+function matches(account: DemoAccount, query: string): boolean {
+  const haystack = [
+    fullName(account),
+    ROLE_LABELS[account.role],
+    account.city,
+    account.email,
+    ...account.interests,
+  ]
+    .join(' ')
+    .toLowerCase()
+  return query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => haystack.includes(word))
+}
 
 type QuickLoginModalProps = {
   isOpen: boolean
@@ -127,75 +68,137 @@ type QuickLoginModalProps = {
   onSignedIn: (session: SessionResponse) => void
 }
 
+// Connexion rapide de la démo : tous les comptes `@needed.demo` de la base, un clic pour entrer.
+// La feuille est rendue sur <body> : posée dans l'accueil, elle passait sous son contenu.
 function QuickLoginModal({
   isOpen,
   onClose,
   onSignedIn,
 }: QuickLoginModalProps) {
-  const [filter, setFilter] = useState<'all' | 'helper' | 'patient' | 'staff'>(
-    'all',
-  )
-  const [busyId, setBusyId] = useState<string | null>(null)
+  const [accounts, setAccounts] = useState<DemoAccount[] | null>(null)
+  const [group, setGroup] = useState<Group>('all')
+  const [query, setQuery] = useState('')
+  const [busyEmail, setBusyEmail] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // La liste est relue à chaque ouverture : un compte ajouté à la base y apparaît.
+  useEffect(() => {
+    if (!isOpen) return
+    let live = true
+    getDemoAccounts()
+      .then((list) => {
+        if (live) setAccounts(list)
+      })
+      .catch((err: unknown) => {
+        if (!live) return
+        setAccounts([])
+        setError(
+          err instanceof ApiError ? err.message : "Can't reach the server.",
+        )
+      })
+    return () => {
+      live = false
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [isOpen, onClose])
+
+  // Les nombres des onglets suivent la recherche : ce qu'on trouverait dans chacun.
+  const found = useMemo(
+    () => (accounts ?? []).filter((a) => matches(a, query)),
+    [accounts, query],
+  )
+
+  const counts = useMemo(
+    () =>
+      Object.fromEntries(
+        GROUPS.map(({ key }) => [
+          key,
+          found.filter((a) => inGroup(a, key)).length,
+        ]),
+      ) as Record<Group, number>,
+    [found],
+  )
+
+  const shown = useMemo(
+    () => found.filter((a) => inGroup(a, group)),
+    [found, group],
+  )
 
   if (!isOpen) return null
 
-  const filtered = DEMO_PEOPLE.filter((p) => {
-    if (filter === 'all') return true
-    if (filter === 'helper') return p.role === 'helper'
-    if (filter === 'patient') return p.role === 'patient'
-    return p.role === 'clinician' || p.role === 'admin'
-  })
-
-  async function handleSelect(person: QuickPerson) {
-    setBusyId(person.id)
+  async function choose(account: DemoAccount) {
+    setBusyEmail(account.email)
     setError(null)
     try {
-      const session = await login(person.email, 'needed')
-      onSignedIn(session)
+      onSignedIn(await login(account.email, DEMO_PASSWORD))
       onClose()
     } catch (err) {
       setError(
-        err instanceof ApiError
-          ? err.message
-          : 'Impossible de joindre le serveur. Vérifiez que le backend tourne sur le port 8000.',
+        err instanceof ApiError ? err.message : "Can't reach the server.",
       )
     } finally {
-      setBusyId(null)
+      setBusyEmail(null)
     }
   }
 
-  return (
+  return createPortal(
     <div
-      className="modal-backdrop"
+      className="modal-backdrop quick-login-backdrop"
       role="dialog"
       aria-modal="true"
       aria-labelledby="quick-login-title"
       onClick={onClose}
     >
       <div
-        className="modal-card modal-card-large stack"
+        className="modal-card quick-login-sheet"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="modal-header">
-          <span className="eyebrow">Hackathon Demo · Junction 2026</span>
+        <div className="quick-login-head">
+          <div>
+            <span className="eyebrow">Demo</span>
+            <h2 id="quick-login-title">Sign in as anyone</h2>
+          </div>
           <button
             type="button"
             className="modal-close"
-            aria-label="Fermer"
+            aria-label="Close"
             onClick={onClose}
           >
             ✕
           </button>
         </div>
 
-        <div className="quick-login-headline">
-          <h2 id="quick-login-title" style={{ margin: 0 }}>
-            ⚡ Connexion rapide
-          </h2>
-          <p className="quiet" style={{ margin: '4px 0 0 0' }}>
-            Choisissez une personne pour essayer l’application en 1 clic :
-          </p>
+        <input
+          type="text"
+          className="quick-login-search"
+          placeholder="Search a name, an interest, a district"
+          aria-label="Search the demo accounts"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          autoFocus
+        />
+
+        <div className="quick-login-groups" role="group" aria-label="Role">
+          {GROUPS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              className={`quick-login-group ${group === key ? 'active' : ''}`}
+              aria-pressed={group === key}
+              onClick={() => setGroup(key)}
+            >
+              {label}
+              <span className="quick-login-count">{counts[key]}</span>
+            </button>
+          ))}
         </div>
 
         {error && (
@@ -204,106 +207,50 @@ function QuickLoginModal({
           </p>
         )}
 
-        <div className="quick-login-tabs">
-          <button
-            type="button"
-            className={`quick-tab ${filter === 'all' ? 'active' : ''}`}
-            onClick={() => setFilter('all')}
-          >
-            Tous ({DEMO_PEOPLE.length})
-          </button>
-          <button
-            type="button"
-            className={`quick-tab ${filter === 'helper' ? 'active' : ''}`}
-            onClick={() => setFilter('helper')}
-          >
-            🌿 Aidants (3)
-          </button>
-          <button
-            type="button"
-            className={`quick-tab ${filter === 'patient' ? 'active' : ''}`}
-            onClick={() => setFilter('patient')}
-          >
-            🌸 Patients (3)
-          </button>
-          <button
-            type="button"
-            className={`quick-tab ${filter === 'staff' ? 'active' : ''}`}
-            onClick={() => setFilter('staff')}
-          >
-            🩺 Équipe (2)
-          </button>
-        </div>
-
-        <div className="quick-people-list">
-          {filtered.map((person) => {
-            const isBusy = busyId === person.id
+        <ul className="quick-login-list">
+          {accounts === null && <li className="quiet">Loading accounts…</li>}
+          {accounts !== null && shown.length === 0 && !error && (
+            <li className="quiet">No one matches “{query}”.</li>
+          )}
+          {shown.map((account) => {
+            const busy = busyEmail === account.email
             return (
-              <div
-                key={person.id}
-                className={`quick-person-card ${isBusy ? 'busy' : ''}`}
-                onClick={() => !isBusy && void handleSelect(person)}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    if (!isBusy) void handleSelect(person)
-                  }
-                }}
-              >
-                <img
-                  src={person.avatarUrl}
-                  alt=""
-                  className="quick-person-avatar"
-                />
-                <div className="quick-person-content">
-                  <div className="quick-person-header">
-                    <strong>{person.name}</strong>
-                    <span className={`quick-badge ${person.badgeClass}`}>
-                      {person.roleLabel}
-                    </span>
-                  </div>
-                  {person.city && (
-                    <span className="quick-person-city">{person.city}</span>
-                  )}
-                  {person.interests && person.interests.length > 0 && (
-                    <div className="quick-person-tags">
-                      {person.interests.map((tag) => (
-                        <span key={tag} className="quick-tag">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  <p className="quick-person-bio">{person.bio}</p>
-                </div>
-                <div className="quick-person-action">
-                  <button
-                    type="button"
-                    className="button button-primary button-small"
-                    disabled={isBusy}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void handleSelect(person)
-                    }}
+              <li key={account.email}>
+                <button
+                  type="button"
+                  className="quick-login-row"
+                  disabled={busyEmail !== null}
+                  onClick={() => void choose(account)}
+                >
+                  <span
+                    className={`quick-login-initials quick-login-${account.role}`}
+                    aria-hidden="true"
                   >
-                    {isBusy ? 'Connexion…' : 'Choisir →'}
-                  </button>
-                </div>
-              </div>
+                    {initials(account)}
+                  </span>
+                  <span className="quick-login-who">
+                    <strong>{fullName(account)}</strong>
+                    <span className="quick-login-meta">
+                      {ROLE_LABELS[account.role]}
+                      {account.city && ` · ${account.city}`}
+                    </span>
+                    {account.interests.length > 0 && (
+                      <span className="quick-login-meta">
+                        {account.interests.join(' · ')}
+                      </span>
+                    )}
+                  </span>
+                  <span className="quick-login-go" aria-hidden="true">
+                    {busy ? '…' : '→'}
+                  </span>
+                </button>
+              </li>
             )
           })}
-        </div>
-
-        <div className="quick-login-footer">
-          <p className="quiet font-small text-center" style={{ margin: 0 }}>
-            💡 Mot de passe universel de démo pour tous les comptes :{' '}
-            <code>needed</code>
-          </p>
-        </div>
+        </ul>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
