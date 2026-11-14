@@ -43,7 +43,7 @@ Pour ne pas se marcher dessus :
 
 - **Backend** : Python 3.12, FastAPI, Pydantic v2, uvicorn. Gestionnaire : **uv** (jamais `pip install`).
 - **ML** : Python 3.12, dans le même environnement uv que le backend. `numpy` pour les données simulées, `torch` en version CPU pour les réseaux (l'index PyTorch CPU est déclaré dans `pyproject.toml` : `uv sync` suffit, ne pas installer torch à la main).
-- **IA générative** : API Gemini appelée en REST avec la bibliothèque standard (`ml/gemini.py`), sans SDK. Clé dans `.env` (`GEMINI_API_KEY`). Modèle par défaut : `gemini-flash-lite-latest`, le moins gourmand. Sur une surcharge, la génération passe au modèle suivant et les embeddings sont réessayés deux fois. Sans clé, ou si Gemini échoue malgré cela, `ml/lexicon.py` prend le relais.
+- **IA générative** : API Gemini appelée en REST avec la bibliothèque standard (`ml/gemini.py`), sans SDK. Clé dans `.env` (`GEMINI_API_KEY`). Modèle par défaut : `gemini-flash-lite-latest`, le moins gourmand. Sur une surcharge, la génération passe au modèle suivant et les embeddings sont réessayés deux fois. Sans clé, ou si Gemini échoue malgré cela, `ml/lexicon.py` prend le relais. **Claude** (`ml/claude.py`, SDK officiel `anthropic`) écrit les demandes à la place de Gemini quand `ANTHROPIC_API_KEY` est dans `.env` ; modèle `claude-opus-5-5` par défaut (`CLAUDE_MODEL`), sorties JSON structurées, mesure de λ par le modèle d'embeddings local. Même prompt pour les deux (`GENERATION_SYSTEM`, `ml/pipeline.py`).
 - **Frontend** : React 19, TypeScript 7, Vite 8. Gestionnaire : **npm 11.19 ou plus** (comme la CI). Un npm plus ancien écrit un `package-lock.json` incomplet que la CI refuse (« Missing: … from lock file »). Mise à jour : `npm install -g npm@latest`.
 - **Qualité** : ruff (lint + format Python), prettier (format front), oxlint (lint front), pytest, pre-commit, CI GitHub Actions.
 
@@ -68,6 +68,7 @@ uv run pre-commit run --all-files          # tous les hooks (format, lint, tests
 
 uv run python -m backend.seed              # base de démo neuve : comptes fictifs (mot de passe « needed »), ancienne base mise de côté
 uv run python -m ml.check_gemini           # vérifie la clé Gemini et la mesure λ
+uv run python -m ml.check_claude           # vérifie la clé Claude, un appel, affiche son coût
 uv run python -m ml.simulation             # génère les données simulées dans ml/data/sim (hors git)
 uv run python -m garmin login              # montre : première connexion Garmin, dans son propre terminal
 uv run python -m garmin read --push        # montre : lit Garmin Connect et pousse θ au patient (--simulate sans montre)
@@ -120,10 +121,12 @@ ml/
   pipeline.py        # générer -> mesurer λ -> filtrer -> choisir trois demandes
   matching.py        # appariement patient–aidant : profils d'intérêts, couverture, mariages stables
   gemini.py          # client REST Gemini (génération JSON, embeddings)
+  claude.py          # Claude (SDK anthropic) : génération JSON des demandes, relecture des messages
   lexicon.py         # mode hors ligne : banque de demandes et mesure par mots-clés
   embedding.py       # vecteurs de texte : Gemini, modèle local (sans clé), ou mots-clés
   formats.py         # grille fixe des formats et de leur effort
   check_gemini.py    # vérification de la clé Gemini
+  check_claude.py    # vérification de la clé Claude, avec le coût de l'essai
   watch.py           # θ provisoire à partir d'un relevé de la montre, en attendant l'autoencodeur
   simulation/        # données simulées : θ, état caché, patient simulé, journal d'épisodes (docs/modele.md, 11 et 12)
   nets/              # les trois réseaux : features, models, train, policy, evaluate, runtime (docs/modele.md, 13 et 14)
@@ -212,6 +215,8 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 ## Décisions
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
+
+- 2026-11-14 — Nouvelle dépendance `anthropic` (SDK officiel) : Claude écrit les demandes quand sa clé est là, avant Gemini ; Gemini et la banque restent en repli (issue #74). Le prompt de génération interdit le collage de deux intérêts, demande un vrai point de rencontre, lit les intérêts comme des passions, écrit toujours en anglais et reçoit les bios — testée sur 12 combinaisons, la banque collait des phrases sans lien (« I'm building a shelf. What makes swing feel like swing? ») et ignorait les bios. Choix d'Adel : clé personnelle Claude, l'équipe n'ayant plus de crédit Gemini.
 
 - 2026-11-14 — Nouvelle dépendance `transformers` : sans Gemini, λ et les profils d'appariement sont mesurés par un modèle d'embeddings local (`paraphrase-multilingual-MiniLM-L12-v2`, ~120 Mo, CPU, téléchargé au premier usage), recalé sur les niveaux de mélange de la banque ; la mesure par mots-clés ne reste qu'en dernier recours (issue #69) — par mots-clés, un intérêt hors des 9 de la banque ne donnait que λ = 0, 0,5 ou 1, et un patient « moyen » ne recevait aucune proposition ; le modèle local est gratuit, sans clé ni quota, et comprend le français. `NEEDED_LOCAL_EMBEDDINGS=off` le coupe (les tests le font).
 

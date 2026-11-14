@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Literal
 
-Provider = Literal["gemini", "offline"]
+Provider = Literal["claude", "gemini", "offline"]
 Slot = Literal["best", "bridge", "explore"]
 
 

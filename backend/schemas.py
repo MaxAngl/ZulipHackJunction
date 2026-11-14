@@ -17,7 +17,7 @@ Email = Annotated[str, Field(min_length=3, max_length=120, pattern=r"^[^@\s]+@[^
 ImageUrl = Annotated[str, Field(max_length=400_000)]
 Stage = Literal["idle", "proposed", "held", "sent", "answered"]
 Slot = Literal["best", "bridge", "explore"]
-Provider = Literal["gemini", "offline"]
+Provider = Literal["claude", "gemini", "offline"]
 MessageSource = Literal["suggested", "edited", "real_need"]
 PatientAction = Literal["helped", "ignored"]
 

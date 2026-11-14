@@ -4072,6 +4072,7 @@
           "provider": {
             "type": "string",
             "enum": [
+              "claude",
               "gemini",
               "offline"
             ],
@@ -4429,6 +4430,7 @@
           "provider": {
             "type": "string",
             "enum": [
+              "claude",
               "gemini",
               "offline"
             ],

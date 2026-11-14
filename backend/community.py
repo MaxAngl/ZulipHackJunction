@@ -232,6 +232,8 @@ class Community:
                     patient_name=patient.name,
                     avoid=[candidate.text for candidate in candidates],
                     seed=suggestion_seed() + attempt,
+                    patient_bio=patient.bio,
+                    helper_bio=helper.bio,
                 )
                 chosen = select_three(candidates, zone, set(patient.tried_formats))
                 if len(chosen) >= PROPOSALS_WANTED:

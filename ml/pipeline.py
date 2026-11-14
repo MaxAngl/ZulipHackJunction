@@ -12,7 +12,7 @@ import uuid
 from dataclasses import dataclass, replace
 from typing import Any
 
-from ml import gemini, lexicon
+from ml import claude, gemini, lexicon
 from ml.embedding import Measure, cosine, embed_texts, measure_kind
 from ml.formats import FORMATS, effort_of, guess_format, request_axes
 from ml.types import Candidate, InterestPair, Provider, ProviderInfo, Review, Slot, Zone
@@ -52,7 +52,29 @@ for small favours.
 
 A member (the asker) is about to ask another member (the recipient) for a small favour. It must \
 be something the asker would genuinely want, and something the recipient can give thanks to \
-what they like or know.
+what they like or know. The point of every request is to let the recipient feel competent and \
+useful: someone really relies on a skill, a taste or a memory of theirs.
+
+Blending the two interests of a pair:
+- When a request should touch both interests, find ONE concrete situation where they genuinely \
+meet, and ask about it. Examples: gardening x cooking: "Which herbs should I plant so I always \
+have fresh basil for my pasta?"; jazz x woodworking: "What record would you put on for an hour \
+of sanding in the workshop?".
+- Never glue a sentence about the asker's hobby to an unrelated question about the recipient's \
+("I'm planning a bike ride. What's your favourite jazz album?" is wrong). If you find no \
+natural link, write a request closer to the recipient's interest instead.
+- Any reason you give for asking this person must follow from their interest or profile.
+
+Reading the interests:
+- Interests are short labels for hobbies: read them as a person would ("dogs" means caring for \
+and walking dogs, "reading" means books). Never write a phrase like "get into dogs" or "some \
+running".
+- Always write in English. Translate labels given in another language ("jardinage" is \
+gardening, "cuisine" is cooking).
+- If both interests of a pair are the same, the recipient and the asker share it: every request \
+is about that shared interest, and requests differ by angle and format, not by position.
+- When profiles are given, build on what they actually say. Invent nothing personal about the \
+recipient; about the asker, at most a small plausible detail.
 
 Rules:
 - Write in the asker's voice, first person, as a short warm message to the recipient.
@@ -70,6 +92,8 @@ advance, Whenever suits you. Invent others too.
 - Never mention health, mood, wellbeing, therapy, recovery, AI or the app itself.
 - Never ask for money, personal data, or medical or legal advice.
 - Each request uses exactly one format from the list, and fits its description.
+- Every request is a different idea: never send the same question twice with another greeting, \
+closing or short add-on.
 Return JSON only."""
 
 REVIEW_SYSTEM = """You review one short message that a member of a community app wants to send \
@@ -87,10 +111,31 @@ class _Draft:
     aim: float | None = None  # banque hors ligne : position que vise son niveau de mélange
 
 
-def provider_info() -> ProviderInfo:
+_LLM_ERRORS = (gemini.GeminiError, claude.ClaudeError)
+
+
+def generator() -> Provider:
+    """Qui écrit les demandes : Claude si sa clé est là, sinon Gemini, sinon la banque."""
+    if claude.is_configured():
+        return "claude"
     if gemini.is_configured():
-        return ProviderInfo("gemini", gemini.generation_model(), _state["note"])
+        return "gemini"
+    return "offline"
+
+
+def provider_info() -> ProviderInfo:
+    match generator():
+        case "claude":
+            return ProviderInfo("claude", claude.generation_model(), _state["note"])
+        case "gemini":
+            return ProviderInfo("gemini", gemini.generation_model(), _state["note"])
     return ProviderInfo("offline", None, "")
+
+
+def _generate_json(provider: Provider, system: str, prompt: str, schema: dict[str, Any]) -> Any:
+    if provider == "claude":
+        return claude.generate_json(system, prompt, schema)
+    return gemini.generate_json(system, prompt, schema)
 
 
 def _clip(value: float) -> float:
@@ -213,8 +258,30 @@ def _weight_limit(zone: Zone) -> tuple[str, str, str]:
     )
 
 
+def _target_line(index: int, pair: InterestPair, center: float) -> str:
+    """Ce que la position visée veut dire, en mots, pour une paire."""
+    if _same_name(pair):
+        return f"{index}. {pair.patient_interest} (shared by both): any request about it"
+    return f"{index}. {_mix_words(center, pair.patient_interest, pair.helper_interest)}"
+
+
+def _profiles_block(patient_name: str, patient_bio: str, helper_name: str, helper_bio: str) -> str:
+    lines = [
+        f"- {name}: {' '.join(bio.split())}"
+        for name, bio in ((patient_name, patient_bio), (helper_name, helper_bio))
+        if bio.strip()
+    ]
+    return "\n\nProfiles, in their own words:\n" + "\n".join(lines) if lines else ""
+
+
 def _generation_prompt(
-    pairs: list[InterestPair], zone: Zone, helper_name: str, patient_name: str, avoid: list[str]
+    pairs: list[InterestPair],
+    zone: Zone,
+    helper_name: str,
+    patient_name: str,
+    avoid: list[str],
+    patient_bio: str = "",
+    helper_bio: str = "",
 ) -> str:
     pair_lines = "\n".join(
         f"{index}. {pair.patient_interest} x {pair.helper_interest}"
@@ -224,13 +291,13 @@ def _generation_prompt(
         f"- {fmt.key} (effort {fmt.effort:.2f}): {fmt.hint}" for fmt in FORMATS.values()
     )
     limit, within, beyond = _weight_limit(zone)
-    first = pairs[0]
-    target = _mix_words(zone.center, first.patient_interest, first.helper_interest)
+    targets = "\n".join(_target_line(i, pair, zone.center) for i, pair in enumerate(pairs))
+    profiles = _profiles_block(patient_name, patient_bio, helper_name, helper_bio)
     avoid_block = ""
     if avoid:
         listed = "\n".join(f"- {text}" for text in avoid[-12:])
         avoid_block = f"\n\nAlready written, do not repeat these ideas:\n{listed}"
-    return f"""Asker: {helper_name}. Recipient: {patient_name}.
+    return f"""Asker: {helper_name}. Recipient: {patient_name}.{profiles}
 
 Interest pairs (recipient's interest x asker's interest):
 {pair_lines}
@@ -239,7 +306,8 @@ Every request sits somewhere between the two interests of its pair. Position is 
 1.0 = entirely about the recipient's interest, 0.5 = an even bridge, 0.0 = entirely about the \
 asker's interest.
 
-Target position: {zone.center:.2f} (for pair 0, that means {target}).
+Target position: {zone.center:.2f}. In words, for each pair:
+{targets}
 Acceptable range: {zone.low:.2f} to {zone.high:.2f}.
 
 Formats (use only these keys):
@@ -330,11 +398,21 @@ def _body(text: str) -> str:
     return "\n".join(lines[1:-2]) if len(lines) >= 4 else text
 
 
-def _draft_with_gemini(
-    pairs: list[InterestPair], zone: Zone, helper_name: str, patient_name: str, avoid: list[str]
+def _draft_with_model(
+    provider: Provider,
+    pairs: list[InterestPair],
+    zone: Zone,
+    helper_name: str,
+    patient_name: str,
+    avoid: list[str],
+    bios: tuple[str, str] = ("", ""),
 ) -> list[_Draft]:
-    prompt = _generation_prompt(pairs, zone, helper_name, patient_name, avoid)
-    data = gemini.generate_json(GENERATION_SYSTEM, prompt, _generation_schema(len(pairs)))
+    """Demandes écrites par un modèle de langage (Claude ou Gemini), même prompt pour les deux.
+
+    `bios` : bio du patient, puis de l'aidant.
+    """
+    prompt = _generation_prompt(pairs, zone, helper_name, patient_name, avoid, *bios)
+    data = _generate_json(provider, GENERATION_SYSTEM, prompt, _generation_schema(len(pairs)))
     items = data.get("requests", []) if isinstance(data, dict) else []
     drafts: list[_Draft] = []
     for item in items:
@@ -356,6 +434,8 @@ def _draft_with_gemini(
             )
         )
     if not drafts:
+        if provider == "claude":
+            raise claude.ClaudeError(0, "aucune demande exploitable dans la réponse")
         raise gemini.GeminiError(0, "aucune demande exploitable dans la réponse")
     return drafts
 
@@ -431,8 +511,13 @@ def _measure(
     if kind == "gemini":
         aims = [d.intended if keep else None for d, keep in zip(drafts, counted, strict=True)]
         _calibrate(raws, aims)
-    elif kind == "local":  # la banque annonce un niveau de mélange : même recalage que Gemini
-        aims = [d.aim if keep else None for d, keep in zip(drafts, counted, strict=True)]
+    elif kind == "local":
+        # La banque annonce un niveau de mélange, Claude la position qu'il vise : même recalage
+        # que Gemini, chaque demande gardant sa propre mesure.
+        aims = [
+            (d.aim if d.aim is not None else d.intended) if keep else None
+            for d, keep in zip(drafts, counted, strict=True)
+        ]
         _calibrate(raws, aims, _local_scale)
     candidates = []
     for draft, (raw, off_topic) in zip(drafts, measured, strict=True):
@@ -460,13 +545,16 @@ def _measure(
 
 
 def _estimated(
-    drafts: list[_Draft], pairs: list[InterestPair], zone: Zone | None = None
+    drafts: list[_Draft],
+    pairs: list[InterestPair],
+    zone: Zone | None = None,
+    provider: Provider = "gemini",
 ) -> list[Candidate]:
-    """Sans embeddings : la position que Gemini dit avoir visée, à défaut la mesure par mots-clés.
+    """Sans embeddings : la position que le modèle dit avoir visée, à défaut les mots-clés.
 
-    Mode dégradé. La mesure par mots-clés seule place mal les textes de Gemini (souvent 0 ou 1,
-    vu en réel) et la zone n'en garde presque aucun ; Gemini, lui, a écrit pour la zone. Un
-    intérêt commun garde le joker.
+    Mode dégradé. La mesure par mots-clés seule place mal les textes d'un modèle (souvent 0 ou 1,
+    vu en réel avec Gemini) et la zone n'en garde presque aucun ; le modèle, lui, a écrit pour
+    la zone. Un intérêt commun garde le joker.
     """
     lexical, shared = _measure(drafts, pairs, "offline", zone)
     return [
@@ -474,7 +562,7 @@ def _estimated(
             candidate,
             lam=round(draft.intended, 3),
             off_topic=False,
-            provider="gemini",
+            provider=provider,
             axes=request_axes(draft.intended, candidate.format),
         )
         if draft.intended is not None and candidate.pair not in shared
@@ -490,32 +578,45 @@ def generate_candidates(
     patient_name: str,
     avoid: list[str],
     seed: int,
+    patient_bio: str = "",
+    helper_bio: str = "",
 ) -> list[Candidate]:
     """Étapes 4 et 5 : générer des demandes pour la zone, puis les mesurer.
 
-    Avec Gemini si une clé est configurée, sinon avec la banque hors ligne. En cas d'erreur
-    Gemini, on bascule sur la banque pour cet appel : la démo continue. Si seuls les embeddings
-    échouent (quota du jour épuisé, vu en réel le 14/11), les demandes écrites par Gemini sont
-    gardées, placées à la position qu'il dit avoir visée (`_estimated`).
+    Avec Claude ou Gemini si une clé est configurée (Claude d'abord), sinon avec la banque hors
+    ligne. En cas d'erreur du modèle, on bascule sur la banque pour cet appel : la démo
+    continue. Les demandes de Claude sont mesurées par le modèle d'embeddings local ; si aucune
+    mesure par embeddings n'est possible (modèle local absent, ou quota Gemini épuisé, vu en
+    réel le 14/11), elles sont placées à la position que le modèle dit avoir visée
+    (`_estimated`). Les bios, quand elles sont données, nourrissent le prompt.
     """
     known = set(avoid)
-    if gemini.is_configured():
+    provider = generator()
+    if provider != "offline":
+        name = provider.capitalize()
+        bios = (patient_bio, helper_bio)
         try:
-            drafts = _draft_with_gemini(pairs, zone, helper_name, patient_name, avoid)
-        except gemini.GeminiError as exc:
-            logger.warning("Gemini indisponible, bascule hors ligne : %s", exc)
-            _state["note"] = f"Gemini error ({exc.status or 'network'}): built-in bank used."
+            drafts = _draft_with_model(
+                provider, pairs, zone, helper_name, patient_name, avoid, bios
+            )
+        except _LLM_ERRORS as exc:
+            logger.warning("%s indisponible, bascule hors ligne : %s", name, exc)
+            _state["note"] = f"{name} error ({exc.status or 'network'}): built-in bank used."
         else:
-            try:
-                candidates, _ = _measure(drafts, pairs, "gemini", zone)
-                _state["note"] = ""
-            except gemini.GeminiError as exc:
-                logger.warning("Embeddings Gemini indisponibles, position estimée : %s", exc)
-                _state["note"] = (
-                    f"Gemini embeddings error ({exc.status or 'network'}): "
-                    "positions estimated by Gemini."
-                )
-                candidates = _estimated(drafts, pairs, zone)
+            if provider == "claude" and measure_kind("claude") == "offline":
+                _state["note"] = "No embedding model: positions estimated by Claude."
+                candidates = _estimated(drafts, pairs, zone, "claude")
+            else:
+                try:
+                    candidates, _ = _measure(drafts, pairs, provider, zone)
+                    _state["note"] = ""
+                except gemini.GeminiError as exc:
+                    logger.warning("Embeddings Gemini indisponibles, position estimée : %s", exc)
+                    _state["note"] = (
+                        f"Gemini embeddings error ({exc.status or 'network'}): "
+                        "positions estimated by Gemini."
+                    )
+                    candidates = _estimated(drafts, pairs, zone)
             return [candidate for candidate in candidates if candidate.text not in known]
     bodies = {_body(text) for text in known}
     drafts = _draft_offline(pairs, seed, bodies, helper_name, patient_name)
@@ -525,7 +626,8 @@ def generate_candidates(
 
 def review_text(text: str) -> Review:
     """Format, effort et sûreté d'un message écrit ou modifié par l'aidant."""
-    if gemini.is_configured():
+    provider = generator()
+    if provider != "offline":
         schema = {
             "type": "object",
             "properties": {
@@ -538,13 +640,13 @@ def review_text(text: str) -> Review:
         formats = "\n".join(f"- {fmt.key}: {fmt.hint}" for fmt in FORMATS.values())
         prompt = f"Formats:\n{formats}\n\nMessage:\n{text}"
         try:
-            data = gemini.generate_json(REVIEW_SYSTEM, prompt, schema)
+            data = _generate_json(provider, REVIEW_SYSTEM, prompt, schema)
             fmt = data.get("format") if isinstance(data, dict) else None
             if fmt in FORMATS:
                 safe = bool(data.get("safe", True))
                 return Review(fmt, effort_of(fmt), safe, str(data.get("reason", "")))
-        except gemini.GeminiError as exc:
-            logger.warning("Relecture Gemini indisponible, règle locale utilisée : %s", exc)
+        except _LLM_ERRORS as exc:
+            logger.warning("Relecture %s indisponible, règle locale utilisée : %s", provider, exc)
     fmt = guess_format(text)
     safe = _UNSAFE.search(text.lower()) is None
     return Review(fmt, effort_of(fmt), safe, "" if safe else "matched a blocked topic")
@@ -598,7 +700,7 @@ def measure_message(
     Sur un intérêt commun, le texte prend le centre de `zone` (le joker), 0,5 sans zone.
     """
     review = review_text(text)
-    provider: Provider = "gemini" if gemini.is_configured() else "offline"
+    provider = generator()  # Claude n'a pas d'embeddings : son texte est mesuré en local
     try:
         pair, lam, off_topic = _measure_free_text(text, pairs, preferred, provider, zone)
     except gemini.GeminiError as exc:
