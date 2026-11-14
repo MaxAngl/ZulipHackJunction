@@ -107,7 +107,7 @@ function App() {
   if (route === 'demo') {
     content = <DemoScreen />
   } else if (route === 'home') {
-    content = <Landing />
+    content = <Landing onSignedIn={signIn} />
   } else if (route === 'login') {
     content = (
       <ScreenFrame showSettings={false}>

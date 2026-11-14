@@ -1,9 +1,13 @@
 """Application FastAPI. Lancer : uv run uvicorn backend.main:app --reload --port 8000"""
 
 import functools
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header
+from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import FileResponse
 
 from backend import portals
 from backend.community import Community
@@ -358,3 +362,39 @@ def patient_watch_link(body: WatchLinkRequest, user: Patient) -> WatchStatus:
 @app.delete("/api/app/patient/watch", responses=ERROR_RESPONSES)
 def patient_watch_unlink(user: Patient) -> WatchStatus:
     return get_watches().unlink(user)
+
+
+# --- Servir le frontend React buildé (mode tout-en-un et portail web) ---
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+if FRONTEND_DIST.is_dir():
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    icons_dir = FRONTEND_DIST / "icons"
+    if icons_dir.is_dir():
+        app.mount("/icons", StaticFiles(directory=icons_dir), name="icons")
+
+    moomins_dir = FRONTEND_DIST / "moomins"
+    if moomins_dir.is_dir():
+        app.mount("/moomins", StaticFiles(directory=moomins_dir), name="moomins")
+
+    @app.get("/", include_in_schema=False)
+    def serve_index():
+        index_file = FRONTEND_DIST / "index.html"
+        if index_file.is_file():
+            return FileResponse(index_file)
+        raise StarletteHTTPException(status_code=404, detail="Index not found")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def serve_frontend_spa(full_path: str):
+        if full_path.startswith("api/") or full_path == "api":
+            raise StarletteHTTPException(status_code=404, detail="Not Found")
+        file_path = FRONTEND_DIST / full_path
+        if full_path and file_path.is_file():
+            return FileResponse(file_path)
+        index_file = FRONTEND_DIST / "index.html"
+        if index_file.is_file():
+            return FileResponse(index_file)
+        raise StarletteHTTPException(status_code=404, detail="Not Found")

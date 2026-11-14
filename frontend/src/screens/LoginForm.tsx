@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ApiError, login, type SessionResponse } from '../api/client'
+import QuickLoginModal from '../components/QuickLoginModal'
 
 type LoginFormProps = {
   title?: string
@@ -20,6 +21,7 @@ function LoginForm({
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [showQuickLogin, setShowQuickLogin] = useState(false)
 
   async function submit() {
     setBusy(true)
@@ -80,11 +82,30 @@ function LoginForm({
       >
         {busy ? 'Signing in…' : 'Sign in'}
       </button>
+
+      <div className="login-quick-demo-divider">
+        <span>ou</span>
+      </div>
+
+      <button
+        type="button"
+        className="button button-ghost button-wide button-quick-demo"
+        onClick={() => setShowQuickLogin(true)}
+      >
+        ⚡ Connexion rapide (Démo 1 clic)
+      </button>
+
       {signupHref && (
         <p className="quiet text-center">
           New here? <a href={signupHref}>Create an account</a>
         </p>
       )}
+
+      <QuickLoginModal
+        isOpen={showQuickLogin}
+        onClose={() => setShowQuickLogin(false)}
+        onSignedIn={onSignedIn}
+      />
     </form>
   )
 }
