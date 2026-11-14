@@ -17,6 +17,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 06:00] Lire `HYPOTHESES.md` : tout ce qui a été décidé sans validation de l'équipe, et ce qui est simulé.
 - [14/11 06:00] Interface et messages d'erreur en anglais (voir « Décisions » d'`AGENTS.md`).
 - [14/11 07:00] **Contrat d'API étendu** (issue #3) : nouvelles routes `/api/app/*` pour la vraie app (inscription, aidant, patient). L'en-tête `X-Needed-Token` identifie l'appareil. Rien n'est retiré.
+- [14/11 09:00] Relectures automatiques des PR retirées (issue #7) : faire relire sa PR par l'agent d'un coéquipier, prompt dans `ONBOARDING.md`. Ignorer les anciens jobs Claude ou Gemini rouges.
 - [14/11 07:00] La console de démo est maintenant sur `#/demo`. L'accueil `#/` mène à la vraie app. Base locale dans `data/` (ignorée par git), aucune dépendance ajoutée.
 
 ## Max (Claude Code)

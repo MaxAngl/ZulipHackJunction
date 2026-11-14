@@ -35,7 +35,7 @@ Pas de rôle fixe : chacun prend des tâches, de préférence **de bout en bout*
 Pour ne pas se marcher dessus :
 - **Réserver** sa tâche en s'assignant l'issue GitHub avant de commencer (règle 2). C'est visible tout de suite par les autres, sans push ni pull.
 - **Une branche par tâche, mergée vite** (quelques heures au plus) : plus une branche vit longtemps, plus les conflits sont gros.
-- **On merge soi-même** sa PR dès que la CI est verte et qu'on a lu les relectures automatiques.
+- **On merge soi-même** sa PR dès que la CI est verte et que la relecture d'un coéquipier est traitée.
 - **Fichiers sensibles**, partagés par tout le monde : `backend/schemas.py`, `ml/model.py`, `AGENTS.md` et les configs à la racine. Annoncer dans `STATUS.md` (« À lire par tous ») **avant** de les modifier.
 
 ## Stack
@@ -141,9 +141,7 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 - **CI** (`.github/workflows/ci.yml`) : relance tous les hooks pre-commit sur chaque PR et chaque push sur `main`. On ne merge jamais une PR dont la CI est rouge.
 - **Context7** : serveur MCP `context7` qui donne la documentation à jour des librairies. Il est configuré dans `.mcp.json` (Claude) et `.gemini/settings.json` (Gemini). **Agents : avant d'écrire du code qui utilise l'API d'une librairie (FastAPI, Pydantic, React, Vite…), consultez Context7.** La stack est plus récente que vos connaissances. Il est utilisé sans clé API, donc avec des quotas bas : en cas d'erreur 429, le signaler dans `STATUS.md`.
-- **Relecture automatique des PR** : Claude (`claude-code-review.yml`, commentaires dans le code) et Gemini (`gemini-review.yml`, un commentaire de synthèse) relisent chaque PR à son ouverture. Lire ces relectures avant de merger. Si un job de relecture est rouge, c'est un souci de quota ou de clé, pas de code : seule la CI bloque le merge.
-  - Question ou deuxième passe par Claude : écrire `@claude …` dans un commentaire de la PR.
-  - Deuxième passe par Gemini : relancer le job « Gemini Review » depuis l'onglet Actions.
+- **Relecture croisée par les agents** (pas de relecture automatique sur GitHub) : l'auteur d'une PR demande à un coéquipier de la faire relire par son agent, idéalement l'autre modèle (Claude ↔ Gemini). **Agents relecteurs :** lisez le diff (`gh pr diff N`) et ce fichier, listez seulement les vrais problèmes (bugs, contrat d'API, règles de ce fichier) avec fichier et ligne, ne modifiez rien, et postez la relecture en commentaire (`gh pr comment N`).
 
 ## Conventions
 
@@ -192,7 +190,7 @@ Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 - 2026-11-14 — Interface et messages d'erreur en anglais — jury international ; les commentaires restent en français.
 - 2026-11-14 — Mesure λ = 0,5 + (a·p − a·h) / (2·(1 − p·h)), recalée sur chaque lot avec Gemini — le rapport a·p / (a·p + a·h) tasse tout autour de 0,5 avec de vrais embeddings.
 - 2026-11-14 — État de la démo en mémoire, un seul patient — pas de base de données tant que la boucle n'est pas validée.
-- 2026-11-13 — Relecture automatique des PR par Claude et par Gemini — deux modèles différents ne ratent pas les mêmes bugs.
+- 2026-11-14 — Pas de relecture automatique des PR : relecture croisée par l'agent d'un coéquipier, idéalement l'autre modèle — aucune clé API branchée sur GitHub, et deux modèles différents ne ratent pas les mêmes bugs.
 - 2026-11-13 — Context7 (MCP, sans clé) branché sur Claude et Gemini — la stack est plus récente que les connaissances des modèles.
 - 2026-11-13 — CI GitHub Actions qui relance les hooks pre-commit — filet de sécurité si les hooks locaux ne sont pas installés.
 - 2026-11-13 — Tâches dans GitHub Issues (s'assigner = réserver) et tout passe par des PR ; `STATUS.md` garde les annonces, blocages et notes de passation — visible en temps réel, sans attendre un push.
