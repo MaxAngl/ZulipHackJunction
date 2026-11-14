@@ -56,8 +56,9 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 
 ## Rami (Antigravity)
 
-- **En cours :** #33, branchage et robustesse de l'API Gemini (génération, embeddings, fallback modèles et endpoints régionaux).
-- **Bloqué :** En attente de la clé GEMINI_API_KEY fournie par l'utilisateur pour validation avec check_gemini en conditions réelles.
+- **En cours :** #33, branchage et validation de l'API Gemini.
+- **Bloqué :** —
 - **Notes pour la suite :**
   - #11 est mergée dans main.
-  - L'implémentation Gemini utilise par défaut `gemini-1.5-flash` et `text-embedding-004` avec repli automatique en cas de 404/400 et support d'endpoints régionaux/proxy (`GEMINI_API_ROOT`).
+  - #33 validée avec `check_gemini` : embeddings (gemini-embedding-001, dim 768), calcul de l'axe λ et génération de demandes JSON (gemini-flash-lite-latest) opérationnels de bout en bout.
+  - L'implémentation dispose de mécanismes de repli automatique en cas de quotas ou pannes réseau.
