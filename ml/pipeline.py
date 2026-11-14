@@ -28,6 +28,15 @@ MAX_TEXT_LENGTH = 400
 # sans rapport (« help me move a sofa ») contre des demandes sur le sujet (issue #69). Gemini :
 # reste à calibrer.
 MIN_RELEVANCE: dict[Measure, float] = {"offline": 0.03, "local": 0.25, "gemini": 0.0}
+
+# Joker (issue #71) : au-delà de cette ressemblance entre l'intérêt du patient et celui de
+# l'aidant, c'est le même intérêt. La position entre les deux n'a plus de sens (λ vaut 0,5 pour
+# tout texte, ou saute au hasard) : toute demande sur ce sujet commun est dans les intérêts du
+# patient, et elle est placée au centre de sa zone. Modèle local, mesuré : gardening × jardinage
+# 0,97, photography × photo 0,89, garden 0,88 passent ; knitting × sewing 0,82, baking × cooking
+# 0,76 non. Mots-clés : seuls deux noms identiques. Gemini : à calibrer.
+SHARED_SIMILARITY: dict[Measure, float] = {"offline": 0.99, "local": 0.85, "gemini": 0.9}
+JOKER_WITHOUT_ZONE = 0.5
 MIN_POINTS_TO_CALIBRATE = 4
 
 _UNSAFE = re.compile(
@@ -105,6 +114,22 @@ def lambda_position(
         return 0.0, True
     span = max(1e-6, 1.0 - cosine(p, h))
     return _clip(0.5 + (to_patient - to_helper) / (2.0 * span)), False
+
+
+def _same_name(pair: InterestPair) -> bool:
+    return " ".join(pair.patient_interest.lower().split()) == " ".join(
+        pair.helper_interest.lower().split()
+    )
+
+
+def _shared(pair: InterestPair, p: list[float], h: list[float], kind: Measure) -> bool:
+    """Le patient et l'aidant partagent-ils cet intérêt ? Même nom, ou sens très proche."""
+    return _same_name(pair) or cosine(p, h) >= SHARED_SIMILARITY[kind]
+
+
+def _joker(zone: Zone | None) -> float:
+    """Position d'une demande sur un intérêt commun : le centre de la zone du patient."""
+    return zone.center if zone is not None else JOKER_WITHOUT_ZONE
 
 
 def _calibrate(
@@ -380,9 +405,17 @@ def _vectors(
 
 
 def _measure(
-    drafts: list[_Draft], pairs: list[InterestPair], provider: Provider
-) -> list[Candidate]:
+    drafts: list[_Draft], pairs: list[InterestPair], provider: Provider, zone: Zone | None = None
+) -> tuple[list[Candidate], set[InterestPair]]:
+    """Mesure chaque demande. Renvoie aussi les paires d'intérêt commun (le joker)."""
     vectors, by_interest, kind = _vectors([draft.text for draft in drafts], pairs, provider)
+    shared = {
+        pair
+        for pair in pairs
+        if _shared(
+            pair, by_interest[pair.patient_interest], by_interest[pair.helper_interest], kind
+        )
+    }
     measured = [
         lambda_position(
             vector,
@@ -393,13 +426,22 @@ def _measure(
         for draft, vector in zip(drafts, vectors, strict=True)
     ]
     raws = [raw for raw, _ in measured]
+    # Une demande sur un intérêt commun n'a pas de vraie position : elle ne recale rien.
+    counted = [pairs[draft.pair_index] not in shared for draft in drafts]
     if kind == "gemini":
-        _calibrate(raws, [draft.intended for draft in drafts])
+        aims = [d.intended if keep else None for d, keep in zip(drafts, counted, strict=True)]
+        _calibrate(raws, aims)
     elif kind == "local":  # la banque annonce un niveau de mélange : même recalage que Gemini
-        _calibrate(raws, [draft.aim for draft in drafts], _local_scale)
+        aims = [d.aim if keep else None for d, keep in zip(drafts, counted, strict=True)]
+        _calibrate(raws, aims, _local_scale)
     candidates = []
     for draft, (raw, off_topic) in zip(drafts, measured, strict=True):
-        lam = 0.0 if off_topic else round(_rescaled(raw, kind), 3)
+        if off_topic:
+            lam = 0.0
+        elif pairs[draft.pair_index] in shared:
+            lam = round(_joker(zone), 3)
+        else:
+            lam = round(_rescaled(raw, kind), 3)
         candidates.append(
             Candidate(
                 id=uuid.uuid4().hex[:8],
@@ -414,16 +456,19 @@ def _measure(
                 axes=request_axes(lam, draft.format),
             )
         )
-    return candidates
+    return candidates, shared
 
 
-def _estimated(drafts: list[_Draft], pairs: list[InterestPair]) -> list[Candidate]:
+def _estimated(
+    drafts: list[_Draft], pairs: list[InterestPair], zone: Zone | None = None
+) -> list[Candidate]:
     """Sans embeddings : la position que Gemini dit avoir visée, à défaut la mesure par mots-clés.
 
     Mode dégradé. La mesure par mots-clés seule place mal les textes de Gemini (souvent 0 ou 1,
-    vu en réel) et la zone n'en garde presque aucun ; Gemini, lui, a écrit pour la zone.
+    vu en réel) et la zone n'en garde presque aucun ; Gemini, lui, a écrit pour la zone. Un
+    intérêt commun garde le joker.
     """
-    lexical = _measure(drafts, pairs, "offline")
+    lexical, shared = _measure(drafts, pairs, "offline", zone)
     return [
         replace(
             candidate,
@@ -432,7 +477,7 @@ def _estimated(drafts: list[_Draft], pairs: list[InterestPair]) -> list[Candidat
             provider="gemini",
             axes=request_axes(draft.intended, candidate.format),
         )
-        if draft.intended is not None
+        if draft.intended is not None and candidate.pair not in shared
         else candidate
         for candidate, draft in zip(lexical, drafts, strict=True)
     ]
@@ -462,7 +507,7 @@ def generate_candidates(
             _state["note"] = f"Gemini error ({exc.status or 'network'}): built-in bank used."
         else:
             try:
-                candidates = _measure(drafts, pairs, "gemini")
+                candidates, _ = _measure(drafts, pairs, "gemini", zone)
                 _state["note"] = ""
             except gemini.GeminiError as exc:
                 logger.warning("Embeddings Gemini indisponibles, position estimée : %s", exc)
@@ -470,11 +515,11 @@ def generate_candidates(
                     f"Gemini embeddings error ({exc.status or 'network'}): "
                     "positions estimated by Gemini."
                 )
-                candidates = _estimated(drafts, pairs)
+                candidates = _estimated(drafts, pairs, zone)
             return [candidate for candidate in candidates if candidate.text not in known]
     bodies = {_body(text) for text in known}
     drafts = _draft_offline(pairs, seed, bodies, helper_name, patient_name)
-    candidates = _measure(drafts, pairs, "offline")
+    candidates, _ = _measure(drafts, pairs, "offline", zone)
     return [candidate for candidate in candidates if candidate.text not in known]
 
 
@@ -506,7 +551,11 @@ def review_text(text: str) -> Review:
 
 
 def _measure_free_text(
-    text: str, pairs: list[InterestPair], preferred: InterestPair | None, provider: Provider
+    text: str,
+    pairs: list[InterestPair],
+    preferred: InterestPair | None,
+    provider: Provider,
+    zone: Zone | None = None,
 ) -> tuple[InterestPair, float, bool]:
     vectors, by_interest, kind = _vectors([text], pairs, provider)
 
@@ -522,7 +571,12 @@ def _measure_free_text(
             by_interest[pair.helper_interest],
             kind,
         )
-        return (0.0, True) if off_topic else (_rescaled(raw, kind), False)
+        if off_topic:
+            return 0.0, True
+        p, h = by_interest[pair.patient_interest], by_interest[pair.helper_interest]
+        if _shared(pair, p, h, kind):
+            return _joker(zone), False
+        return _rescaled(raw, kind), False
 
     if preferred is not None and not position(preferred)[1]:
         return preferred, *position(preferred)
@@ -531,22 +585,26 @@ def _measure_free_text(
 
 
 def measure_message(
-    text: str, pairs: list[InterestPair], preferred: InterestPair | None = None
+    text: str,
+    pairs: list[InterestPair],
+    preferred: InterestPair | None = None,
+    zone: Zone | None = None,
 ) -> tuple[Candidate, Review]:
     """Étape 8 : re-mesurer un message modifié ou écrit par l'aidant.
 
     `pairs` liste les paires possibles (intérêts du patient x intérêts de cet aidant). On garde
     `preferred` si le texte y est encore rattaché, sinon la paire la plus proche du texte.
     Un texte sans lien avec aucun centre d'intérêt reçoit la position 0 (tout côté aidant).
+    Sur un intérêt commun, le texte prend le centre de `zone` (le joker), 0,5 sans zone.
     """
     review = review_text(text)
     provider: Provider = "gemini" if gemini.is_configured() else "offline"
     try:
-        pair, lam, off_topic = _measure_free_text(text, pairs, preferred, provider)
+        pair, lam, off_topic = _measure_free_text(text, pairs, preferred, provider, zone)
     except gemini.GeminiError as exc:
         logger.warning("Mesure Gemini indisponible, mesure lexicale utilisée : %s", exc)
         provider = "offline"
-        pair, lam, off_topic = _measure_free_text(text, pairs, preferred, provider)
+        pair, lam, off_topic = _measure_free_text(text, pairs, preferred, provider, zone)
     candidate = Candidate(
         id=uuid.uuid4().hex[:8],
         text=text,
