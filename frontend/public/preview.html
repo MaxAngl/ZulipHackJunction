@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Needed · Aperçu iPhone 15 Pro (393 × 852 px)</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      :root {
+        --bg-studio: #0e0f12;
+        --card-bg: #18191e;
+        --border-studio: #282a32;
+        --accent: #00d8ff;
+        --text: #f0f0f5;
+        --text-muted: #8a8d9a;
+        --chassis-color: #2b2b2f;
+        --chassis-border: #4a4a52;
+        --screen-w: 393px;
+        --screen-h: 852px;
+        --scale: 0.95;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+          Arial, sans-serif;
+        background: var(--bg-studio);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow-x: auto;
+        background-image:
+          radial-gradient(
+            circle at 50% 15%,
+            rgba(0, 216, 255, 0.08) 0%,
+            transparent 60%
+          ),
+          linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        background-size:
+          100% 100%,
+          32px 32px,
+          32px 32px;
+      }
+
+      /* --- Barre d'outils supérieure --- */
+      header.toolbar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(20, 21, 26, 0.88);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border-studio);
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .brand-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .device-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(0, 216, 255, 0.12);
+        border: 1px solid rgba(0, 216, 255, 0.3);
+        color: var(--accent);
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .dim-tag {
+        color: var(--text-muted);
+        font-size: 0.82rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      .nav-tabs,
+      .zoom-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #121317;
+        padding: 4px;
+        border-radius: 10px;
+        border: 1px solid var(--border-studio);
+      }
+
+      .tab-btn {
+        font: inherit;
+        font-size: 0.82rem;
+        font-weight: 500;
+        padding: 6px 12px;
+        border-radius: 7px;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 140ms ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .tab-btn:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .tab-btn.active {
+        color: #000000;
+        background: var(--accent);
+        font-weight: 600;
+      }
+
+      .direct-link {
+        font-size: 0.82rem;
+        color: var(--text-muted);
+        text-decoration: none;
+        padding: 6px 10px;
+        border-radius: 6px;
+        transition: color 120ms;
+      }
+      .direct-link:hover {
+        color: var(--text);
+      }
+
+      /* --- Scène principale --- */
+      main.stage {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px 60px;
+        gap: 48px;
+        flex-wrap: wrap;
+      }
+
+      .phone-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        transform-origin: top center;
+        transition: transform 180ms ease;
+      }
+
+      .phone-label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      /* --- Châssis iPhone 15 Pro --- */
+      .iphone-15-pro {
+        position: relative;
+        width: calc(var(--screen-w) + 22px);
+        height: calc(var(--screen-h) + 22px);
+        background: linear-gradient(
+          135deg,
+          #44454d 0%,
+          #1f2024 45%,
+          #2a2a30 100%
+        );
+        border-radius: 54px;
+        padding: 11px;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.12),
+          0 25px 60px -15px rgba(0, 0, 0, 0.85),
+          0 40px 90px -25px rgba(0, 216, 255, 0.15);
+        user-select: none;
+      }
+
+      /* Boutons matériels sur les côtés */
+      /* Action button */
+      .iphone-15-pro::before {
+        content: '';
+        position: absolute;
+        left: -3px;
+        top: 115px;
+        width: 3px;
+        height: 26px;
+        background: #3a3b42;
+        border-radius: 2px 0 0 2px;
+        box-shadow: inset 1px 0 1px rgba(255, 255, 255, 0.2);
+      }
+
+      /* Volume buttons & Power button */
+      .btn-vol-up,
+      .btn-vol-down,
+      .btn-power {
+        position: absolute;
+        background: #3a3b42;
+        box-shadow: inset 1px 0 1px rgba(255, 255, 255, 0.2);
+      }
+      .btn-vol-up {
+        left: -3px;
+        top: 160px;
+        width: 3px;
+        height: 50px;
+        border-radius: 2px 0 0 2px;
+      }
+      .btn-vol-down {
+        left: -3px;
+        top: 220px;
+        width: 3px;
+        height: 50px;
+        border-radius: 2px 0 0 2px;
+      }
+      .btn-power {
+        right: -3px;
+        top: 175px;
+        width: 3px;
+        height: 75px;
+        border-radius: 0 2px 2px 0;
+      }
+
+      /* Écran interne 393 × 852 px */
+      .screen-container {
+        position: relative;
+        width: var(--screen-w);
+        height: var(--screen-h);
+        border-radius: 46px;
+        overflow: hidden;
+        background: #fefaef; /* couleur crème de Needed */
+        border: 1px solid rgba(0, 0, 0, 0.5);
+      }
+
+      /* Dynamic Island */
+      .dynamic-island {
+        position: absolute;
+        top: 11px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 124px;
+        height: 35px;
+        background: #000000;
+        border-radius: 20px;
+        z-index: 50;
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 12px;
+      }
+      .di-camera {
+        width: 11px;
+        height: 11px;
+        background: #11141c;
+        border: 1.5px solid #20242f;
+        border-radius: 50%;
+        margin-left: auto;
+      }
+
+      /* Status Bar iOS */
+      .status-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 52px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 26px 0;
+        color: #0a0a0a;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        z-index: 40;
+        pointer-events: none;
+      }
+
+      .status-icons {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .status-icons svg {
+        fill: currentColor;
+      }
+
+      /* Home Indicator (barre de balayage iOS) */
+      .home-indicator {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 136px;
+        height: 5px;
+        background: rgba(10, 10, 10, 0.85);
+        border-radius: 4px;
+        z-index: 50;
+        pointer-events: none;
+      }
+
+      /* Iframe hébergeant l'application */
+      .screen-frame {
+        width: 100%;
+        height: 100%;
+        border: none;
+        display: block;
+        /* Marge haute pour que la Dynamic Island ne masque pas le haut de page */
+        padding-top: 24px;
+        background: transparent;
+      }
+
+      /* Pied de page informatif */
+      footer.info-bar {
+        border-top: 1px solid var(--border-studio);
+        padding: 12px 24px;
+        text-align: center;
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        background: #121317;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Barre d'outils -->
+    <header class="toolbar">
+      <div class="brand-meta">
+        <span class="device-badge">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="5" y="2" width="14" height="20" rx="4"></rect>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+          </svg>
+          iPhone 15 Pro
+        </span>
+        <span class="dim-tag">393 × 852 px (19.5:9)</span>
+      </div>
+
+      <!-- Sélecteur de routes -->
+      <nav class="nav-tabs" aria-label="Routes de l'application">
+        <button class="tab-btn active" data-hash="">🏠 Accueil</button>
+        <button class="tab-btn" data-hash="helper">🤝 Aidant (Helper)</button>
+        <button class="tab-btn" data-hash="patient">🌱 Patient</button>
+        <button class="tab-btn" data-hash="demo">🔁 Démo Boucle</button>
+        <button class="tab-btn" data-hash="clinician">🩺 Clinicien</button>
+        <button class="tab-btn" data-hash="admin">🛡️ Admin</button>
+        <button class="tab-btn" data-hash="settings">⚙️ Paramètres</button>
+        <button class="tab-btn" id="btn-duo">👥 Mode Duo (2 téléphones)</button>
+      </nav>
+
+      <!-- Échelle de zoom -->
+      <div class="zoom-controls">
+        <button class="tab-btn" data-scale="0.8">80%</button>
+        <button class="tab-btn active" data-scale="0.92">92%</button>
+        <button class="tab-btn" data-scale="1">100% (1:1)</button>
+      </div>
+
+      <a href="/#/" class="direct-link" target="_blank" rel="noreferrer"
+        >Ouvrir l'app plein écran ↗</a
+      >
+    </header>
+
+    <!-- Zone de prévisualisation -->
+    <main class="stage" id="stage">
+      <!-- Téléphone 1 (Principal) -->
+      <div
+        class="phone-wrapper"
+        id="phone-1-wrap"
+        style="transform: scale(0.92)"
+      >
+        <span class="phone-label" id="phone-1-label">Vue courante</span>
+
+        <div class="iphone-15-pro">
+          <div class="btn-vol-up"></div>
+          <div class="btn-vol-down"></div>
+          <div class="btn-power"></div>
+
+          <div class="screen-container">
+            <!-- Dynamic Island -->
+            <div class="dynamic-island">
+              <div class="di-camera"></div>
+            </div>
+
+            <!-- Status Bar iOS -->
+            <div class="status-bar">
+              <span>9:41</span>
+              <div class="status-icons">
+                <!-- Signal cellulaire -->
+                <svg width="16" height="12" viewBox="0 0 16 12">
+                  <rect x="0" y="8" width="2.5" height="4" rx="0.5"></rect>
+                  <rect x="4" y="6" width="2.5" height="6" rx="0.5"></rect>
+                  <rect x="8" y="3" width="2.5" height="9" rx="0.5"></rect>
+                  <rect x="12" y="0" width="2.5" height="12" rx="0.5"></rect>
+                </svg>
+                <!-- Wi-Fi -->
+                <svg
+                  width="15"
+                  height="11"
+                  viewBox="0 0 16 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                >
+                  <path d="M1 3a13 13 0 0 1 14 0"></path>
+                  <path d="M4 6.5a8.5 8.5 0 0 1 8 0"></path>
+                  <circle cx="8" cy="10" r="1" fill="currentColor"></circle>
+                </svg>
+                <!-- Batterie -->
+                <svg
+                  width="22"
+                  height="11"
+                  viewBox="0 0 24 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  rx="3"
+                >
+                  <rect x="1" y="1" width="19" height="10" rx="2.5"></rect>
+                  <rect
+                    x="2.5"
+                    y="2.5"
+                    width="14"
+                    height="7"
+                    rx="1.5"
+                    fill="currentColor"
+                  ></rect>
+                  <path d="M22 4.5v3" stroke-linecap="round"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Contenu iframe -->
+            <iframe id="app-frame-1" class="screen-frame" src="/#/"></iframe>
+
+            <!-- Home indicator -->
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Téléphone 2 (visible uniquement en Mode Duo) -->
+      <div
+        class="phone-wrapper"
+        id="phone-2-wrap"
+        style="display: none; transform: scale(0.92)"
+      >
+        <span class="phone-label">Patient (Aino)</span>
+
+        <div class="iphone-15-pro">
+          <div class="btn-vol-up"></div>
+          <div class="btn-vol-down"></div>
+          <div class="btn-power"></div>
+
+          <div class="screen-container">
+            <div class="dynamic-island">
+              <div class="di-camera"></div>
+            </div>
+
+            <div class="status-bar">
+              <span>9:41</span>
+              <div class="status-icons">
+                <svg width="16" height="12" viewBox="0 0 16 12">
+                  <rect x="0" y="8" width="2.5" height="4" rx="0.5"></rect>
+                  <rect x="4" y="6" width="2.5" height="6" rx="0.5"></rect>
+                  <rect x="8" y="3" width="2.5" height="9" rx="0.5"></rect>
+                  <rect x="12" y="0" width="2.5" height="12" rx="0.5"></rect>
+                </svg>
+                <svg
+                  width="15"
+                  height="11"
+                  viewBox="0 0 16 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                >
+                  <path d="M1 3a13 13 0 0 1 14 0"></path>
+                  <path d="M4 6.5a8.5 8.5 0 0 1 8 0"></path>
+                  <circle cx="8" cy="10" r="1" fill="currentColor"></circle>
+                </svg>
+                <svg
+                  width="22"
+                  height="11"
+                  viewBox="0 0 24 12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  rx="3"
+                >
+                  <rect x="1" y="1" width="19" height="10" rx="2.5"></rect>
+                  <rect
+                    x="2.5"
+                    y="2.5"
+                    width="14"
+                    height="7"
+                    rx="1.5"
+                    fill="currentColor"
+                  ></rect>
+                  <path d="M22 4.5v3" stroke-linecap="round"></path>
+                </svg>
+              </div>
+            </div>
+
+            <iframe
+              id="app-frame-2"
+              class="screen-frame"
+              src="/#/patient"
+            ></iframe>
+            <div class="home-indicator"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="info-bar">
+      Simulateur de rendu fidèle à la viewport Apple iPhone 15 Pro (Logic
+      Resolution 393 × 852 pt, ratio 19.5:9, iOS 17/18).
+    </footer>
+
+    <script>
+      const frame1 = document.getElementById('app-frame-1')
+      const frame2 = document.getElementById('app-frame-2')
+      const phone1Wrap = document.getElementById('phone-1-wrap')
+      const phone2Wrap = document.getElementById('phone-2-wrap')
+      const phone1Label = document.getElementById('phone-1-label')
+      const tabBtns = document.querySelectorAll('.tab-btn[data-hash]')
+      const btnDuo = document.getElementById('btn-duo')
+      const zoomBtns = document.querySelectorAll('.zoom-controls .tab-btn')
+
+      let isDuo = false
+
+      // Gestion du changement de route
+      tabBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          tabBtns.forEach((b) => b.classList.remove('active'))
+          btnDuo.classList.remove('active')
+          btn.classList.add('active')
+
+          isDuo = false
+          phone2Wrap.style.display = 'none'
+          phone1Label.textContent = btn.textContent
+
+          const hash = btn.dataset.hash
+          frame1.src = hash ? `/#/${hash}` : '/#/'
+        })
+      })
+
+      // Mode Duo (Aidant + Patient côte à côte)
+      btnDuo.addEventListener('click', () => {
+        tabBtns.forEach((b) => b.classList.remove('active'))
+        btnDuo.classList.add('active')
+
+        isDuo = true
+        phone1Label.textContent = 'Aidant (Mikko)'
+        frame1.src = '/#/helper'
+        frame2.src = '/#/patient'
+        phone2Wrap.style.display = 'flex'
+      })
+
+      // Gestion du zoom / échelle
+      zoomBtns.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          zoomBtns.forEach((b) => b.classList.remove('active'))
+          btn.classList.add('active')
+          const scale = btn.dataset.scale
+          phone1Wrap.style.transform = `scale(${scale})`
+          phone2Wrap.style.transform = `scale(${scale})`
+        })
+      })
+    </script>
+  </body>
+</html>

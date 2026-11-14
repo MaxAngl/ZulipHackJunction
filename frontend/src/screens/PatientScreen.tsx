@@ -1,5 +1,9 @@
 import { useState } from 'react'
-import { declineRequest, getPatientHome, replyToRequest } from '../api/client'
+import { getPatientHome } from '../api/client'
+import BottomNav, { type TabType } from '../components/BottomNav'
+import ChatView from '../components/ChatView'
+import ProfileView from '../components/ProfileView'
+import { readUserProfile, savePatientCommunityNeed } from '../session'
 import ScreenFrame from './ScreenFrame'
 import { useHome } from './useHome'
 
@@ -8,11 +12,12 @@ type PatientScreenProps = {
   onLeave: () => void
 }
 
-// L'écran du patient, dans la vraie app : une demande venue d'une personne, sa réponse, puis
-// ce que cette personne en a fait. On ne lui pose aucune question sur son état.
+// L'écran du patient, dans la vraie app. Il répond aux demandes et peut aussi exprimer un besoin.
 function PatientScreen({ token, onLeave }: PatientScreenProps) {
-  const { home, error, busy, run } = useHome(token, getPatientHome, onLeave)
-  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const { home, error } = useHome(token, getPatientHome, onLeave)
+  const [activeTab, setActiveTab] = useState<TabType>('messages')
+  const [patientNeed, setPatientNeed] = useState('')
+  const [sentNeedFeedback, setSentNeedFeedback] = useState(false)
 
   if (!home) {
     return (
@@ -22,8 +27,47 @@ function PatientScreen({ token, onLeave }: PatientScreenProps) {
     )
   }
 
+  const profile = readUserProfile('patient')
+  const unreadCount = home.inbox.length
+
+  function handleSendNeed() {
+    if (!patientNeed.trim()) return
+    const needText = patientNeed.trim()
+    savePatientCommunityNeed({
+      id: `need-${Date.now()}`,
+      patientName:
+        profile && `${profile.firstName} ${profile.lastName}`.trim()
+          ? `${profile.firstName} ${profile.lastName}`.trim()
+          : (home?.user.name ?? 'Test1 Patient'),
+      patientAvatar: profile?.avatarUrl ?? '/moomins/Muumipeikko2.jpg',
+      text: needText,
+      timestamp: new Date().toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      answered: false,
+    })
+    setSentNeedFeedback(true)
+    setPatientNeed('')
+    setTimeout(() => {
+      setSentNeedFeedback(false)
+      setActiveTab('messages')
+    }, 2000)
+  }
+
   return (
-    <ScreenFrame name={home.user.name} onLeave={onLeave}>
+    <ScreenFrame
+      name={home.user.name}
+      avatarUrl={profile?.avatarUrl}
+      onLeave={onLeave}
+      bottomNav={
+        <BottomNav
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          unreadBadge={unreadCount}
+        />
+      }
+    >
       <main className="stack">
         {error && (
           <p className="error" role="alert">
@@ -31,76 +75,54 @@ function PatientScreen({ token, onLeave }: PatientScreenProps) {
           </p>
         )}
 
-        {home.inbox.length === 0 && (
-          <section className="stack">
-            <h1>Nothing for now.</h1>
-            <p className="quiet">
-              When someone needs a hand, you will see it here.
+        {/* Onglet 1 : Faire une demande (côté patient) */}
+        {activeTab === 'request' && (
+          <section className="stack text-center section-centered">
+            <h1 className="text-center">Need a hand for something?</h1>
+            <p className="quiet text-center">
+              You can also share a small question, ask for a recipe tip, or
+              request a quick hand from your trusted community circle.
             </p>
+
+            <div className="card-patient-ask stack">
+              <textarea
+                rows={4}
+                value={patientNeed}
+                placeholder="e.g. Could someone recommend a quiet park walk in Helsinki, or give a tip on sourdough starter?"
+                aria-label="Your request to community"
+                onChange={(e) => setPatientNeed(e.target.value)}
+              />
+              <div className="button-center-wrap">
+                <button
+                  type="button"
+                  className="button button-primary button-wide"
+                  disabled={patientNeed.trim() === ''}
+                  onClick={handleSendNeed}
+                >
+                  Share with community
+                </button>
+              </div>
+              {sentNeedFeedback && (
+                <span className="success-pill">
+                  ✓ Your request was discreetly shared with your helper circle!
+                </span>
+              )}
+            </div>
           </section>
         )}
 
-        {home.inbox.map((request) => (
-          <section key={request.id} className="stack">
-            <p className="eyebrow">{request.with_name} is asking you</p>
-            <p className="bubble bubble-in bubble-big">{request.text}</p>
-            <textarea
-              value={drafts[request.id] ?? ''}
-              rows={4}
-              placeholder="Write your answer"
-              aria-label={`Your answer to ${request.with_name}`}
-              onChange={(event) =>
-                setDrafts((current) => ({
-                  ...current,
-                  [request.id]: event.target.value,
-                }))
-              }
-            />
-            <div className="row">
-              <button
-                type="button"
-                className="button button-primary"
-                disabled={busy || (drafts[request.id] ?? '').trim() === ''}
-                onClick={() =>
-                  void run(() =>
-                    replyToRequest(token, request.id, drafts[request.id] ?? ''),
-                  )
-                }
-              >
-                Send answer
-              </button>
-              <button
-                type="button"
-                className="button button-ghost"
-                disabled={busy}
-                onClick={() =>
-                  void run(() => declineRequest(token, request.id))
-                }
-              >
-                Not now
-              </button>
-            </div>
-          </section>
-        ))}
+        {/* Onglet 2 : Messagerie libre & multimédia */}
+        {activeTab === 'messages' && (
+          <ChatView
+            role="patient"
+            userName={home.user.name}
+            onStartNewRequest={() => setActiveTab('request')}
+          />
+        )}
 
-        {home.past.length > 0 && (
-          <section className="stack">
-            <h2>You helped</h2>
-            <ul className="thread">
-              {home.past.map((request) => (
-                <li key={request.id} className="thread-item">
-                  <p className="eyebrow">{request.with_name} asked</p>
-                  <p className="bubble bubble-plain">{request.text}</p>
-                  <p className="bubble bubble-out">{request.reply}</p>
-                  {request.thanks && (
-                    <p className="note">
-                      <strong>{request.with_name}:</strong> {request.thanks}
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
+        {/* Onglet 3 : Mon profil */}
+        {activeTab === 'profile' && (
+          <ProfileView role="patient" name={home.user.name} onLeave={onLeave} />
         )}
       </main>
     </ScreenFrame>
