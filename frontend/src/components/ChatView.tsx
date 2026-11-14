@@ -368,15 +368,6 @@ function ChatView({
             ✓ Helped me
           </button>
         )}
-        {role === 'helper' && activeThread.thanked && onStartNewRequest && (
-          <button
-            type="button"
-            className="button button-primary button-small"
-            onClick={onStartNewRequest}
-          >
-            + New request
-          </button>
-        )}
       </div>
 
       {activeThread.thanked && (
