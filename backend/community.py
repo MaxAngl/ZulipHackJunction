@@ -174,6 +174,17 @@ class Community:
 
     def helper_home(self, helper: User) -> schemas.HelperHome:
         saved = self.store.suggestions(helper.id)
+        if saved:
+            # Si le patient suggéré a déjà été aidé entre temps, on nettoie les suggestions
+            helped_ids = {
+                request.patient_id for request in self.store.requests_of("helper", helper.id)
+            }
+            patients = [patient for patient in self.store.patients() if patient.id != helper.id]
+            unhelped = [p for p in patients if p.id not in helped_ids]
+            if unhelped and saved[0] in helped_ids:
+                self.store.clear_suggestions(helper.id)
+                saved = None
+
         patient = self.store.user(saved[0]) if saved else None
         proposals = []
         if saved and patient:
@@ -422,11 +433,18 @@ class Community:
 
         Mariages stables entre les patients libres et tous les aidants (`ml/matching.py`). Un
         aidant resté sans patient reçoit le patient libre qui attend depuis le plus longtemps.
+        Une fois qu'un aidant a aidé une personne, elle ne revient pas dans ses recommandations
+        tant qu'il reste d'autres personnes à aider dans la communauté (diversification).
         """
         patients = [patient for patient in self.store.patients() if patient.id != helper.id]
         if not patients:
             return None
-        free = [patient for patient in patients if self._pending(patient) is None] or patients
+
+        helped_ids = {request.patient_id for request in self.store.requests_of("helper", helper.id)}
+        unhelped = [p for p in patients if p.id not in helped_ids]
+        candidates = unhelped if unhelped else patients
+
+        free = [patient for patient in candidates if self._pending(patient) is None] or candidates
 
         now = time.time()
         matched = stable_match(
@@ -435,7 +453,20 @@ class Community:
             {patient.id: now - self._last_asked(patient) for patient in free},
         )
         partner = next((patient for patient in free if matched.get(patient.id) == helper.id), None)
-        return partner or min(free, key=self._last_asked)
+        if partner:
+            return partner
+
+        # Si tout le monde a été aidé, on tourne vers le plus anciennement sollicité par lui
+        if not unhelped:
+            return min(free, key=lambda p: self._last_asked_by_helper(helper, p))
+        return min(free, key=self._last_asked)
+
+    def _last_asked_by_helper(self, helper: User, patient: User) -> float:
+        """Date de la dernière demande de cet aidant à ce patient."""
+        reqs = [
+            r for r in self.store.requests_of("helper", helper.id) if r.patient_id == patient.id
+        ]
+        return reqs[-1].created_at if reqs else patient.created_at
 
     def _last_asked(self, patient: User) -> float:
         """Date de la dernière demande ; jamais sollicité : il attend depuis son inscription."""

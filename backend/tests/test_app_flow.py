@@ -172,11 +172,50 @@ def test_a_never_asked_patient_waits_from_their_sign_up(monkeypatch: pytest.Monk
     aino = account(community.store, "patient", "Aino", ["gardening"])
     helper = account(community.store, "helper", "Mikko", ["cooking"])
     now["t"] = 150.0
-    _waiting_request(community.store, helper.id, aino.id, 0.64, "answered")
+    _waiting_request(community.store, "prior_helper", aino.id, 0.64, "answered")
     now["t"] = 300.0
     account(community.store, "patient", "Bob", ["gardening"])
 
     assert community.suggest(helper).patient_name == "Aino"
+
+
+def test_helping_a_patient_recommends_other_patients_to_multiply_help():
+    """Une fois qu'un aidant a aidé une personne, elle ne revient plus dans ses recommandations
+
+    tant qu'il reste d'autres personnes à aider.
+    """
+    community = Community(Store(":memory:"))
+    account(community.store, "patient", "Lucas", ["biking"])
+    account(community.store, "patient", "Sofia", ["painting"])
+    account(community.store, "patient", "Julien", ["gardening"])
+    clara = account(community.store, "helper", "Clara", ["cooking"])
+
+    # 1. Première recommandation
+    home1 = community.suggest(clara)
+    first_patient = home1.patient_name
+    assert first_patient in ("Lucas", "Sofia", "Julien")
+    proposal_id = home1.proposals[0].id if home1.proposals else None
+    community.send(clara, proposal_id, "Bonjour !")
+
+    # 2. Deuxième recommandation : le premier patient aidé ne revient pas !
+    home2 = community.suggest(clara)
+    second_patient = home2.patient_name
+    assert second_patient != first_patient
+    assert second_patient in ("Lucas", "Sofia", "Julien")
+    proposal_id = home2.proposals[0].id if home2.proposals else None
+    community.send(clara, proposal_id, "Bonjour !")
+
+    # 3. Troisième recommandation : les 2 premiers ont été aidés, il ne reste que le 3ème
+    home3 = community.suggest(clara)
+    third_patient = home3.patient_name
+    assert third_patient not in (first_patient, second_patient)
+    assert third_patient in ("Lucas", "Sofia", "Julien")
+    proposal_id = home3.proposals[0].id if home3.proposals else None
+    community.send(clara, proposal_id, "Bonjour !")
+
+    # 4. Tous les patients ont été aidés : rotation vers le plus ancien (le premier aidé)
+    home4 = community.suggest(clara)
+    assert home4.patient_name == first_patient
 
 
 def test_each_helper_is_offered_the_patient_sharing_their_interests():
