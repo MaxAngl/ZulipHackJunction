@@ -15,9 +15,9 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 API_ROOT = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_MODEL = "gemini-1.5-flash"
-DEFAULT_EMBED_MODEL = "text-embedding-004"
-TIMEOUT_SECONDS = 25
+DEFAULT_MODEL = "gemini-flash-lite-latest"
+DEFAULT_EMBED_MODEL = "gemini-embedding-001"
+TIMEOUT_SECONDS = 15
 
 
 class GeminiError(Exception):
@@ -116,7 +116,9 @@ def generate_json(system: str, prompt: str, schema: dict[str, Any]) -> Any:
     ]
     model = generation_model()
     candidates = list(
-        dict.fromkeys([model, "gemini-1.5-flash", "gemini-2.0-flash", "gemini-flash-latest"])
+        dict.fromkeys(
+            [model, "gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-flash-latest"]
+        )
     )
     last_error = GeminiError(0, "aucune tentative")
     for m in candidates:
@@ -127,8 +129,8 @@ def generate_json(system: str, prompt: str, schema: dict[str, Any]) -> Any:
                 return _parse_json_text(_first_text(data))
             except GeminiError as exc:
                 last_error = exc
-                if exc.status == 404:
-                    # Modèle non supporté ou introuvable sur cet endpoint, essayer le modèle suivant
+                if exc.status in (404, 503, 429):
+                    # Modèle surchargé, indisponible ou quota : essayer le modèle suivant
                     break
                 if exc.status != 400:
                     raise
@@ -145,9 +147,7 @@ def _embed_batch(texts: list[str]) -> list[list[float]]:
         {"taskType": "SEMANTIC_SIMILARITY", "outputDimensionality": 768},
         {},
     ]
-    candidates = list(
-        dict.fromkeys([model, "text-embedding-004", "embedding-001", "gemini-embedding-001"])
-    )
+    candidates = list(dict.fromkeys([model, "gemini-embedding-001", "text-embedding-004"]))
     last_error = GeminiError(0, "aucune tentative")
     for m in candidates:
         for extra in variants:

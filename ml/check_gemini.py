@@ -29,7 +29,7 @@ def main() -> None:
         print(f"OK embeddings : {len(vectors)} vecteurs de dimension {len(vectors[0])}")
     except gemini.GeminiError as exc:
         print(f"ÉCHEC embeddings : {exc}")
-        print("  -> essayez GEMINI_EMBED_MODEL=text-embedding-004 dans .env")
+        print("  -> essayez GEMINI_EMBED_MODEL=gemini-embedding-001 dans .env")
         return
 
     print("Mesure λ sur trois phrases de référence (attendu : haut, moyen, bas) :")
@@ -42,7 +42,7 @@ def main() -> None:
     live = [candidate for candidate in candidates if candidate.provider == "gemini"]
     if not live:
         print("ÉCHEC génération : la banque hors ligne a pris le relais (voir les logs).")
-        print("  -> essayez un autre modèle avec GEMINI_MODEL=gemini-1.5-flash dans .env")
+        print("  -> essayez un autre modèle avec GEMINI_MODEL=gemini-flash-lite-latest dans .env")
         return
     inside = [c for c in live if zone.contains(c.lam, c.effort)]
     print(f"OK génération : {len(live)} demandes, dont {len(inside)} dans la zone")
