@@ -5,9 +5,7 @@ Ces tests ne prouvent pas que la vraie API répond comme attendu (pour cela :
 lit les réponses, écarte ce qui est invalide et bascule hors ligne en cas d'erreur.
 """
 
-import io
 import json
-import urllib.error
 from typing import Any
 
 import pytest
@@ -93,6 +91,7 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeGemini:
     api = FakeGemini()
     monkeypatch.setattr("ml.gemini.api_key", lambda: "test-key")
     monkeypatch.setattr("ml.gemini._post", api.post)
+    monkeypatch.setattr("ml.gemini.time.sleep", lambda _seconds: None)  # pas d'attente réelle
     monkeypatch.setattr("ml.embedding._gemini_cache", {})
     monkeypatch.setattr("ml.pipeline._scale", {"gain": 1.0, "shift": 0.0})
     return api
@@ -165,32 +164,50 @@ def test_a_written_message_is_reviewed_and_measured_with_gemini(fake: FakeGemini
     assert 0.5 < measured.lam < 1.0
 
 
-def _overloaded(monkeypatch: pytest.MonkeyPatch, failures: int) -> list[str]:
-    """Remplace le réseau : `failures` réponses 503, puis une réponse normale."""
+def _busy_then_fine(monkeypatch: pytest.MonkeyPatch, failures: int) -> list[str]:
+    """Remplace l'appel réseau : `failures` réponses 503, puis des embeddings normaux."""
     calls: list[str] = []
 
-    def urlopen(request, timeout):
-        calls.append(request.full_url)
+    def post(path: str, body: dict[str, Any]) -> dict[str, Any]:
+        calls.append(path)
         if len(calls) <= failures:
-            raise urllib.error.HTTPError(request.full_url, 503, "busy", {}, io.BytesIO(b"busy"))
-        return io.BytesIO(b'{"ok": true}')
+            raise gemini.GeminiError(503, "busy")
+        return {"embeddings": [{"values": [1.0, 0.0]} for _ in body["requests"]]}
 
     monkeypatch.setattr("ml.gemini.api_key", lambda: "test-key")
-    monkeypatch.setattr("urllib.request.urlopen", urlopen)
-    monkeypatch.setattr("time.sleep", lambda _seconds: None)
+    monkeypatch.setattr("ml.gemini._post", post)
+    monkeypatch.setattr("ml.gemini.time.sleep", lambda _seconds: None)
     return calls
 
 
-def test_a_passing_overload_is_retried(monkeypatch: pytest.MonkeyPatch):
-    """Vu en réel : le modèle répond 503 quand il est surchargé, puis répond normalement."""
-    calls = _overloaded(monkeypatch, failures=1)
-    assert gemini._post("models/any:generateContent", {}) == {"ok": True}
+def test_an_overloaded_embedding_call_is_retried(monkeypatch: pytest.MonkeyPatch):
+    """Vu en réel : Gemini répond 503 quand il est surchargé, puis répond normalement.
+
+    Pour les embeddings, on réessaie au lieu de changer de modèle : un autre modèle changerait
+    l'échelle de la mesure de position.
+    """
+    calls = _busy_then_fine(monkeypatch, failures=1)
+    assert gemini.embed(["gardening", "cooking"]) == [[1.0, 0.0], [1.0, 0.0]]
     assert len(calls) == 2
 
 
 def test_a_lasting_overload_ends_in_an_error_after_three_tries(monkeypatch: pytest.MonkeyPatch):
-    calls = _overloaded(monkeypatch, failures=10)
+    calls = _busy_then_fine(monkeypatch, failures=10)
     with pytest.raises(gemini.GeminiError) as caught:
-        gemini._post("models/any:generateContent", {})
+        gemini.embed(["gardening"])
     assert caught.value.status == 503
     assert len(calls) == 3
+
+
+def test_a_generated_request_reads_like_a_normal_message():
+    """Vu en réel : le modèle léger oublie parfois la majuscule et la ponctuation finale."""
+    from ml.pipeline import _tidy
+
+    assert _tidy("could you explain how you grow basil indoors") == (
+        "Could you explain how you grow basil indoors?"
+    )
+    assert _tidy("  tell me about  your first garden ") == "Tell me about your first garden."
+    assert (
+        _tidy("Which herb goes best with tomato soup?") == "Which herb goes best with tomato soup?"
+    )
+    assert _tidy("") == ""

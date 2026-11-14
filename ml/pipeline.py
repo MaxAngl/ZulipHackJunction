@@ -44,6 +44,8 @@ what they like or know.
 Rules:
 - Write in the asker's voice, first person, addressed to the recipient.
 - One or two sentences, at most 220 characters. Concrete and specific.
+- Write it as a normal message: a capital letter at the start, a question mark or a full stop \
+at the end.
 - No greeting, no name, no emoji, no exclamation mark.
 - Never mention health, mood, wellbeing, therapy, recovery, AI or the app itself.
 - Never ask for money, personal data, or medical or legal advice.
@@ -235,6 +237,24 @@ def _generation_schema(pair_count: int) -> dict[str, Any]:
     }
 
 
+_QUESTION_START = re.compile(
+    r"^(could|can|would|will|do|does|did|is|are|was|were|have|has|what|which|how|when|where|who|why)\b",
+    re.IGNORECASE,
+)
+
+
+def _tidy(text: str) -> str:
+    """Majuscule au début, ponctuation à la fin. Vu en réel : le modèle léger les oublie parfois,
+    et la demande arrive telle quelle sur le téléphone du patient."""
+    text = " ".join(text.split())
+    if not text:
+        return text
+    text = text[0].upper() + text[1:]
+    if text[-1] not in ".?!…":
+        text += "?" if _QUESTION_START.match(text) else "."
+    return text
+
+
 def _draft_with_gemini(
     pairs: list[InterestPair], zone: Zone, helper_name: str, patient_name: str, avoid: list[str]
 ) -> list[_Draft]:
@@ -245,7 +265,7 @@ def _draft_with_gemini(
     for item in items:
         if not isinstance(item, dict):
             continue
-        text = str(item.get("text", "")).strip()
+        text = _tidy(str(item.get("text", "")))
         pair_index = item.get("pair")
         if not text or len(text) > MAX_TEXT_LENGTH or pair_index not in range(len(pairs)):
             continue

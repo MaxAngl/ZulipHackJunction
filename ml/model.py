@@ -139,7 +139,7 @@ def load_env_file(path: Path | None = None) -> None:
     if not env_path.is_file():
         return
     for line in env_path.read_text(encoding="utf-8").splitlines():
-        entry = line.strip()
+        entry = line.strip().removeprefix("export ").strip()
         if not entry or entry.startswith("#") or "=" not in entry:
             continue
         key, _, value = entry.partition("=")

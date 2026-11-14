@@ -36,7 +36,7 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 15:30] Résultat en boucle fermée sur des patients jamais vus : le réseau B fait nettement mieux que la règle fixe. Chiffres et limites : `docs/modele.md`, section 14. Tout est simulé.
 - [14/11 15:30] Pour réentraîner : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`, puis `uv run python -m ml.nets.train` et `uv run python -m ml.nets.evaluate`. Une dizaine de minutes sur CPU.
 - **Bloqué :** —
-- [14/11 17:00] Gemini testé en réel avec la clé de l'équipe (#36) : tout fonctionne avec le modèle léger `gemini-flash-lite-latest`, devenu le modèle par défaut. La clé va dans `.env` (jamais dans git) ; la demander à Max. Vérifier chez soi : `uv run python -m ml.check_gemini`.
+- [14/11 17:00] Gemini testé en réel dans la console, avec la zone du réseau B (#36) : trois propositions à plusieurs états du patient, message libre retenu, demande d'argent refusée. Le modèle léger par défaut et le repli vers un autre modèle viennent de #33 (Rami) ; #36 ajoute les formats permis dans le prompt et une nouvelle tentative sur les embeddings. La clé va dans `.env` (jamais dans git) ; la demander à Max. Vérifier chez soi : `uv run python -m ml.check_gemini`.
 - **Notes pour la suite :**
   - Données simulées : `uv run python -m ml.simulation` écrit `ml/data/sim` (hors git). Le sens de chaque colonne est dans `meta.json`, les règles dans `docs/modele.md`, section 12.
   - Les choix de θ, de L et de la récompense sont délégués à Claude et attendent une relecture de l'équipe (section 11).
@@ -60,8 +60,12 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Le repli hors ligne (trigrammes de lettres) ne comprend pas le sens : « ski » et « montagne » n'y sont pas proches. Il ne sert qu'à ne jamais casser sans clé Gemini.
   - Un profil enregistré n'est pas recalculé si les intérêts changent : supprimer sa ligne dans la table `profiles` pour le recalculer.
 
-## _<prénom C>_
+## Rami (Antigravity)
 
-- **En cours :** —
+- **En cours :** #31 (évolutions et finitions UI/UX de la page aidant) et #33 (branchage et validation de l'API Gemini).
 - **Bloqué :** —
-- **Notes pour la suite :** —
+- **Notes pour la suite :**
+  - #11 est mergée dans main.
+  - Page aidant : sélection de profil interactive, affichage des hobbies, propositions IA dédiées, bouton « Send mine » centré et suppression de « Not now ».
+  - L'inscription applique les contraintes de Max (max 40 car., max 8 intérêts).
+  - #33 validée avec `check_gemini` : embeddings (gemini-embedding-001, dim 768), calcul de l'axe λ et génération de demandes JSON (gemini-flash-lite-latest) opérationnels de bout en bout avec mécanismes de repli automatique.
