@@ -160,10 +160,8 @@ function App() {
     <>
       <InAppNotificationBanner />
       {content}
-      {/* La mascotte se promène dans la communauté, pas dans les portails ni la console. */}
-      {route !== 'demo' && route !== 'clinician' && route !== 'admin' && (
-        <Mascot />
-      )}
+      {/* La mascotte se promène dans la communauté (aidant, patient), pas sur les pages de connexion, portails ou console. */}
+      {(route === 'helper' || route === 'patient') && <Mascot />}
     </>
   )
 }
