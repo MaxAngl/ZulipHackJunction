@@ -49,14 +49,14 @@ La dernière commande doit afficher uniquement des `Passed`.
 ## 2. La boucle de travail
 
 ```
-issue  →  s'assigner  →  branche  →  coder avec l'agent  →  PR  →  CI + relectures  →  merge
+issue  →  s'assigner  →  branche  →  coder avec l'agent  →  PR  →  CI + relecture  →  merge
 ```
 
 1. **Choisir une tâche** dans les issues libres, ou en créer une. **S'assigner l'issue = la réserver** : les autres le voient tout de suite.
 2. **Créer une branche** depuis `main` à jour : `prenom/12-sujet` (12 = numéro de l'issue).
 3. **Coder avec ton agent.** Petits commits. Le hook pre-commit formate, lint, vérifie les types et lance les tests à chaque commit.
-4. **Ouvrir une PR** qui contient `Closes #12`. La CI relance toutes les vérifications ; Claude et Gemini relisent la PR automatiquement.
-5. **Merger soi-même** dès que la CI est verte et qu'on a lu les relectures. Viser une PR mergée toutes les 2 à 3 heures : plus une branche vit, plus les conflits font mal.
+4. **Ouvrir une PR** qui contient `Closes #12`. La CI relance toutes les vérifications. Demande à un coéquipier de la faire relire par son agent, idéalement l'autre modèle (Claude ↔ Gemini).
+5. **Merger soi-même** dès que la CI est verte et que la relecture est traitée. Viser une PR mergée toutes les 2 à 3 heures : plus une branche vit, plus les conflits font mal.
 
 On ne pousse **jamais** directement sur `main`.
 
@@ -89,9 +89,16 @@ mets à jour mon bloc de STATUS.md, commit, push, puis ouvre la PR avec « Close
 en remplissant le modèle de PR.
 ```
 
+**Relire la PR d'un coéquipier**
+```
+Relis la PR #15 comme un relecteur exigeant : lis le diff (gh pr diff 15) et AGENTS.md,
+puis liste seulement les vrais problèmes (bugs, contrat d'API, règles d'AGENTS.md),
+avec fichier et ligne. Ne modifie rien, et poste ta relecture en commentaire (gh pr comment 15).
+```
+
 **Traiter les retours**
 ```
-Lis la CI (gh pr checks) et les commentaires de relecture de la PR #15.
+Lis la CI (gh pr checks) et les commentaires de la PR #15.
 Corrige ce qui est justifié, et dis-moi ce que tu ignores et pourquoi.
 ```
 
@@ -120,10 +127,8 @@ rencontrés, pour que la prochaine session (ou un coéquipier) reprenne sans con
 |---|---|
 | Chaque commit | Hook pre-commit : format (ruff, prettier), lint (ruff, oxlint), types (tsc), tests du contrat API et ML, refus des fichiers de plus de 5 Mo |
 | Chaque PR et chaque push sur `main` | CI GitHub : les mêmes vérifications, sur une machine propre |
-| Ouverture d'une PR | Relecture par Claude (commentaires dans le code) et par Gemini (un commentaire de synthèse) |
-| `@claude …` dans un commentaire | Claude répond ou corrige sur la PR |
 
-Une relecture en rouge = souci de quota ou de clé, pas de code. **Seule la CI bloque un merge.**
+La relecture n'est pas automatique : elle passe par l'agent d'un coéquipier (voir les prompts). **La CI rouge bloque un merge.**
 
 ## 5. Quand ça coince
 
