@@ -14,7 +14,6 @@ from backend import schemas
 from backend.community import Community
 from backend.errors import ApiError
 from backend.store import User
-from ml.model import theta_from_watch
 
 PAIRING_SECONDS = 600
 WATCH_REPLY = "Yes, happy to help! (answered from my watch)"
@@ -45,6 +44,12 @@ class WatchDevice:
 
 def _first(rows: list[sqlite3.Row]) -> sqlite3.Row | None:
     return rows[0] if rows else None
+
+
+def measured(reading: schemas.WatchReading) -> dict[str, float]:
+    """Les signaux réellement mesurés, sous leurs noms de θ (ml/simulation/spec.py)."""
+    values = reading.model_dump(exclude={"local_hour"})
+    return {name: float(value) for name, value in values.items() if value is not None}
 
 
 def _new_code(taken: set[str]) -> str:
@@ -146,16 +151,18 @@ class Watches:
         return WatchDevice(token, patient)
 
     def sync(self, device: WatchDevice, reading: schemas.WatchReading) -> schemas.WatchHome:
-        """La montre envoie ses mesures : on les garde, on réestime θ, on renvoie la demande."""
-        signals = reading.model_dump(exclude={"local_hour"})
-        theta = theta_from_watch(signals, reading.local_hour)
+        """La montre envoie ses mesures : gardées, elles entrent dans θ ; on renvoie la demande."""
         self.store._run(
             "UPDATE watches SET last_seen = ?, last_reading = ? WHERE token = ?",
             (time.time(), reading.model_dump_json(), device.token),
         )
-        if theta is not None:
-            self.community.push_state(device.patient, theta)
+        self.community.push_reading(device.patient, measured(reading))
         return self.home(device.patient)
+
+    def record(self, patient: User, reading: schemas.WatchReading) -> schemas.WatchStatus:
+        """Mesures envoyées pour le patient par un autre moyen que l'app montre (`garmin read`)."""
+        self.community.push_reading(patient, measured(reading))
+        return self.status(patient)
 
     def answer(self, device: WatchDevice, request_id: str, accept: bool) -> schemas.WatchHome:
         if accept:

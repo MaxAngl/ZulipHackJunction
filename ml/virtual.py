@@ -35,6 +35,9 @@ class VirtualPatient:
         )  # ce qui bouge tout seul, corrélé d'un jour à l'autre
         self._boost = np.zeros(len(COMPONENTS))  # ce qui reste des demandes passées
         self.level = float(level)
+        # Dernière valeur connue de chaque signal réellement mesuré (la montre, par exemple) :
+        # elle remplace celle du simulateur dans chaque relevé, jusqu'à la mesure suivante.
+        self._real: dict[str, float] = {}
         self.theta = np.empty((0, len(SIGNALS)), dtype=np.float32)
         self.states: list[np.ndarray] = []  # l'état caché de chaque jour vécu
         for _ in range(REFERENCE_DAYS):
@@ -91,6 +94,16 @@ class VirtualPatient:
         """Une journée sans demande."""
         self._live_one_day()
 
+    def measure(self, values: dict[str, float]) -> None:
+        """Des signaux réellement relevés, par exemple par la montre, à l'instant présent.
+
+        Ils remplacent ceux du simulateur dans le dernier relevé, puis restent leur dernière
+        valeur connue dans les relevés suivants (docs/modele.md, section 11). Le simulateur ne
+        complète que ce qui n'est pas mesuré.
+        """
+        self._real.update(values)
+        _overwrite(self.theta[-1:], values)
+
     # --- Intérieur ---------------------------------------------------------------------------
 
     def _live_one_day(self, decay: bool = True, measured: dict[str, float] | None = None) -> None:
@@ -106,8 +119,13 @@ class VirtualPatient:
             traits=self._traits,
         )
         snapshots = observe(self._rng, one, state[None, None, :])[0]
-        for name, value in (measured or {}).items():
-            signal = SIGNALS[signal_index(name)]
-            snapshots[:, signal_index(name)] = np.clip(value, signal.low, signal.high)
+        _overwrite(snapshots, {**self._real, **(measured or {})})
         self.theta = np.concatenate([self.theta, snapshots])
         self.states.append(state)
+
+
+def _overwrite(snapshots: np.ndarray, values: dict[str, float]) -> None:
+    """Remplace des colonnes de relevés par des valeurs mesurées, ramenées à leurs bornes."""
+    for name, value in values.items():
+        signal = SIGNALS[signal_index(name)]
+        snapshots[:, signal_index(name)] = np.clip(value, signal.low, signal.high)

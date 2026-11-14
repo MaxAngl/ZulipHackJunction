@@ -117,7 +117,7 @@ ml/
   lexicon.py         # mode hors ligne : banque de demandes et mesure par mots-clés
   formats.py         # grille fixe des formats et de leur effort
   check_gemini.py    # vérification de la clé Gemini
-  watch.py           # θ provisoire à partir d'un relevé de la montre, en attendant l'autoencodeur
+  watch.py           # état estimé hors ligne d'un relevé de la montre (affichage de `garmin read`)
   simulation/        # données simulées : θ, état caché, patient simulé, journal d'épisodes (docs/modele.md, 11 et 12)
   nets/              # les trois réseaux : features, models, train, policy, evaluate, runtime (docs/modele.md, 13 et 14)
   weights/           # poids entraînés et leurs mesures, VERSIONNÉS (moins d'1 Mo) : personne n'a à réentraîner
@@ -207,7 +207,7 @@ Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
 - 2026-11-14 — Montre Garmin lue par Garmin Connect avec la bibliothèque non officielle `garminconnect` (nouvelle dépendance), sans app sur la montre — la montre se synchronise déjà en Bluetooth avec le téléphone ; l'API santé officielle de Garmin demande un partenariat de plusieurs semaines.
 - 2026-11-14 — App Connect IQ sur la montre (`watch/`), liée au patient par un code à 6 chiffres saisi dans l'écran patient, avec un jeton propre à la montre ; elle envoie ses mesures et traite la demande en attente (`/api/watch/*`) — pas de jeton à recopier, et délier la montre ne déconnecte pas le téléphone. Elle n'envoie rien quand elle est fermée.
-- 2026-11-14 — En attendant l'autoencodeur, `ml/watch.py` tire un seul `theta` d'un relevé de la montre en inversant le générateur de `ml/simulation` pour une personne moyenne — l'app n'accepte qu'un nombre ; règle provisoire, sans normalisation par personne.
+- 2026-11-14 — Les vraies mesures de la montre entrent dans θ (`VirtualPatient.measure`) : elles remplacent celles du simulateur et restent la dernière valeur connue ; l'autoencodeur lit L(θ) dessus — le corps virtuel ne complète que ce que la montre ne mesure pas. La normale par personne reste celle du corps virtuel, à recalculer sur l'historique réel.
 - 2026-11-14 — L'app tourne sur les réseaux : état L(θ), zone à six axes, récompense de 0 à 100, vecteur du patient. `backend/sensor.py` est supprimé — remplacé par `ml/virtual.py`, un patient virtuel tiré du même simulateur que les données d'entraînement ; c'est la seule partie encore simulée.
 - 2026-11-14 — Cinq des six positions d'une demande viennent de son format (`ml/formats.py`), posées à la main — aucun modèle ne note encore une demande axe par axe ; la position entre les intérêts reste mesurée sur le texte.
 - 2026-11-14 — Nouvelle dépendance `torch`, en version CPU — les trois réseaux font 82 000 paramètres et s'entraînent en sept minutes sur un portable ; la version GPU pèserait plusieurs Go pour rien.

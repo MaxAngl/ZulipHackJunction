@@ -3,7 +3,7 @@
     uv run python -m garmin login              # une fois, dans ton terminal (mot de passe, MFA)
     uv run python -m garmin read               # lit Garmin Connect, affiche le relevé et l'état
     uv run python -m garmin read --simulate    # pareil avec une montre simulée (--level 0.3)
-    uv run python -m garmin read --push        # envoie aussi l'état au patient de la vraie app
+    uv run python -m garmin read --push        # envoie aussi les mesures au patient (dans θ)
 
 Pour --push : le jeton du patient (NEEDED_PATIENT_TOKEN dans .env, ou --token) se lit dans la
 console du navigateur du patient : localStorage.getItem('needed.token.patient').
@@ -27,16 +27,18 @@ from ml.watch import Estimate, estimate
 DEFAULT_API = "http://localhost:8000"
 
 
-def push_theta(api_url: str, token: str, theta: float) -> None:
-    """Pousse l'état sur la route prévue pour un capteur externe."""
+def push_reading(api_url: str, token: str, reading: Reading, hour: float) -> dict:
+    """Envoie les mesures réelles au patient : elles entrent dans θ, l'app relit L(θ)."""
+    body = {"local_hour": round(hour, 2)}
+    body.update({name: value for name, value in reading.items() if value is not None})
     request = urllib.request.Request(
-        f"{api_url.rstrip('/')}/api/app/patient/state",
-        data=json.dumps({"theta": round(theta, 4)}).encode(),
+        f"{api_url.rstrip('/')}/api/app/patient/reading",
+        data=json.dumps(body).encode(),
         headers={"Content-Type": "application/json", "X-Needed-Token": token},
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=10) as response:
-        response.read()
+        return json.load(response)
 
 
 def _garmin_reading(now: datetime) -> Reading | None:
@@ -73,10 +75,10 @@ def _show(reading: Reading, result: Estimate, source: str) -> None:
     print("Composantes estimées (0 = au plus mal, 1 = au mieux)")
     for name, value in result.components.items():
         print(f"  {name:<24} {value:8.2f}")
-    print(f"θ provisoire = {result.theta:.2f}")
+    print(f"θ provisoire, calculé hors ligne = {result.theta:.2f}")
 
 
-def _push(args: argparse.Namespace, theta: float) -> int:
+def _push(args: argparse.Namespace, reading: Reading, hour: float) -> int:
     token = args.token or os.environ.get("NEEDED_PATIENT_TOKEN")
     if not token:
         print("Jeton du patient manquant : --token, ou NEEDED_PATIENT_TOKEN dans .env.")
@@ -84,19 +86,19 @@ def _push(args: argparse.Namespace, theta: float) -> int:
         return 1
     api_url = args.api or os.environ.get("NEEDED_API_URL") or DEFAULT_API
     try:
-        push_theta(api_url, token, theta)
+        status = push_reading(api_url, token, reading, hour)
     except urllib.error.HTTPError as error:
         body = error.read().decode(errors="replace")
         try:
             message = json.loads(body)["error"]["message"]
         except (ValueError, KeyError, TypeError):
             message = body
-        print(f"L'app a refusé l'état ({error.code}) : {message}")
+        print(f"L'app a refusé les mesures ({error.code}) : {message}")
         return 1
     except urllib.error.URLError as error:
         print(f"L'app ne répond pas sur {api_url} : {error.reason}")
         return 1
-    print(f"θ = {theta:.2f} envoyé au patient sur {api_url}")
+    print(f"Mesures envoyées sur {api_url}. État lu par l'autoencodeur : {status['theta']:.2f}")
     return 0
 
 
@@ -118,7 +120,7 @@ def _read(args: argparse.Namespace) -> int:
         print("Aucun signal exploitable : la montre s'est-elle synchronisée avec le téléphone ?")
         return 1
     _show(reading, result, source)
-    return _push(args, result.theta) if args.push else 0
+    return _push(args, reading, hour) if args.push else 0
 
 
 def main(argv: list[str] | None = None) -> int:
