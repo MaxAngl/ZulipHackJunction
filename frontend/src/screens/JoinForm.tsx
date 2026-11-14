@@ -281,16 +281,21 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
   }
 
   function toggle(interest: string) {
-    setInterests((current) =>
-      current.includes(interest)
-        ? current.filter((item) => item !== interest)
-        : [...current, interest],
-    )
+    setInterests((current) => {
+      if (current.includes(interest)) {
+        return current.filter((item) => item !== interest)
+      }
+      if (current.length >= 8) {
+        return current
+      }
+      return [...current, interest]
+    })
   }
 
   function addCustom() {
-    const value = custom.trim().toLowerCase()
+    const value = custom.trim().toLowerCase().slice(0, 40)
     if (value && !interests.includes(value)) {
+      if (interests.length >= 8) return
       setInterests((current) => [...current, value])
     }
     setCustom('')
@@ -300,8 +305,16 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
     setBusy(true)
     setError(null)
     try {
-      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
-      const session = await join(role, fullName, interests)
+      const fullName = `${firstName.trim()} ${lastName.trim()}`
+        .trim()
+        .slice(0, 40)
+      const cleanedInterests = Array.from(
+        new Set(
+          interests.map((item) => item.trim().toLowerCase()).filter(Boolean),
+        ),
+      ).slice(0, 8)
+
+      const session = await join(role, fullName, cleanedInterests)
       saveToken(role, session.token)
 
       const finalAvatar = rawPhoto
@@ -614,6 +627,11 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
       <div className="field">
         <span>
           {COPY[role].ask} <span className="required-asterisk">*</span>
+          <span
+            style={{ fontSize: '0.8rem', color: '#666', marginLeft: '6px' }}
+          >
+            ({interests.length}/8)
+          </span>
         </span>
         <div className="chips">
           {options.map((interest) => (
@@ -624,6 +642,7 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
                 interests.includes(interest) ? 'chip chip-on' : 'chip chip-off'
               }
               aria-pressed={interests.includes(interest)}
+              disabled={!interests.includes(interest) && interests.length >= 8}
               onClick={() => toggle(interest)}
             >
               {interest}
@@ -635,8 +654,13 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
             type="text"
             value={custom}
             maxLength={40}
-            placeholder="Add your own"
+            placeholder={
+              interests.length >= 8
+                ? 'Maximum 8 interests reached'
+                : 'Add your own'
+            }
             aria-label="Add your own interest"
+            disabled={interests.length >= 8}
             onChange={(event) => setCustom(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
@@ -648,7 +672,7 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
           <button
             type="button"
             className="button"
-            disabled={custom.trim() === ''}
+            disabled={custom.trim() === '' || interests.length >= 8}
             onClick={addCustom}
           >
             Add
