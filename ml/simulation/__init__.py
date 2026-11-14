@@ -5,6 +5,6 @@ Tout ce que ces données « savent » vient des règles écrites ici : elles ser
 point la machinerie d'apprentissage, pas à prouver quoi que ce soit sur de vrais patients.
 """
 
-from ml.simulation.generate import Dataset, generate, save
+from ml.simulation.generate import Dataset, generate, population, save, subset
 
-__all__ = ["Dataset", "generate", "save"]
+__all__ = ["Dataset", "generate", "population", "save", "subset"]

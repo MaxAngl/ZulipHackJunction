@@ -24,7 +24,9 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 
 ## Max (Claude Code)
 
-- **En cours :** #15, les données simulées (PR ouverte, à faire relire).
+- **En cours :** #20, la frappe dans θ et la simulation pilotable (PR ouverte, à faire relire). Ensuite : les trois réseaux et leur entraînement, puis leur branchement dans l'app, pour minuit.
+- [14/11 15:00] θ passe de 22 à 25 signaux (frappe et réactivité), rangés par modalité. **Régénérer les données** après le prochain `git pull` : `uv run python -m ml.simulation --people 5000 --days 84 --out ml/data/sim_big`. Les 22 anciens signaux et le journal sont identiques pour une même graine.
+- [14/11 15:00] Je travaille dans une copie séparée, `C:\dev\hackaton-max` (`git worktree`), pour ne pas changer de branche sous les pieds de quelqu'un dans `C:\dev\hackaton`.
 - **Bloqué :** pas de clé Gemini sur la machine, donc la connexion à Gemini n'est pas testée en réel. Mettre la clé dans `.env`, puis `uv run python -m ml.check_gemini`.
 - **Notes pour la suite :**
   - Données simulées : `uv run python -m ml.simulation` écrit `ml/data/sim` (hors git). Le sens de chaque colonne est dans `meta.json`, les règles dans `docs/modele.md`, section 12.
