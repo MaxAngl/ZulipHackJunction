@@ -1,9 +1,11 @@
 """Application FastAPI. Lancer : uv run uvicorn backend.main:app --reload --port 8000"""
 
 import functools
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import Depends, FastAPI, Header
+from fastapi.staticfiles import StaticFiles
 
 from backend import portals
 from backend.community import Community
@@ -358,3 +360,13 @@ def patient_watch_link(body: WatchLinkRequest, user: Patient) -> WatchStatus:
 @app.delete("/api/app/patient/watch", responses=ERROR_RESPONSES)
 def patient_watch_unlink(user: Patient) -> WatchStatus:
     return get_watches().unlink(user)
+
+
+# --- Le front buildé, à la même adresse que l'API (mise en ligne, issue #59) -----------------
+
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+
+if FRONTEND_DIST.is_dir():
+    # Monté en dernier : les routes /api passent avant. Les écrans de l'app sont des adresses
+    # en #/… : le serveur n'a à servir que index.html et des fichiers.
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="front")

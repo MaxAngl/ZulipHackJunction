@@ -1,0 +1,16 @@
+# Mise en ligne gratuite sur Render (issue #59), en « Blueprint » : Render lit ce fichier,
+# construit le Dockerfile et redéploie à chaque push sur main.
+# Formule gratuite : 512 Mo de mémoire (l'app en prend environ 250), mise en veille après
+# 15 minutes sans visite (une minute pour se réveiller), disque effacé à chaque redémarrage.
+services:
+  - type: web
+    name: needed
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      # À saisir dans Render (Environment), jamais dans git.
+      - key: GEMINI_API_KEY
+        sync: false
