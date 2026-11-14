@@ -83,16 +83,12 @@ function LoginForm({
         {busy ? 'Signing in…' : 'Sign in'}
       </button>
 
-      <div className="login-quick-demo-divider">
-        <span>ou</span>
-      </div>
-
       <button
         type="button"
-        className="button button-ghost button-wide button-quick-demo"
+        className="button-quick-demo"
         onClick={() => setShowQuickLogin(true)}
       >
-        ⚡ Connexion rapide (Démo 1 clic)
+        Try a demo account
       </button>
 
       {signupHref && (

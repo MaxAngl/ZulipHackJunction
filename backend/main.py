@@ -20,6 +20,7 @@ from backend.schemas import (
     ClinicianHome,
     ClinicianNotes,
     DeclineRequest,
+    DemoAccount,
     ErrorResponse,
     FeedbackRequest,
     HealthResponse,
@@ -178,6 +179,12 @@ def signup(body: SignupRequest) -> SessionResponse:
 def login(body: LoginRequest) -> SessionResponse:
     """Connexion de tout compte : aidant, patient, clinicien ou admin."""
     return get_community().login(body.email, body.password)
+
+
+@app.get("/api/app/demo/accounts")
+def demo_accounts() -> list[DemoAccount]:
+    """Comptes de démo (`@needed.demo`) pour la connexion rapide de l'accueil."""
+    return get_community().demo_accounts()
 
 
 @app.post("/api/app/logout", responses=ERROR_RESPONSES)

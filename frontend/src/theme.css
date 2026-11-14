@@ -500,109 +500,165 @@ button.chip.chip-on {
   stroke: var(--grid);
 }
 
-/* --- Modale de Connexion Rapide (Hackathon Démo 1-Clic) -------------------------------- */
+/* --- Connexion rapide de la démo (issue #76) ------------------------------------------ */
 
+/* Ce qui l'ouvre : un lien souligné sous les vrais boutons, pas un bouton de plus */
 .button-quick-demo {
-  border: var(--stroke) dashed var(--cyan, #00d8ff);
-  background: rgba(0, 216, 255, 0.08);
+  align-self: center;
+  padding: var(--space-2);
+  background: transparent;
+  border: none;
   color: var(--ink);
+  font: inherit;
   font-weight: 700;
-  transition: all 0.15s ease;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.hero .button-quick-demo {
+  color: #0a0a0a;
 }
 
 .button-quick-demo:hover {
-  background: var(--cyan, #00d8ff);
-  color: #0a0a0a;
-  border-style: solid;
+  text-decoration-thickness: var(--stroke);
 }
 
-.login-quick-demo-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: var(--space-2) 0;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.quick-login-headline {
+/* La feuille : le papier et son cadre ; seule la liste défile */
+.quick-login-sheet {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-4);
+  max-height: min(720px, calc(100dvh - 40px));
 }
 
-.quick-login-tabs {
+.quick-login-head {
   display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  padding-bottom: var(--space-2);
-  border-bottom: var(--stroke-thin) solid var(--rule);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
-.quick-tab {
+.quick-login-head h2 {
+  margin: var(--space-1) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+/* Les rôles : contour fin, cyan plein quand c'est choisi, comme les centres d'intérêt */
+.quick-login-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.quick-login-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
   background: transparent;
   border: var(--stroke-thin) solid var(--rule);
+  border-radius: var(--radius-inner);
   color: var(--ink);
+  font: inherit;
   font-size: var(--text-sm);
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: var(--radius);
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.12s ease;
 }
 
-.quick-tab:hover {
-  background: rgba(0, 0, 0, 0.05);
+.quick-login-group.active {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  color: #0a0a0a;
 }
 
-.quick-tab.active {
-  background: var(--ink);
-  color: var(--bg);
+.quick-login-count {
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
-.quick-people-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  max-height: 52vh;
+/* La liste : des lignes séparées par un filet ; la ligne survolée prend l'aplat cyan */
+.quick-login-list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
   overflow-y: auto;
-  padding-right: var(--space-1);
+  list-style: none;
+  border-top: var(--stroke) solid var(--rule);
 }
 
-.quick-person-card {
+.quick-login-list > li.quiet {
+  padding: var(--space-4) 0;
+}
+
+.quick-login-row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3);
-  background: var(--bg);
-  border: var(--stroke-thin) solid var(--rule);
-  border-radius: var(--radius);
+  width: 100%;
+  padding: var(--space-3) var(--space-2);
+  background: transparent;
+  border: none;
+  border-bottom: var(--stroke-thin) solid var(--rule);
+  border-radius: 0;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.quick-person-card:hover {
-  border-color: var(--cyan);
-  background: rgba(0, 216, 255, 0.04);
+.quick-login-row:hover:not(:disabled),
+.quick-login-row:focus-visible {
+  background: var(--cyan);
+  color: #0a0a0a;
+  outline: none;
 }
 
-.quick-person-card.busy {
-  opacity: 0.6;
-  pointer-events: none;
+.quick-login-row:disabled {
+  cursor: wait;
 }
 
-.quick-person-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: var(--stroke-thin) solid var(--rule);
+/* Les avatars de la base (backend/seed.py) : cyan sur noir pour les patients, noir sur cyan
+   pour les aidants, l'encre en contour pour l'équipe */
+.quick-login-initials {
+  display: grid;
+  place-items: center;
   flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border: var(--stroke) solid #0a0a0a;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
-.quick-person-content {
+.quick-login-patient {
+  background: #0a0a0a;
+  color: var(--cyan);
+}
+
+.quick-login-helper {
+  background: var(--cyan);
+  color: #0a0a0a;
+}
+
+.quick-login-clinician,
+.quick-login-admin {
+  background: transparent;
+  border-color: currentColor;
+}
+
+[data-theme='dark'] .quick-login-patient {
+  border-color: var(--rule);
+}
+
+.quick-login-who {
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -610,83 +666,27 @@ button.chip.chip-on {
   min-width: 0;
 }
 
-.quick-person-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.quick-person-header strong {
-  font-size: var(--text-md);
-  font-weight: 700;
-  white-space: nowrap;
+.quick-login-who strong,
+.quick-login-meta {
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.quick-badge {
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 1px 6px;
-  border-radius: var(--radius);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
-.badge-helper {
-  background: #e6f4ea;
-  color: #137333;
-  border: 1px solid #137333;
-}
-
-.badge-patient {
-  background: #f3e8fd;
-  color: #7b1fa2;
-  border: 1px solid #7b1fa2;
-}
-
-.badge-staff {
-  background: #e8f0fe;
-  color: #1a73e8;
-  border: 1px solid #1a73e8;
-}
-
-.quick-person-city {
-  font-size: var(--text-sm);
+.quick-login-meta {
   color: var(--muted);
-}
-
-.quick-person-tags {
-  display: flex;
-  gap: var(--space-1);
-  flex-wrap: wrap;
-  margin-top: 2px;
-}
-
-.quick-tag {
-  font-size: 0.72rem;
-  background: rgba(0, 0, 0, 0.05);
-  color: var(--ink);
-  padding: 1px 6px;
-  border-radius: var(--radius);
-}
-
-.quick-person-bio {
   font-size: var(--text-sm);
-  color: var(--ink);
-  margin: 3px 0 0 0;
-  line-height: 1.35;
-  white-space: normal;
 }
 
-.quick-person-action {
+.quick-login-row:hover:not(:disabled) .quick-login-meta,
+.quick-login-row:focus-visible .quick-login-meta {
+  color: #0a0a0a;
+}
+
+.quick-login-go {
   flex-shrink: 0;
-}
-
-.quick-login-footer {
-  padding-top: var(--space-2);
-  border-top: var(--stroke-thin) solid var(--rule);
+  font-size: var(--text-lg);
+  font-weight: 700;
 }
 
 /* --- Édition des Hobbies & Photo dans le profil -------------------------------- */

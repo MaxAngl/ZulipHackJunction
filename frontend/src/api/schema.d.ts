@@ -201,6 +201,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/app/demo/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Demo Accounts
+         * @description Comptes de démo (`@needed.demo`) pour la connexion rapide de l'accueil.
+         */
+        get: operations["demo_accounts_api_app_demo_accounts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/app/logout": {
         parameters: {
             query?: never;
@@ -1037,6 +1057,27 @@ export interface components {
         DeclineRequest: {
             /** Request Id */
             request_id: string;
+        };
+        /**
+         * DemoAccount
+         * @description Un compte de démo (`@needed.demo`), tel que la connexion rapide de l'accueil le montre.
+         */
+        DemoAccount: {
+            /** Email */
+            email: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "helper" | "patient" | "clinician" | "admin";
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            /** City */
+            city: string;
+            /** Interests */
+            interests: string[];
         };
         /** ErrorDetail */
         ErrorDetail: {
@@ -2435,6 +2476,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    demo_accounts_api_app_demo_accounts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoAccount"][];
                 };
             };
         };
