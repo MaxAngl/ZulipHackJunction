@@ -43,7 +43,7 @@ Pour ne pas se marcher dessus :
 
 - **Backend** : Python 3.12, FastAPI, Pydantic v2, uvicorn. Gestionnaire : **uv** (jamais `pip install`).
 - **ML** : Python 3.12, dans le même environnement uv que le backend. `numpy` pour les données simulées, `torch` en version CPU pour les réseaux (l'index PyTorch CPU est déclaré dans `pyproject.toml` : `uv sync` suffit, ne pas installer torch à la main).
-- **IA générative** : API Gemini appelée en REST avec la bibliothèque standard (`ml/gemini.py`), sans SDK. Clé dans `.env` (`GEMINI_API_KEY`). Sans clé, ou si Gemini échoue, `ml/lexicon.py` prend le relais.
+- **IA générative** : API Gemini appelée en REST avec la bibliothèque standard (`ml/gemini.py`), sans SDK. Clé dans `.env` (`GEMINI_API_KEY`). Modèle par défaut : `gemini-flash-lite-latest`, le moins gourmand. Sur une surcharge, la génération passe au modèle suivant et les embeddings sont réessayés deux fois. Sans clé, ou si Gemini échoue malgré cela, `ml/lexicon.py` prend le relais.
 - **Frontend** : React 19, TypeScript 7, Vite 8. Gestionnaire : **npm 11.19 ou plus** (comme la CI). Un npm plus ancien écrit un `package-lock.json` incomplet que la CI refuse (« Missing: … from lock file »). Mise à jour : `npm install -g npm@latest`.
 - **Qualité** : ruff (lint + format Python), prettier (format front), oxlint (lint front), pytest, pre-commit, CI GitHub Actions.
 

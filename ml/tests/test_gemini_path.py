@@ -11,7 +11,15 @@ from typing import Any
 import pytest
 
 from ml import embedding, gemini, lexicon
-from ml.model import InterestPair, generate_candidates, measure_message, provider_info, zone_for
+from ml.model import (
+    InterestPair,
+    Zone,
+    ZoneBox,
+    generate_candidates,
+    measure_message,
+    provider_info,
+    zone_for,
+)
 
 PAIRS = [InterestPair("gardening", "cooking"), InterestPair("jazz", "cycling")]
 DIMS = sorted(lexicon.all_interests())
@@ -83,6 +91,7 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> FakeGemini:
     api = FakeGemini()
     monkeypatch.setattr("ml.gemini.api_key", lambda: "test-key")
     monkeypatch.setattr("ml.gemini._post", api.post)
+    monkeypatch.setattr("ml.gemini.time.sleep", lambda _seconds: None)  # pas d'attente réelle
     monkeypatch.setattr("ml.embedding._gemini_cache", {})
     monkeypatch.setattr("ml.pipeline._scale", {"gain": 1.0, "shift": 0.0})
     return api
@@ -118,6 +127,18 @@ def test_the_prompt_carries_the_zone(fake: FakeGemini):
     assert body["generationConfig"]["responseMimeType"] == "application/json"
 
 
+def test_with_a_six_axis_zone_the_prompt_names_the_formats_that_suit(fake: FakeGemini):
+    """Un format léger peut être exclu alors qu'un plus lourd passe : on nomme les formats."""
+    # Exposition personnelle plafonnée à 0,30 : « memory » (0,45) est exclu, « explain » passe.
+    box = ZoneBox(low=(0.6, 0.6, 0.2, 0.2, 0.1), high=(0.8, 0.8, 0.5, 0.5, 0.3), startup_max=0.15)
+    zone = Zone(center=0.7, half_width=0.1, effort_max=0.5, common_center=0.7, box=box)
+    generate_candidates(PAIRS, zone, "Mikko", "Aino", avoid=[], seed=1)
+    prompt = fake.calls[0][1]["contents"][0]["parts"][0]["text"]
+    assert "Formats that suit this recipient right now: opinion, explain, review." in prompt
+    assert "Effort ceiling" not in prompt
+    assert "0.60 to 0.80" in prompt
+
+
 def test_a_refused_configuration_is_retried_more_simply(fake: FakeGemini):
     fake.refuse_schema = True
     candidates = _generate()
@@ -141,3 +162,52 @@ def test_a_written_message_is_reviewed_and_measured_with_gemini(fake: FakeGemini
     assert measured.provider == "gemini"
     assert measured.pair == PAIRS[0]
     assert 0.5 < measured.lam < 1.0
+
+
+def _busy_then_fine(monkeypatch: pytest.MonkeyPatch, failures: int) -> list[str]:
+    """Remplace l'appel réseau : `failures` réponses 503, puis des embeddings normaux."""
+    calls: list[str] = []
+
+    def post(path: str, body: dict[str, Any]) -> dict[str, Any]:
+        calls.append(path)
+        if len(calls) <= failures:
+            raise gemini.GeminiError(503, "busy")
+        return {"embeddings": [{"values": [1.0, 0.0]} for _ in body["requests"]]}
+
+    monkeypatch.setattr("ml.gemini.api_key", lambda: "test-key")
+    monkeypatch.setattr("ml.gemini._post", post)
+    monkeypatch.setattr("ml.gemini.time.sleep", lambda _seconds: None)
+    return calls
+
+
+def test_an_overloaded_embedding_call_is_retried(monkeypatch: pytest.MonkeyPatch):
+    """Vu en réel : Gemini répond 503 quand il est surchargé, puis répond normalement.
+
+    Pour les embeddings, on réessaie au lieu de changer de modèle : un autre modèle changerait
+    l'échelle de la mesure de position.
+    """
+    calls = _busy_then_fine(monkeypatch, failures=1)
+    assert gemini.embed(["gardening", "cooking"]) == [[1.0, 0.0], [1.0, 0.0]]
+    assert len(calls) == 2
+
+
+def test_a_lasting_overload_ends_in_an_error_after_three_tries(monkeypatch: pytest.MonkeyPatch):
+    calls = _busy_then_fine(monkeypatch, failures=10)
+    with pytest.raises(gemini.GeminiError) as caught:
+        gemini.embed(["gardening"])
+    assert caught.value.status == 503
+    assert len(calls) == 3
+
+
+def test_a_generated_request_reads_like_a_normal_message():
+    """Vu en réel : le modèle léger oublie parfois la majuscule et la ponctuation finale."""
+    from ml.pipeline import _tidy
+
+    assert _tidy("could you explain how you grow basil indoors") == (
+        "Could you explain how you grow basil indoors?"
+    )
+    assert _tidy("  tell me about  your first garden ") == "Tell me about your first garden."
+    assert (
+        _tidy("Which herb goes best with tomato soup?") == "Which herb goes best with tomato soup?"
+    )
+    assert _tidy("") == ""

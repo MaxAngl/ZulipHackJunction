@@ -8,6 +8,7 @@ sur le mode hors ligne, la démo ne doit jamais casser à cause du réseau ou d'
 import json
 import logging
 import os
+import time
 import urllib.error
 import urllib.request
 from typing import Any
@@ -18,6 +19,8 @@ API_ROOT = "https://generativelanguage.googleapis.com/v1beta"
 DEFAULT_MODEL = "gemini-flash-lite-latest"
 DEFAULT_EMBED_MODEL = "gemini-embedding-001"
 TIMEOUT_SECONDS = 15
+RETRY_STATUSES = (429, 500, 503)
+RETRY_PAUSES = (0.6, 1.5)  # secondes avant le deuxième et le troisième essai d'embedding
 
 
 class GeminiError(Exception):
@@ -140,6 +143,24 @@ def generate_json(system: str, prompt: str, schema: dict[str, Any]) -> Any:
     raise last_error
 
 
+def _post_patiently(path: str, body: dict[str, Any]) -> dict[str, Any]:
+    """Comme `_post`, mais réessaie deux fois sur une surcharge passagère (503, 429, 500).
+
+    Pour les embeddings : contrairement à la génération, on ne peut pas se replier sur un autre
+    modèle sans changer l'échelle de la mesure de position. Sans cela, une seule surcharge fait
+    retomber toute la mesure sur les mots-clés.
+    """
+    for pause in (*RETRY_PAUSES, None):
+        try:
+            return _post(path, body)
+        except GeminiError as exc:
+            if exc.status not in RETRY_STATUSES or pause is None:
+                raise
+            logger.info("Gemini %s sur les embeddings, nouvel essai dans %.1f s", exc.status, pause)
+            time.sleep(pause)
+    raise GeminiError(0, "aucune réponse")  # jamais atteint : la dernière passe lève toujours
+
+
 def _embed_batch(texts: list[str]) -> list[list[float]]:
     """Calcul d'embedding pour un lot de textes."""
     model = embedding_model()
@@ -156,7 +177,7 @@ def _embed_batch(texts: list[str]) -> list[list[float]]:
                 for text in texts
             ]
             try:
-                data = _post(f"models/{m}:batchEmbedContents", {"requests": requests})
+                data = _post_patiently(f"models/{m}:batchEmbedContents", {"requests": requests})
             except GeminiError as exc:
                 last_error = exc
                 if exc.status == 404:
