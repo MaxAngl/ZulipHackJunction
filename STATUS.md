@@ -62,10 +62,10 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 
 ## Rami (Antigravity)
 
-- **En cours :** #31 (évolutions et finitions UI/UX de la page aidant) et #33 (branchage et validation de l'API Gemini).
+- **En cours :** #40, correction de l'identification et de la création de profil.
 - **Bloqué :** —
 - **Notes pour la suite :**
-  - #11 est mergée dans main.
+  - #11, #31 et #33 sont livrées et mergées dans main.
   - Page aidant : sélection de profil interactive, affichage des hobbies, propositions IA dédiées, bouton « Send mine » centré et suppression de « Not now ».
   - L'inscription applique les contraintes de Max (max 40 car., max 8 intérêts).
   - #33 validée avec `check_gemini` : embeddings (gemini-embedding-001, dim 768), calcul de l'axe λ et génération de demandes JSON (gemini-flash-lite-latest) opérationnels de bout en bout avec mécanismes de repli automatique.
