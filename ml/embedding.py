@@ -101,8 +101,9 @@ def local_embed(texts: list[str]) -> list[list[float]]:
 def measure_kind(generator: str) -> Measure:
     """Quelle mesure pour des textes venus de ce générateur.
 
-    Gemini mesure ce qu'il a écrit avec ses propres embeddings. Sinon, le modèle local s'il est
-    là, et la mesure lexicale en dernier recours.
+    Gemini mesure ce qu'il a écrit avec ses propres embeddings. Sinon (banque hors ligne, ou
+    Claude, qui n'a pas d'embeddings), le modèle local s'il est là, et la mesure lexicale en
+    dernier recours.
     """
     if generator == "gemini":
         return "gemini"

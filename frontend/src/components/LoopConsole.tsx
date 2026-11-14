@@ -167,14 +167,16 @@ function LoopConsole({ state, theta, busy, onTheta, onRun }: LoopConsoleProps) {
       <p className="provenance">
         <span
           className={
-            generator.provider === 'gemini'
-              ? 'status status-live'
-              : 'status status-offline'
+            generator.provider === 'offline'
+              ? 'status status-offline'
+              : 'status status-live'
           }
         />
-        {generator.provider === 'gemini'
-          ? `Requests written and measured with Gemini (${generator.model})`
-          : 'Requests from the built-in bank (no Gemini key)'}
+        {generator.provider === 'claude'
+          ? `Requests written by Claude (${generator.model}), measured locally`
+          : generator.provider === 'gemini'
+            ? `Requests written and measured with Gemini (${generator.model})`
+            : 'Requests from the built-in bank (no Claude or Gemini key)'}
         {generator.note && ` · ${generator.note}`}
         <br />
         State, zone and personal vector: three networks trained on simulated

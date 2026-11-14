@@ -928,7 +928,7 @@ export interface components {
              * Provider
              * @enum {string}
              */
-            provider: "gemini" | "offline";
+            provider: "claude" | "gemini" | "offline";
             /**
              * Axes
              * @description Position sur les six axes
@@ -1086,7 +1086,7 @@ export interface components {
              * Provider
              * @enum {string}
              */
-            provider: "gemini" | "offline";
+            provider: "claude" | "gemini" | "offline";
             /** Model */
             model: string | null;
             /** Note */
