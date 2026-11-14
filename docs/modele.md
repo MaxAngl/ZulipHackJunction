@@ -29,7 +29,7 @@ On mesure l'état du patient, on en déduit quel genre de demande lui convient, 
 
 | Objet | Symbole | Type et domaine | Définition | Statut |
 |---|---|---|---|---|
-| Données brutes | θ_t | Vecteur de 22 signaux, à un instant t | Tout ce qu'on relève sur le patient à cet instant, sans rien lui demander | Décidé ; contenu délégué (section 11) |
+| Données brutes | θ_t | Vecteur de 25 signaux, à un instant t | Tout ce qu'on relève sur le patient à cet instant, sans rien lui demander | Décidé ; contenu délégué (section 11) |
 | État | L(θ_t) | Vecteur de dimension 6 | Code latent de l'autoencodeur appliqué à θ_t | Décidé ; composantes déléguées (section 11) |
 | Référence saine | L_ref | Une moyenne et une dispersion par composante | L des personnes saines | Décidé ; forme déléguée (section 11) |
 | Centre d'intérêt | p (patient), h (aidant) | Texte, et son vecteur | Ce que la personne aime ou connaît | Décidé |
@@ -110,7 +110,7 @@ Un seul jeu de poids pour tout le monde, et un petit vecteur par patient. Jamais
 |---|---|---|
 | Poids de l'autoencodeur, de A et de B | Général | Environ 45 000 nombres au total (section 13) |
 | Vecteur du patient | Personnel | 8 nombres, lus par A et par B comme une entrée de plus |
-| Normale du patient | Personnel | La moyenne et la dispersion de chacun de ses 22 signaux, pour normaliser θ. Ce sont des statistiques, pas des poids appris |
+| Normale du patient | Personnel | La moyenne et la dispersion de chacun de ses 25 signaux, pour normaliser θ. Ce sont des statistiques, pas des poids appris |
 
 Décidé : la partie personnelle est réduite à un petit vecteur partagé par A et B. Sa taille, 8, est déléguée. Ce choix remplace une première version, qui donnait à A et à B une dernière couche par patient : 715 nombres pour B, bien trop pour si peu de réactions.
 
@@ -228,9 +228,13 @@ Passer à la cible changera les deux contrats, API et ML : `theta` et `ZoneState
 
 Ces choix sont **délégués**. Ils sont appliqués par `ml/simulation/spec.py` et `ml/simulation/reward.py`.
 
-### θ : 22 signaux
+### θ : 25 signaux, trois modalités
 
 θ réunit ce qu'une montre Garmin Forerunner 965 mesure d'utile pour suivre une personne, plus son comportement dans l'app. Un relevé est pris à un instant : les signaux de la nuit et du jour y figurent avec leur dernière valeur connue.
+
+Les signaux sont rangés par **modalité**, c'est-à-dire par source : la montre (19 signaux, blocs Instant, Journée, Nuit et Jour), les réponses dans l'app (3), la frappe (3). L'autoencodeur aura un encodeur par modalité. Ajouter une modalité plus tard revient à déclarer ses signaux dans `ml/simulation/spec.py` et à entraîner son encodeur : les réseaux A et B ne lisent que L, ils ne bougent pas.
+
+Les trois signaux de frappe sont **décidés** par l'équipe le 14 novembre (« le rythme de frappe, la réactivité »). On n'enregistre que des durées et des comptes, jamais les caractères tapés.
 
 | Bloc | Signal | Unité | Composante de l'état qui pèse le plus |
 |---|---|---|---|
@@ -256,8 +260,13 @@ Ces choix sont **délégués**. Ils sont appliqués par `ml/simulation/spec.py` 
 | App | `reply_rate_7d` | 0 à 1 | Engagement |
 | App | `reply_delay_hours_7d` | heures | Engagement |
 | App | `reply_length_7d` | caractères | Engagement |
+| Frappe | `typing_correction_rate` | effacements pour 100 caractères | Sommeil |
+| Frappe | `open_delay_minutes` | minutes entre la notification et l'ouverture | Engagement |
+| Frappe | `first_key_delay_seconds` | secondes entre l'ouverture et la première touche | Énergie |
 
 À savoir :
+
+- Les signaux de frappe n'existent que les jours où la personne écrit dans l'app. Le reste du temps ils sont absents, comme une montre non portée.
 
 - **La montre n'est pas un dispositif médical**, et Garmin le dit. Ces signaux décrivent un mode de vie, pas un diagnostic.
 - Les minutes dehors viennent des activités enregistrées avec le GPS. La montre ne suit pas la position en continu.
@@ -266,7 +275,7 @@ Ces choix sont **délégués**. Ils sont appliqués par `ml/simulation/spec.py` 
 
 ### L : 6 composantes
 
-Vingt-deux signaux, six composantes : une par groupe de signaux qui bougent ensemble. Chaque composante va de 0 à 1, et plus elle est haute, mieux la personne va.
+Vingt-cinq signaux, six composantes : une par groupe de signaux qui bougent ensemble. Chaque composante va de 0 à 1, et plus elle est haute, mieux la personne va. L'équipe a décidé de rester à six : la frappe nourrit des composantes existantes (sommeil, calme, engagement, énergie).
 
 | Composante | Ce qu'elle décrit | Signaux qui la portent |
 |---|---|---|
@@ -324,9 +333,11 @@ La commande écrit `people.npz` (θ, masque, état caché, groupe, parcours, L_r
 | Niveau moyen de l'état | Saines : 0,78 ± 0,05. Patients : 0,52 ± 0,09 |
 | Parcours d'un patient | Stable 50 %, rechute 30 % (−0,22 en trois semaines), rétablissement 20 % (+0,15) |
 | État d'un jour | Niveau propre + une part commune aux six composantes + une part propre à chacune, toutes deux corrélées d'un jour à l'autre |
-| Habitudes | Besoin de sommeil, heure du coucher, fréquence cardiaque de repos, variabilité cardiaque, pas, longueur des réponses : tirés par personne, **sans lien avec l'état** |
+| Habitudes | Besoin de sommeil, heure du coucher, fréquence cardiaque de repos, variabilité cardiaque, pas, longueur des réponses, façon de taper : tirés par personne, **sans lien avec l'état** |
 | Signal | Habitude de la personne + effet de l'état + effet de l'heure + bruit |
-| Données absentes | Montre non portée le jour (1 à 10 % des jours) ou la nuit (2 à 20 %), oxygène coupé chez une personne sur deux, 3 % de mesures instantanées perdues, 8 % des jours sans comportement dans l'app |
+| Frappe | Habitude de la personne (9 corrections pour 100 caractères, 18 minutes avant d'ouvrir, 8 secondes avant la première touche, en médiane), multipliée par un facteur qui grandit quand l'état baisse. Un patient typique est environ 1,7 fois au-dessus d'une personne saine, avec une forte variation d'un jour à l'autre |
+| Ce qui pèse sur la frappe | Corrections : sommeil, puis calme. Délai d'ouverture : engagement. Délai avant la première touche : énergie |
+| Données absentes | Montre non portée le jour (1 à 10 % des jours) ou la nuit (2 à 20 %), oxygène coupé chez une personne sur deux, 3 % de mesures instantanées perdues, 8 % des jours sans comportement dans l'app, frappe absente 10 à 50 % des jours selon la personne |
 
 Les habitudes sans lien avec l'état sont ce qui oblige à normaliser θ par personne : deux personnes au même état n'ont pas les mêmes chiffres.
 
@@ -353,6 +364,13 @@ Chaque patient a ses propres règles, tirées au hasard. Les réseaux ne les voi
 - La zone est tirée au hasard, puis la demande est tirée dans la zone. C'est voulu : le réseau A doit voir de bonnes et de mauvaises demandes.
 - Les personnes saines ne reçoivent pas de demandes.
 
+**Boucle fermée.** `simulate_policy` fait vivre les mêmes patients avec une politique qui choisit les zones à la place du hasard. Chaque jour, on relève θ, puis la politique reçoit les relevés déjà faits et rend une zone par patient ; elle ne voit ni l'état caché ni l'avenir. C'est ce qui servira à comparer le réseau B à une zone au hasard, à la règle fixe et à un oracle (section 7), et à refaire un journal là où B va réellement (section 6, étape 5). L'oracle est la seule politique autorisée à lire la vérité cachée.
+
+```python
+from ml.simulation import generate
+dataset = generate(n_people=600, n_days=56, seed=0, policy=ma_politique)
+```
+
 ### Ce que donne le réglage par défaut
 
 Avec 600 personnes, 56 jours et la graine 0 :
@@ -360,7 +378,7 @@ Avec 600 personnes, 56 jours et la graine 0 :
 | Mesure | Valeur |
 |---|---|
 | Personnes | 217 saines, 383 patients |
-| Relevés | 224 par personne, 22 signaux, 10,8 % de données absentes |
+| Relevés | 224 par personne, 25 signaux, 13,8 % de données absentes |
 | Distance à L_ref | Saines : 0,93. Patients : 3,20 |
 | Demandes | 14 703, dont 54 % reçoivent une réponse |
 | Demandes supportables | 46 % du journal, 73 % de réponses |

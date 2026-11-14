@@ -94,6 +94,15 @@ def draw_people(
         "night_wear": rng.uniform(0.80, 0.98, n_people),
         "day_wear": rng.uniform(0.90, 0.99, n_people),
     }
+    # Habitudes de frappe. Elles sont tirées d'un générateur à part : les tirages du générateur
+    # principal ne bougent pas, donc tout le reste du jeu reste identique pour une même graine.
+    touch = rng.spawn(1)[0]
+    traits |= {
+        "correction_habit": np.exp(touch.normal(np.log(9.0), 0.35, n_people)),  # pour 100 car.
+        "open_habit": np.exp(touch.normal(np.log(18.0), 0.6, n_people)),  # minutes
+        "first_key_habit": np.exp(touch.normal(np.log(8.0), 0.4, n_people)),  # secondes
+        "typing_days": touch.uniform(0.5, 0.9, n_people),  # part des jours où elle écrit
+    }
     return People(group, course, np.clip(natural, 0.02, 0.98), traits)
 
 
@@ -104,8 +113,12 @@ def _cumulative(total: np.ndarray, rng: np.random.Generator) -> np.ndarray:
 
 
 def observe(rng: np.random.Generator, people: People, state: np.ndarray) -> np.ndarray:
-    """Relevés θ pour chaque personne, jour et heure : [n, jours x 4, 22], NaN = donnée absente."""
+    """Relevés θ pour chaque personne, jour et heure : [n, jours x 4, signaux], NaN = absente.
+
+    `state` peut ne couvrir qu'un seul jour : c'est ce que fait la simulation en boucle fermée.
+    """
     n_people, n_days, _ = state.shape
+    touch = rng.spawn(1)[0]  # frappe : générateur à part, voir draw_people
     slots = len(SNAPSHOT_HOURS)
     traits = people.traits
     centered = {name: state[:, :, component_index(name)] - 0.5 for name in COMPONENTS}
@@ -143,6 +156,22 @@ def observe(rng: np.random.Generator, people: People, state: np.ndarray) -> np.n
         "reply_length_7d": trait("chattiness") * (1.0 + 0.9 * engagement) + per_day(14.0),
     }
 
+    def touch_noise(scale: float) -> np.ndarray:
+        return touch.lognormal(0.0, scale, (n_people, n_days))
+
+    # Frappe et réactivité : l'habitude de la personne, ralentie ou dégradée quand elle va mal.
+    # Un patient typique corrige, tarde à ouvrir et hésite environ 1,7 fois plus qu'une
+    # personne saine, avec beaucoup de variation d'un jour à l'autre.
+    daily |= {
+        "typing_correction_rate": trait("correction_habit")
+        * np.exp(-1.4 * sleep - 0.7 * calm)
+        * touch_noise(0.25),
+        "open_delay_minutes": trait("open_habit") * np.exp(-2.4 * engagement) * touch_noise(0.5),
+        "first_key_delay_seconds": trait("first_key_habit")
+        * np.exp(-2.0 * energy)
+        * touch_noise(0.35),
+    }
+
     # --- Mesures instantanées et cumuls de la journée : une valeur par relevé ---
     level = np.clip(1.0 + 1.3 * activity, 0.15, None)  # niveau d'activité du jour
     steps_last_hour = (
@@ -176,11 +205,13 @@ def observe(rng: np.random.Generator, people: People, state: np.ndarray) -> np.n
     for name in _WHOLE_NUMBERS:
         theta[..., signal_index(name)] = np.round(theta[..., signal_index(name)])
 
-    _punch_holes(rng, people, theta)
+    _punch_holes(rng, touch, people, theta)
     return theta.reshape(n_people, n_days * slots, len(SIGNALS)).astype(np.float32)
 
 
-def _punch_holes(rng: np.random.Generator, people: People, theta: np.ndarray) -> None:
+def _punch_holes(
+    rng: np.random.Generator, touch: np.random.Generator, people: People, theta: np.ndarray
+) -> None:
     """Données absentes : montre non portée le jour ou la nuit, SpO2 désactivée, mesures perdues."""
     n_people, n_days, slots, _ = theta.shape
     traits = people.traits
@@ -197,12 +228,16 @@ def _punch_holes(rng: np.random.Generator, people: People, theta: np.ndarray) ->
         theta[..., index][night_off] = np.nan
     for index in block["app"]:
         theta[..., index][app_off] = np.nan
+    # La frappe n'existe que les jours où la personne a écrit dans l'app.
+    no_typing = app_off | (touch.random((n_people, n_days)) > traits["typing_days"][:, None])
+    for index in block["touch"]:
+        theta[..., index][no_typing] = np.nan
     for position, index in enumerate(block["instant"]):
         theta[..., index][lost[..., position]] = np.nan
     theta[~traits["spo2_enabled"], :, :, signal_index("spo2_sleep")] = np.nan
 
 
-_BLOCKS = ("instant", "day", "night", "daily", "app")
+_BLOCKS = ("instant", "day", "night", "daily", "app", "touch")
 _WHOLE_NUMBERS = (
     "heart_rate",
     "stress",

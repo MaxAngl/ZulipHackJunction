@@ -10,9 +10,18 @@ import numpy as np
 import pytest
 
 from ml.simulation import generate, save
+from ml.simulation.episodes import Moment
 from ml.simulation.people import HEALTHY, PATIENT
 from ml.simulation.reward import distance, reward
-from ml.simulation.spec import AXES, COMPONENTS, CONTEXT_DAYS, SIGNALS, SNAPSHOT_HOURS
+from ml.simulation.spec import (
+    AXES,
+    COMPONENTS,
+    CONTEXT_DAYS,
+    MODALITIES,
+    SIGNALS,
+    SNAPSHOT_HOURS,
+    modality_indices,
+)
 
 PEOPLE, DAYS = 240, 35
 
@@ -129,3 +138,70 @@ def test_the_dataset_is_written_with_its_description(tmp_path: Path):
 def test_too_few_days_is_refused():
     with pytest.raises(ValueError):
         generate(n_people=10, n_days=CONTEXT_DAYS, seed=0)
+
+
+def test_every_signal_belongs_to_one_modality():
+    columns = modality_indices()
+    assert set(columns) == set(MODALITIES)
+    assert sorted(index for group in columns.values() for index in group) == list(
+        range(len(SIGNALS))
+    )
+    assert [SIGNALS[index].name for index in columns["touch"]] == [
+        "typing_correction_rate",
+        "open_delay_minutes",
+        "first_key_delay_seconds",
+    ]
+
+
+def test_typing_signals_get_worse_when_the_person_is_worse(data):
+    """Un patient corrige plus, tarde plus à ouvrir et hésite plus : c'est écrit dans people.py."""
+    names = [s.name for s in SIGNALS]
+    for signal_name, component in (
+        ("typing_correction_rate", "sleep"),
+        ("open_delay_minutes", "engagement"),
+        ("first_key_delay_seconds", "energy"),
+    ):
+        values = np.log(data.theta[:, 3::4, names.index(signal_name)])
+        state = data.state[:, 3::4, COMPONENTS.index(component)]
+        seen = ~np.isnan(values)
+        assert 0.2 < seen.mean() < 0.95, signal_name  # présent certains jours seulement
+        assert np.corrcoef(values[seen], state[seen])[0, 1] < -0.25, signal_name
+
+
+class _FixedZones:
+    """Politique de test : la même zone pour tout le monde, et elle note ce qu'on lui montre."""
+
+    def __init__(self, cost: float) -> None:
+        self.cost = cost
+        self.seen_future = False
+        self.feedbacks = 0
+
+    def zones(self, moment: Moment):
+        n = len(moment.slot)
+        after_today = (moment.day + 1) * len(SNAPSHOT_HOURS)
+        self.seen_future |= bool((~np.isnan(moment.theta[:, after_today:])).any())
+        center = np.array([0.7, 0.6, self.cost, self.cost, self.cost])
+        low = np.tile(center - 0.05, (n, 1))
+        return low, low + 0.1, np.full(n, 0.2)
+
+    def feedback(self, moment: Moment, axes, reaction) -> None:
+        self.feedbacks += 1
+
+
+def test_a_policy_chooses_the_zones_and_never_sees_the_future():
+    light, heavy = _FixedZones(0.2), _FixedZones(0.9)
+    gentle = generate(n_people=120, n_days=20, seed=2, policy=light)
+    harsh = generate(n_people=120, n_days=20, seed=2, policy=heavy)
+
+    assert gentle.theta.shape == (120, 20 * len(SNAPSHOT_HOURS), len(SIGNALS))
+    assert not np.isnan(gentle.theta).all(axis=(0, 2)).any()  # chaque relevé a bien eu lieu
+    assert not light.seen_future
+    assert light.feedbacks == 20 - 1  # appelée chaque jour, sauf le dernier
+    assert gentle.episodes.day.min() >= CONTEXT_DAYS
+    log = gentle.episodes
+    assert np.allclose(log.zone_low[:, 2], 0.15) and np.allclose(log.zone_high[:, 2], 0.25)
+    assert ((log.axes[:, :5] >= log.zone_low) & (log.axes[:, :5] <= log.zone_high)).all()
+    # Les mêmes personnes, des demandes trop lourdes : elles répondent bien moins.
+    assert np.array_equal(gentle.group, harsh.group)
+    assert log.replied.mean() > harsh.episodes.replied.mean() + 0.2
+    assert log.reward_counterfactual.mean() > harsh.episodes.reward_counterfactual.mean()

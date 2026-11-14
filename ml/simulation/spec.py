@@ -25,14 +25,33 @@ AXES: tuple[str, ...] = ("interest", "concrete", "duration", "exchange", "exposu
 INTERVAL_AXES = 5
 
 
+# Une modalité est une source de données : la montre, les réponses dans l'app, la frappe.
+# Chaque bloc de signaux appartient à une modalité. L'autoencodeur a un encodeur par modalité :
+# en ajouter une ne touche ni aux autres encodeurs, ni aux réseaux A et B, qui ne lisent que L.
+MODALITY_OF_BLOCK: dict[str, str] = {
+    "instant": "watch",
+    "day": "watch",
+    "night": "watch",
+    "daily": "watch",
+    "app": "app",
+    "touch": "touch",
+}
+MODALITIES: tuple[str, ...] = ("watch", "app", "touch")
+
+
 @dataclass(frozen=True)
 class Signal:
     name: str
     unit: str
-    block: str  # instant, day, night, daily ou app
+    block: str  # instant, day, night, daily, app ou touch
     component: str  # la composante de l'état qui pèse le plus sur ce signal
     low: float  # bornes plausibles : toute valeur générée y est ramenée
     high: float
+    log: bool = False  # signal très étalé : les réseaux en lisent le logarithme
+
+    @property
+    def modality(self) -> str:
+        return MODALITY_OF_BLOCK[self.block]
 
 
 SIGNALS: tuple[Signal, ...] = (
@@ -41,9 +60,9 @@ SIGNALS: tuple[Signal, ...] = (
     Signal("stress", "0-100", "instant", "calm", 0, 100),
     Signal("body_battery", "0-100", "instant", "energy", 5, 100),
     Signal("respiration", "resp/min", "instant", "calm", 8, 28),
-    Signal("steps_last_hour", "pas", "instant", "activity", 0, 9000),
+    Signal("steps_last_hour", "pas", "instant", "activity", 0, 9000, log=True),
     # Cumuls de la journée, à l'heure du relevé.
-    Signal("steps_today", "pas", "day", "activity", 0, 40000),
+    Signal("steps_today", "pas", "day", "activity", 0, 40000, log=True),
     Signal("intensity_minutes_today", "min", "day", "activity", 0, 300),
     Signal("floors_today", "étages", "day", "activity", 0, 80),
     Signal("outdoor_minutes_today", "min", "day", "activity", 0, 480),
@@ -63,6 +82,11 @@ SIGNALS: tuple[Signal, ...] = (
     Signal("reply_rate_7d", "0-1", "app", "engagement", 0, 1),
     Signal("reply_delay_hours_7d", "h", "app", "engagement", 0.1, 48),
     Signal("reply_length_7d", "caractères", "app", "engagement", 5, 600),
+    # Frappe et réactivité, relevées la dernière fois que la personne a écrit dans l'app.
+    # On ne garde que des durées et des comptes, jamais les caractères tapés.
+    Signal("typing_correction_rate", "pour 100 caractères", "touch", "sleep", 0, 60, log=True),
+    Signal("open_delay_minutes", "min", "touch", "engagement", 0.2, 720, log=True),
+    Signal("first_key_delay_seconds", "s", "touch", "energy", 0.5, 300, log=True),
 )
 
 SIGNAL_NAMES: tuple[str, ...] = tuple(signal.name for signal in SIGNALS)
@@ -70,6 +94,14 @@ SIGNAL_NAMES: tuple[str, ...] = tuple(signal.name for signal in SIGNALS)
 
 def signal_index(name: str) -> int:
     return SIGNAL_NAMES.index(name)
+
+
+def modality_indices() -> dict[str, list[int]]:
+    """Pour chaque modalité, les colonnes de θ qui lui appartiennent."""
+    return {
+        modality: [index for index, signal in enumerate(SIGNALS) if signal.modality == modality]
+        for modality in MODALITIES
+    }
 
 
 def component_index(name: str) -> int:
