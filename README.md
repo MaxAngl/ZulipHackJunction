@@ -4,6 +4,7 @@ _Sujet à compléter._
 
 Toutes les règles, commandes et conventions sont dans **[AGENTS.md](AGENTS.md)** (lu aussi par les agents IA).
 L'avancement de chacun est dans **[STATUS.md](STATUS.md)**.
+**Nouveau dans l'équipe ?** Commence par **[ONBOARDING.md](ONBOARDING.md)** : installation, boucle de travail et prompts à donner à ton agent.
 
 ## Démarrage rapide
 

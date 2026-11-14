@@ -2,6 +2,7 @@
 
 Fichier d'instructions **unique**, lu par tous les agents (Claude Code, Gemini CLI, Codex…) et par les humains.
 C'est la mémoire commune de l'équipe : **mettez-le à jour dès qu'une décision est prise.**
+Le guide pratique pour les humains (installation, boucle de travail, prompts types) est [ONBOARDING.md](ONBOARDING.md).
 
 > Ne créez jamais de `CLAUDE.md` ni de `GEMINI.md` : Claude Code lirait le `CLAUDE.md` à la place de ce fichier, et les deux IA divergeraient.
 
