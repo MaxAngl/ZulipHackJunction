@@ -692,8 +692,8 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
               <button
                 type="button"
                 className="passion-photo-remove-btn"
-                title="Supprimer la photo"
-                aria-label={`Supprimer photo ${idx + 1}`}
+                title="Remove photo"
+                aria-label={`Remove photo ${idx + 1}`}
                 onClick={() => handleRemovePassionPhoto(idx)}
               >
                 ×
@@ -701,7 +701,7 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
             </div>
           ))}
           {passionPhotos.length < 3 && (
-            <label className="passion-photo-add-box" title="Ajouter une photo">
+            <label className="passion-photo-add-box" title="Add photo">
               <input
                 type="file"
                 accept="image/*"
@@ -716,7 +716,7 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
         </div>
       </div>
 
-      {/* Option pour autoriser ou refuser l'accès au profil depuis le chat */}
+      {/* Option to allow or deny viewing profile from chat */}
       <div className="field">
         <label className="profile-privacy-toggle-card">
           <input
@@ -725,11 +725,11 @@ function JoinForm({ role, onJoined }: JoinFormProps) {
             onChange={(e) => setAllowProfileView(e.target.checked)}
           />
           <div className="privacy-toggle-info">
-            <strong>Partager mon profil dans les conversations</strong>
+            <strong>Share my profile in conversations</strong>
             <p className="quiet font-small">
               {allowProfileView
-                ? 'Les personnes avec qui vous échangez peuvent cliquer sur votre photo pour consulter votre profil, centres d’intérêt et photos de passion.'
-                : 'Profil masqué : vos correspondants ne pourront pas ouvrir votre page de profil.'}
+                ? 'People you chat with can tap your avatar to view your bio, interests, and passion photos.'
+                : 'Private profile: chat partners cannot view your detailed profile.'}
             </p>
           </div>
         </label>

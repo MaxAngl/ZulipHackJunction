@@ -144,16 +144,16 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
           </p>
         )}
 
-        {/* Onglet 1 : Faire une demande */}
+        {/* Tab 1 : Make a request */}
         {activeTab === 'request' && (
           <>
-            {/* Demandes directes de patients de la communauté */}
+            {/* Direct patient community requests */}
             {patientNeeds.length > 0 && (
               <section className="stack patient-needs-banner-section">
                 <div className="flex-between">
-                  <p className="eyebrow">Demandes directes de patients</p>
+                  <p className="eyebrow">Direct patient requests</p>
                   <span className="badge-highlight">
-                    {patientNeeds.length} besoin(s) exprimé(s)
+                    {patientNeeds.length} active request(s)
                   </span>
                 </div>
                 {patientNeeds.map((need) => (
@@ -174,7 +174,9 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                           </span>
                         </div>
                       </div>
-                      <span className="patient-need-tag">Besoin patient</span>
+                      <span className="patient-need-tag">
+                        Community request
+                      </span>
                     </div>
 
                     <p className="patient-need-body">« {need.text} »</p>
@@ -185,14 +187,14 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                         className="button button-primary button-small"
                         onClick={() => handleAcceptPatientNeed(need)}
                       >
-                        Répondre à {need.patientName}
+                        Reply to {need.patientName}
                       </button>
                       <button
                         type="button"
                         className="button button-ghost button-small"
                         onClick={() => handleDismissPatientNeed(need.id)}
                       >
-                        Passer
+                        Dismiss
                       </button>
                     </div>
                   </div>

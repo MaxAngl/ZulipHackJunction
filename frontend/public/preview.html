@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Needed · Aperçu iPhone 15 Pro (393 × 852 px)</title>
+    <title>Needed · iPhone 15 Pro Studio Preview (393 × 852 px)</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <style>
       :root {
@@ -701,64 +701,64 @@
         <span class="dim-tag">393 × 852 px (19.5:9)</span>
       </div>
 
-      <!-- Sélecteur de routes -->
-      <nav class="nav-tabs" aria-label="Routes de l'application">
-        <button class="tab-btn active" data-hash="">🏠 Accueil</button>
-        <button class="tab-btn" data-hash="helper">🤝 Aidant (Helper)</button>
-        <button class="tab-btn" data-hash="patient">🌱 Patient</button>
-        <button class="tab-btn" data-hash="demo">🔁 Démo Boucle</button>
-        <button class="tab-btn" data-hash="clinician">🩺 Clinicien</button>
+      <!-- Route selector -->
+      <nav class="nav-tabs" aria-label="Application routes">
+        <button class="tab-btn active" data-hash="">🏠 Home</button>
+        <button class="tab-btn" data-hash="helper">🤝 Helper App</button>
+        <button class="tab-btn" data-hash="patient">🌱 Patient App</button>
+        <button class="tab-btn" data-hash="demo">🔁 Loop Demo</button>
+        <button class="tab-btn" data-hash="clinician">🩺 Clinician</button>
         <button class="tab-btn" data-hash="admin">🛡️ Admin</button>
-        <button class="tab-btn" data-hash="settings">⚙️ Paramètres</button>
-        <button class="tab-btn" id="btn-duo">👥 Mode Duo (2 téléphones)</button>
+        <button class="tab-btn" data-hash="settings">⚙️ Settings</button>
+        <button class="tab-btn" id="btn-duo">👥 Duo Mode (2 Phones)</button>
       </nav>
 
-      <!-- Échelle de zoom -->
+      <!-- Zoom controls -->
       <div class="zoom-controls">
         <button class="tab-btn" data-scale="0.8">80%</button>
         <button class="tab-btn active" data-scale="0.92">92%</button>
         <button class="tab-btn" data-scale="1">100% (1:1)</button>
       </div>
 
-      <!-- Barre de test des notifications & bouton d'alimentation -->
-      <div class="notif-sim-bar" aria-label="Simulateur de notifications">
-        <span class="notif-sim-title">Notifications :</span>
+      <!-- Notification simulator & power button -->
+      <div class="notif-sim-bar" aria-label="Notification simulator">
+        <span class="notif-sim-title">Notifications:</span>
         <button
           type="button"
           class="notif-btn notif-btn-power"
           id="btn-toggle-power"
-          title="Éteindre ou allumer l'écran (identique au bouton latéral)"
+          title="Turn screen on or off (same as side button)"
         >
-          ⚡ Écran Allumé/Éteint
+          ⚡ Screen On/Off
         </button>
         <button type="button" class="notif-btn" id="btn-notif-request">
-          🔔 +Demande
+          🔔 +Request
         </button>
         <button type="button" class="notif-btn" id="btn-notif-message">
           💬 +Message
         </button>
         <button type="button" class="notif-btn" id="btn-notif-24h">
-          ⏳ +Sans réponse (24h)
+          ⏳ +Pending (24h)
         </button>
         <button type="button" class="notif-btn" id="btn-notif-declined">
-          🛑 +3 refusées
+          🛑 +3 Declined
         </button>
       </div>
 
       <a href="/#/" class="direct-link" target="_blank" rel="noreferrer"
-        >Ouvrir l'app plein écran ↗</a
+        >Open full app ↗</a
       >
     </header>
 
-    <!-- Zone de prévisualisation -->
+    <!-- Preview Stage -->
     <main class="stage" id="stage">
-      <!-- Téléphone 1 (Principal) -->
+      <!-- Phone 1 (Primary) -->
       <div
         class="phone-wrapper"
         id="phone-1-wrap"
         style="transform: scale(0.92)"
       >
-        <span class="phone-label" id="phone-1-label">Vue courante</span>
+        <span class="phone-label" id="phone-1-label">Current view</span>
 
         <div class="iphone-15-pro">
           <div class="btn-vol-up"></div>
@@ -771,62 +771,60 @@
               <div class="di-camera"></div>
             </div>
 
-            <!-- Bandeau de notification quand le téléphone est allumé -->
+            <!-- In-app notification banner when screen is on -->
             <div class="preview-inapp-banner" id="preview-inapp-banner-1">
               <div class="banner-top">
                 <div class="banner-app-info">
                   <div class="banner-icon-needed">N</div>
                   <span class="banner-app-name">NEEDED</span>
                   <span class="banner-app-time" id="banner-time-1"
-                    >· maintenant</span
+                    >· just now</span
                   >
                 </div>
                 <span class="banner-close-btn" id="banner-close-1">✕</span>
               </div>
               <strong class="banner-title" id="banner-title-1"
-                >Nouvelle notification</strong
+                >New notification</strong
               >
               <p class="banner-body" id="banner-body-1">
-                Contenu de la notification.
+                Notification content.
               </p>
             </div>
 
-            <!-- Écran de veille / Verrouillé (quand le téléphone est éteint) -->
+            <!-- Lock screen / Screen off -->
             <div class="lock-screen" id="lock-screen-1">
               <div class="lock-header">
                 <span class="lock-icon">🔒</span>
                 <span class="lock-date" id="lock-date-1"
-                  >Vendredi 14 novembre</span
+                  >Friday, November 14</span
                 >
                 <h1 class="lock-clock" id="lock-clock-1">09:41</h1>
               </div>
 
-              <!-- Centre de notifications sur l'écran éteint / verrouillé -->
+              <!-- Notification Center on lock screen -->
               <div class="lock-notifs-container">
                 <div class="lock-notifs-title">
-                  <span>Centre de notifications</span>
+                  <span>Notification Center</span>
                 </div>
                 <div class="lock-notifs-list" id="lock-notifs-list-1">
-                  <!-- Notifications injectées par script -->
+                  <!-- Notifications injected by script -->
                 </div>
               </div>
 
-              <!-- Pied de page de l'écran verrouillé -->
+              <!-- Lock screen footer -->
               <div class="lock-footer">
                 <button
                   type="button"
                   class="lock-circle-btn"
-                  aria-label="Lampe torche"
+                  aria-label="Flashlight"
                 >
                   🔦
                 </button>
-                <span class="lock-swipe-hint"
-                  >Cliquer pour allumer l'écran</span
-                >
+                <span class="lock-swipe-hint">Tap or click to wake screen</span>
                 <button
                   type="button"
                   class="lock-circle-btn"
-                  aria-label="Appareil photo"
+                  aria-label="Camera"
                 >
                   📷
                 </button>
@@ -966,8 +964,8 @@
     </main>
 
     <footer class="info-bar">
-      Simulateur de rendu fidèle à la viewport Apple iPhone 15 Pro (Logic
-      Resolution 393 × 852 pt, ratio 19.5:9, iOS 17/18).
+      Faithful Apple iPhone 15 Pro viewport simulator (Logic Resolution 393 ×
+      852 pt, ratio 19.5:9, iOS 17/18).
     </footer>
 
     <script>
@@ -1097,25 +1095,24 @@
         if (lockClock1) lockClock1.textContent = `${hours}:${mins}`
 
         if (lockDate1) {
-          const formattedDate = now.toLocaleDateString('fr-FR', {
+          const formattedDate = now.toLocaleDateString('en-US', {
             weekday: 'long',
-            day: 'numeric',
             month: 'long',
+            day: 'numeric',
           })
-          lockDate1.textContent =
-            formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)
+          lockDate1.textContent = formattedDate
         }
       }
       setInterval(updateLockClock, 1000)
       updateLockClock()
 
-      // Basculer l'état du téléphone (Éteint/Verrouillé <-> Allumé)
+      // Toggle phone power (Locked/Off <-> Screen On)
       function togglePhonePower() {
         isPhoneLocked = !isPhoneLocked
         if (isPhoneLocked) {
           lockScreen1.classList.add('active')
           if (btnTogglePower) {
-            btnTogglePower.textContent = '⚡ Écran Éteint (Verrouillé)'
+            btnTogglePower.textContent = '⚡ Screen Off (Locked)'
             btnTogglePower.style.background = 'rgba(255, 80, 80, 0.2)'
             btnTogglePower.style.borderColor = 'rgba(255, 80, 80, 0.5)'
             btnTogglePower.style.color = '#ff6b6b'
@@ -1124,7 +1121,7 @@
         } else {
           lockScreen1.classList.remove('active')
           if (btnTogglePower) {
-            btnTogglePower.textContent = '⚡ Écran Allumé'
+            btnTogglePower.textContent = '⚡ Screen On'
             btnTogglePower.style.background = 'rgba(0, 216, 255, 0.15)'
             btnTogglePower.style.borderColor = 'rgba(0, 216, 255, 0.4)'
             btnTogglePower.style.color = 'var(--accent)'
@@ -1137,13 +1134,13 @@
       if (physicalPowerBtn1)
         physicalPowerBtn1.addEventListener('click', togglePhonePower)
       if (lockScreen1) {
-        // Cliquer n'importe où sur l'écran éteint / verrouillé pour allumer / déverrouiller
+        // Click anywhere on locked screen to wake
         lockScreen1.addEventListener('click', () => {
           if (isPhoneLocked) togglePhonePower()
         })
       }
 
-      // Lire et afficher les notifications sur l'écran éteint / verrouillé
+      // Read and render notifications on locked screen
       function getNotificationsFromStorage() {
         try {
           const raw = localStorage.getItem('needed.notifications')
@@ -1153,23 +1150,23 @@
           {
             id: 'notif-req-default',
             type: 'new_request',
-            title: 'Nouvelle demande reçue',
-            body: 'Julien Mercier vous sollicite pour des astuces de jardinage d’automne.',
-            timestamp: 'Il y a 10 min',
+            title: 'New request received',
+            body: 'Julien Mercier reached out for autumn gardening advice.',
+            timestamp: '10m ago',
           },
           {
             id: 'notif-24h-default',
             type: 'pending_24h',
-            title: 'Demande en attente (24h)',
-            body: 'Une demande de Thomas Lindqvist attend votre réponse (accepter ou refuser).',
-            timestamp: 'Il y a 1h',
+            title: 'Pending request (24h)',
+            body: 'A request from Thomas Lindqvist is waiting for your response (accept or decline).',
+            timestamp: '1h ago',
           },
           {
             id: 'notif-declined-default',
             type: 'declined_limit',
-            title: 'Alerte bien-être & rythme',
-            body: 'Vous avez refusé plus de 3 demandes. Prenez du temps pour vous, votre réserve d’énergie est prioritaire.',
-            timestamp: 'Il y a 3h',
+            title: 'Rest & pacing reminder',
+            body: 'You have declined more than 3 requests. Take some time for yourself—your recovery comes first.',
+            timestamp: '3h ago',
           },
         ]
       }
@@ -1181,7 +1178,7 @@
 
         if (notifs.length === 0) {
           lockNotifsList1.innerHTML =
-            '<p style="color:#8c909e;font-size:0.8rem;text-align:center;padding:12px;">Aucune notification récente.</p>'
+            '<p style="color:#8c909e;font-size:0.8rem;text-align:center;padding:12px;">No recent notifications.</p>'
           return
         }
 
@@ -1192,7 +1189,7 @@
             <div class="lock-notif-head">
               <span class="lock-notif-app-badge">N</span>
               <span class="lock-notif-app-name">NEEDED</span>
-              <span>· ${n.timestamp || 'maintenant'}</span>
+              <span>· ${n.timestamp || 'just now'}</span>
             </div>
             <strong class="lock-notif-title">${n.title}</strong>
             <p class="lock-notif-body">${n.body}</p>
@@ -1206,14 +1203,14 @@
         })
       }
 
-      // Afficher le bandeau notification déroulant quand le téléphone est allumé
+      // Display in-app drop-down banner when screen is awake
       function displayInAppBanner(notif) {
         if (!inAppBanner1) return
         if (bannerTimer) clearTimeout(bannerTimer)
 
         bannerTitle1.textContent = notif.title
         bannerBody1.textContent = notif.body
-        bannerTime1.textContent = '· ' + (notif.timestamp || 'maintenant')
+        bannerTime1.textContent = '· ' + (notif.timestamp || 'just now')
 
         inAppBanner1.classList.add('active')
 
@@ -1235,14 +1232,14 @@
         })
       }
 
-      // Déclencher une notification (ajoute en storage + met à jour selon état allumé/éteint)
+      // Dispatch notification (saves to storage and alerts based on power state)
       function dispatchNotification(type, title, body, linkHash) {
         const notif = {
           id: 'notif-' + Date.now(),
           type: type,
           title: title,
           body: body,
-          timestamp: 'maintenant',
+          timestamp: 'just now',
           linkHash: linkHash || '#/',
           read: false,
         }
@@ -1256,15 +1253,12 @@
           localStorage.setItem('needed.notifications', JSON.stringify(updated))
         } catch {}
 
-        // 1. Si le téléphone est éteint : mettre à jour le centre de notifications de l'écran verrouillé
         if (isPhoneLocked) {
           renderLockNotifications()
         } else {
-          // 2. Si le téléphone est allumé : afficher le bandeau en haut de l'écran
           displayInAppBanner(notif)
         }
 
-        // Notifier également l'iframe React
         try {
           const win = frame1.contentWindow
           if (win) {
@@ -1275,61 +1269,61 @@
         } catch {}
       }
 
-      // Boutons de simulation des 4 cas requis par l'utilisateur
+      // Simulator buttons for the 4 required cases
       const btnNotifRequest = document.getElementById('btn-notif-request')
       const btnNotifMessage = document.getElementById('btn-notif-message')
       const btnNotif24h = document.getElementById('btn-notif-24h')
       const btnNotifDeclined = document.getElementById('btn-notif-declined')
 
-      // 1. Quelqu'un fait une demande
+      // 1. Someone makes a request
       if (btnNotifRequest) {
         btnNotifRequest.addEventListener('click', () => {
           dispatchNotification(
             'new_request',
-            'Nouvelle demande reçue',
-            'Julien Mercier : « Auriez-vous des conseils de jardinage pour rempoter des plantes d’intérieur ? »',
+            'New request received',
+            'Julien Mercier: "Would you have advice on repotting indoor plants in autumn?"',
             '#/helper',
           )
         })
       }
 
-      // 2. On reçoit un message
+      // 2. Someone receives a message
       if (btnNotifMessage) {
         btnNotifMessage.addEventListener('click', () => {
           dispatchNotification(
             'new_message',
-            'Nouveau message de Clara Fontaine',
-            '« Bonjour ! Avez-vous pu essayer la recette de brioches à la cannelle ? »',
+            'New message from Clara Fontaine',
+            '"Hello! Did you get a chance to try the cinnamon rolls recipe?"',
             '#/patient',
           )
         })
       }
 
-      // 3. Pas répondu à une demande depuis 24h
+      // 3. Unanswered request for >24h
       if (btnNotif24h) {
         btnNotif24h.addEventListener('click', () => {
           dispatchNotification(
             'pending_24h',
-            'Demande en attente (24h)',
-            'Une demande de Thomas Lindqvist attend votre réponse (accepter ou refuser).',
+            'Pending request (24h)',
+            'A request from Thomas Lindqvist is waiting for your response (accept or decline).',
             '#/patient',
           )
         })
       }
 
-      // 4. Plus de 3 demandes refusées
+      // 4. More than 3 declined requests
       if (btnNotifDeclined) {
         btnNotifDeclined.addEventListener('click', () => {
           dispatchNotification(
             'declined_limit',
-            'Alerte bien-être & rythme',
-            'Vous avez refusé plus de 3 demandes. Prenez du temps pour vous, votre récupération passe avant tout.',
+            'Rest & pacing reminder',
+            'You have declined more than 3 requests. Take time for yourself—your recovery comes first.',
             '#/patient',
           )
         })
       }
 
-      // Initialiser l'affichage des notifications sur l'écran verrouillé
+      // Initial render on lock screen
       renderLockNotifications()
     </script>
   </body>

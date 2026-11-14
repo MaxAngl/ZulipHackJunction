@@ -21,7 +21,7 @@ export type SimulationAccount = {
 }
 
 export const SIMULATION_ACCOUNTS: SimulationAccount[] = [
-  // 3 Aidants
+  // 3 Helpers
   {
     id: 'h-clara',
     token: 'token-helper-clara-1234',
@@ -31,7 +31,7 @@ export const SIMULATION_ACCOUNTS: SimulationAccount[] = [
     city: 'Helsinki, Punavuori',
     birthDate: '1992-07-14',
     interests: ['gardening', 'cooking', 'reading'],
-    bio: 'Jardinière passionnée et amoureuse de cuisine saine du potager. Toujours ravie d’échanger des astuces.',
+    bio: 'Passionate urban gardener and healthy organic cooking enthusiast. Always glad to exchange tips and seeds.',
     avatarUrl: '/moomins/Characters-04-2.svg',
     passionPhotos: [
       '/moomins/Characters-04-2.svg',
@@ -48,7 +48,7 @@ export const SIMULATION_ACCOUNTS: SimulationAccount[] = [
     city: 'Espoo, Tapiola',
     birthDate: '1989-11-23',
     interests: ['photography', 'cycling', 'hiking'],
-    bio: 'Photographe argentique et cycliste urbain. J’aime explorer les sentiers côtiers et les parcs nationaux.',
+    bio: 'Film photographer and city cyclist. Love exploring coastal paths, quiet coffee shops, and national parks.',
     avatarUrl: '/moomins/Muumipappa2.jpg',
     passionPhotos: [
       '/moomins/Muumipappa2.jpg',
@@ -65,7 +65,7 @@ export const SIMULATION_ACCOUNTS: SimulationAccount[] = [
     city: 'Vantaa, Tikkurila',
     birthDate: '1995-03-08',
     interests: ['baking', 'knitting', 'jazz'],
-    bio: 'Pâtissière amatrice de brioches à la cannelle (korvapuusti) et passionnée de disques vinyles.',
+    bio: 'Cinnamon bun (korvapuusti) home baker and passionate vinyl record collector.',
     avatarUrl: '/moomins/Nuuskamuikkunen.png',
     passionPhotos: [
       '/moomins/Nuuskamuikkunen.png',
@@ -84,7 +84,7 @@ export const SIMULATION_ACCOUNTS: SimulationAccount[] = [
     city: 'Helsinki, Töölö',
     birthDate: '1994-05-18',
     interests: ['gardening', 'baking', 'reading'],
-    bio: 'En rémission douce. Cultive des herbes aromatiques et teste régulièrement des recettes de pain au levain.',
+    bio: 'Gentle recovery journey. Cultivating indoor herbs and experimenting with sourdough bread recipes.',
     avatarUrl: '/moomins/Muumipeikko2.jpg',
     passionPhotos: [
       '/moomins/Muumipeikko2.jpg',
@@ -101,7 +101,7 @@ export const SIMULATION_ACCOUNTS: SimulationAccount[] = [
     city: 'Helsinki, Kallio',
     birthDate: '1996-09-30',
     interests: ['cooking', 'jazz', 'photography'],
-    bio: 'Amoureuse de musique acoustique, de balades au bord de l’eau et de bons petits plats réconfortants.',
+    bio: 'Acoustic music lover, calm waterfront walker, and warm comfort food enthusiast.',
     avatarUrl: '/moomins/Nuuskamuikkunen.png',
     passionPhotos: [
       '/moomins/Nuuskamuikkunen.png',
@@ -118,7 +118,7 @@ export const SIMULATION_ACCOUNTS: SimulationAccount[] = [
     city: 'Helsinki, Ullanlinna',
     birthDate: '1991-01-25',
     interests: ['cycling', 'hiking', 'knitting'],
-    bio: 'Adepte de grand air et de tricot scandinave pour garder les idées claires et apaisées.',
+    bio: 'Fresh air lover and Scandinavian knitting enthusiast to keep thoughts light, peaceful, and grounded.',
     avatarUrl: '/moomins/Characters-04-2.svg',
     passionPhotos: [
       '/moomins/Characters-04-2.svg',
@@ -375,7 +375,7 @@ export function readThreads(role: Role): ConversationThread[] {
           birthDate: '1994-05-18',
           city: 'Helsinki, Töölö',
           avatarUrl: '/moomins/Muumipeikko2.jpg',
-          bio: 'En rémission douce. Cultive des herbes aromatiques et teste régulièrement des recettes de pain au levain.',
+          bio: 'Gentle recovery journey. Cultivating indoor herbs and experimenting with sourdough bread recipes.',
           interests: ['gardening', 'baking', 'reading'],
           passionPhotos: [
             '/moomins/Muumipeikko2.jpg',
@@ -389,14 +389,14 @@ export function readThreads(role: Role): ConversationThread[] {
             id: 'm-julien-1',
             senderRole: 'helper',
             senderName: helperProfile ? helperProfile.firstName : 'Clara',
-            text: 'Bonjour Julien ! Aurais-tu des astuces de jardinage pour rempoter des plantes d’intérieur en automne ?',
+            text: 'Hello Julien! Would you have any tips for repotting indoor plants in autumn?',
             timestamp: '09:45',
           },
           {
             id: 'm-julien-2',
             senderRole: 'patient',
             senderName: 'Julien',
-            text: 'Avec plaisir ! Il faut surtout choisir un pot percé avec un lit de billes d’argile au fond et un terreau léger.',
+            text: 'With pleasure! Make sure to choose a drainage pot with clay pebbles at the bottom and a light potting mix.',
             timestamp: '10:15',
           },
         ],
@@ -407,7 +407,7 @@ export function readThreads(role: Role): ConversationThread[] {
         peerRole: 'patient',
         peerAvatar: '/moomins/Nuuskamuikkunen.png',
         lastMessageText:
-          'Bonjour Sofia, je cherche des recommandations d’albums de jazz nordique pour une ambiance de lecture apaisante, as-tu des pépites ?',
+          'Hello Sofia, I’m looking for soothing Nordic jazz album recommendations for quiet reading. Do you have favorites?',
         lastMessageTime: '11:30',
         isRead: false,
         isFinished: false,
@@ -418,7 +418,7 @@ export function readThreads(role: Role): ConversationThread[] {
           birthDate: '1996-09-30',
           city: 'Helsinki, Kallio',
           avatarUrl: '/moomins/Nuuskamuikkunen.png',
-          bio: 'Amoureuse de musique acoustique, de balades au bord de l’eau et de bons petits plats réconfortants.',
+          bio: 'Acoustic music lover, calm waterfront walker, and warm comfort food enthusiast.',
           interests: ['cooking', 'jazz', 'photography'],
           passionPhotos: [
             '/moomins/Nuuskamuikkunen.png',
@@ -432,7 +432,7 @@ export function readThreads(role: Role): ConversationThread[] {
             id: 'm-sofia-1',
             senderRole: 'helper',
             senderName: helperProfile ? helperProfile.firstName : 'Thomas',
-            text: 'Bonjour Sofia, je cherche des recommandations d’albums de jazz nordique pour une ambiance de lecture apaisante, as-tu des pépites ?',
+            text: 'Hello Sofia, I’m looking for soothing Nordic jazz album recommendations for quiet reading. Do you have favorites?',
             timestamp: '11:30',
           },
         ],
@@ -443,7 +443,7 @@ export function readThreads(role: Role): ConversationThread[] {
         peerRole: 'patient',
         peerAvatar: '/moomins/Characters-04-2.svg',
         lastMessageText:
-          'Le point mousse ou les côtes 1/1 sont idéales et très relaxantes !',
+          'Garter stitch or 1x1 ribbing is ideal and deeply relaxing to start with!',
         lastMessageTime: '14:20',
         isRead: true,
         isFinished: true,
@@ -454,7 +454,7 @@ export function readThreads(role: Role): ConversationThread[] {
           birthDate: '1991-01-25',
           city: 'Helsinki, Ullanlinna',
           avatarUrl: '/moomins/Characters-04-2.svg',
-          bio: 'Adepte de grand air et de tricot scandinave pour garder les idées claires et apaisées.',
+          bio: 'Fresh air lover and Scandinavian knitting enthusiast to keep thoughts light, peaceful, and grounded.',
           interests: ['cycling', 'hiking', 'knitting'],
           passionPhotos: [
             '/moomins/Characters-04-2.svg',
@@ -468,14 +468,14 @@ export function readThreads(role: Role): ConversationThread[] {
             id: 'm-lucas-1',
             senderRole: 'helper',
             senderName: helperProfile ? helperProfile.firstName : 'Elena',
-            text: 'Bonjour Lucas, je prépare une écharpe en laine mérinos pour l’hiver, quel type de maille conseilles-tu pour débuter sans stress ?',
+            text: 'Hi Lucas, I’m preparing a merino wool scarf for winter. What stitch would you suggest for a stress-free start?',
             timestamp: '13:50',
           },
           {
             id: 'm-lucas-2',
             senderRole: 'patient',
             senderName: 'Lucas',
-            text: 'Le point mousse ou les côtes 1/1 sont idéales et très relaxantes !',
+            text: 'Garter stitch or 1x1 ribbing is ideal and deeply relaxing to start with!',
             timestamp: '14:20',
           },
         ],
@@ -489,7 +489,7 @@ export function readThreads(role: Role): ConversationThread[] {
         peerRole: 'helper',
         peerAvatar: '/moomins/Characters-04-2.svg',
         lastMessageText:
-          'Avec plaisir ! Il faut surtout choisir un pot percé avec un lit de billes d’argile au fond et un terreau léger.',
+          'With pleasure! Make sure to choose a drainage pot with clay pebbles at the bottom and a light potting mix.',
         lastMessageTime: '10:15',
         isRead: true,
         isFinished: true,
@@ -500,7 +500,7 @@ export function readThreads(role: Role): ConversationThread[] {
           birthDate: '1992-07-14',
           city: 'Helsinki, Punavuori',
           avatarUrl: '/moomins/Characters-04-2.svg',
-          bio: 'Jardinière passionnée et amoureuse de cuisine saine du potager. Toujours ravie d’échanger des astuces.',
+          bio: 'Passionate urban gardener and healthy organic cooking enthusiast. Always glad to exchange tips and seeds.',
           interests: ['gardening', 'cooking', 'reading'],
           passionPhotos: [
             '/moomins/Characters-04-2.svg',
@@ -514,14 +514,14 @@ export function readThreads(role: Role): ConversationThread[] {
             id: 'p-m-clara-1',
             senderRole: 'helper',
             senderName: 'Clara',
-            text: 'Bonjour Julien ! Aurais-tu des astuces de jardinage pour rempoter des plantes d’intérieur en automne ?',
+            text: 'Hello Julien! Would you have any tips for repotting indoor plants in autumn?',
             timestamp: '09:45',
           },
           {
             id: 'p-m-clara-2',
             senderRole: 'patient',
             senderName: patientProfile ? patientProfile.firstName : 'Julien',
-            text: 'Avec plaisir ! Il faut surtout choisir un pot percé avec un lit de billes d’argile au fond et un terreau léger.',
+            text: 'With pleasure! Make sure to choose a drainage pot with clay pebbles at the bottom and a light potting mix.',
             timestamp: '10:15',
           },
         ],
@@ -532,7 +532,7 @@ export function readThreads(role: Role): ConversationThread[] {
         peerRole: 'helper',
         peerAvatar: '/moomins/Muumipappa2.jpg',
         lastMessageText:
-          'Bonjour ! Ravi de faire votre connaissance. N’hésitez pas si vous avez besoin d’un coup de main pour vos promenades ou courses.',
+          'Hello! Glad to connect. Let me know if you ever need a hand with light walks, errands, or just a chat.',
         lastMessageTime: '11:00',
         isRead: true,
         isFinished: false,
@@ -543,7 +543,7 @@ export function readThreads(role: Role): ConversationThread[] {
           birthDate: '1989-11-23',
           city: 'Espoo, Tapiola',
           avatarUrl: '/moomins/Muumipappa2.jpg',
-          bio: 'Photographe argentique et cycliste urbain. J’aime explorer les sentiers côtiers et les parcs nationaux.',
+          bio: 'Film photographer and city cyclist. Love exploring coastal paths, quiet coffee shops, and national parks.',
           interests: ['photography', 'cycling', 'hiking'],
           passionPhotos: [
             '/moomins/Muumipappa2.jpg',
@@ -557,7 +557,7 @@ export function readThreads(role: Role): ConversationThread[] {
             id: 'p-m-thomas-1',
             senderRole: 'helper',
             senderName: 'Thomas',
-            text: 'Bonjour ! Ravi de faire votre connaissance. N’hésitez pas si vous avez besoin d’un coup de main pour vos promenades ou courses.',
+            text: 'Hello! Glad to connect. Let me know if you ever need a hand with light walks, errands, or just a chat.',
             timestamp: '11:00',
           },
         ],
@@ -568,7 +568,7 @@ export function readThreads(role: Role): ConversationThread[] {
         peerRole: 'helper',
         peerAvatar: '/moomins/Nuuskamuikkunen.png',
         lastMessageText:
-          'Bonjour ! Je prépare une fournée de brioches à la cannelle, j’espère que vous passez une belle journée ensoleillée.',
+          'Hello! Baking a fresh batch of cinnamon buns today. Hope you are enjoying a sunny and peaceful day.',
         lastMessageTime: '13:10',
         isRead: false,
         isFinished: false,
@@ -579,7 +579,7 @@ export function readThreads(role: Role): ConversationThread[] {
           birthDate: '1995-03-08',
           city: 'Vantaa, Tikkurila',
           avatarUrl: '/moomins/Nuuskamuikkunen.png',
-          bio: 'Pâtissière amatrice de brioches à la cannelle (korvapuusti) et passionnée de disques vinyles.',
+          bio: 'Cinnamon bun (korvapuusti) home baker and passionate vinyl record collector.',
           interests: ['baking', 'knitting', 'jazz'],
           passionPhotos: [
             '/moomins/Nuuskamuikkunen.png',
@@ -593,7 +593,7 @@ export function readThreads(role: Role): ConversationThread[] {
             id: 'p-m-elena-1',
             senderRole: 'helper',
             senderName: 'Elena',
-            text: 'Bonjour ! Je prépare une fournée de brioches à la cannelle, j’espère que vous passez une belle journée ensoleillée.',
+            text: 'Hello! Baking a fresh batch of cinnamon buns today. Hope you are enjoying a sunny and peaceful day.',
             timestamp: '13:10',
           },
         ],
@@ -693,7 +693,7 @@ export function readAdminContactMessages(): AdminContactMessage[] {
       senderRole: 'patient',
       category: 'bug',
       message:
-        'Le temps de chargement des photos de passion a pris quelques secondes ce matin lors du passage au profil.',
+        'Profile photos took a few extra seconds to load when switching to my profile view this morning.',
       timestamp: '14:05',
       resolved: false,
     },
@@ -703,7 +703,7 @@ export function readAdminContactMessages(): AdminContactMessage[] {
       senderRole: 'helper',
       category: 'suggestion',
       message:
-        'Serait-il possible de rajouter un filtre par quartier pour l’entraide de proximité dans Helsinki ?',
+        'Could we add a neighborhood filter to browse local mutual aid requests in the Helsinki area?',
       timestamp: '11:45',
       resolved: true,
     },
@@ -751,27 +751,27 @@ export function readNotifications(): AppNotification[] {
     {
       id: 'notif-req-1',
       type: 'new_request',
-      title: 'Nouvelle demande reçue',
-      body: 'Julien Mercier vous sollicite pour des astuces de jardinage d’automne.',
-      timestamp: 'Il y a 10 min',
+      title: 'New request received',
+      body: 'Julien Mercier reached out for autumn gardening advice.',
+      timestamp: '10m ago',
       read: false,
       linkHash: '#/helper',
     },
     {
       id: 'notif-pending-1',
       type: 'pending_24h',
-      title: 'Demande en attente (24h)',
-      body: 'Une demande de Thomas Lindqvist attend votre réponse depuis 24h (accepter ou refuser).',
-      timestamp: 'Il y a 1h',
+      title: 'Pending request (24h)',
+      body: 'A request from Thomas Lindqvist has been waiting for your response for 24h (accept or decline).',
+      timestamp: '1h ago',
       read: false,
       linkHash: '#/patient',
     },
     {
       id: 'notif-declined-1',
       type: 'declined_limit',
-      title: 'Alerte bien-être & rythme',
-      body: 'Vous avez refusé plus de 3 demandes. Prenez du temps pour vous, votre réserve d’énergie est prioritaire.',
-      timestamp: 'Il y a 3h',
+      title: 'Rest & pacing reminder',
+      body: 'You have declined more than 3 requests. Take some time for yourself—your recovery and energy come first.',
+      timestamp: '3h ago',
       read: false,
       linkHash: '#/patient',
     },
@@ -821,9 +821,9 @@ export function incrementDeclinedRequestsCount(): number {
       saveNotification({
         id: `notif-declined-${Date.now()}`,
         type: 'declined_limit',
-        title: 'Alerte bien-être & rythme',
-        body: 'Vous avez refusé plus de 3 demandes. Prenez du temps pour vous, votre réserve d’énergie est prioritaire.',
-        timestamp: 'Maintenant',
+        title: 'Rest & pacing reminder',
+        body: 'You have declined more than 3 requests. Take some time for yourself—your recovery and energy come first.',
+        timestamp: 'Just now',
         read: false,
         linkHash: '#/patient',
       })
@@ -837,7 +837,7 @@ export function incrementDeclinedRequestsCount(): number {
 export function triggerSimulatedNotification(
   type: NotificationType,
 ): AppNotification {
-  const timeStr = 'Maintenant'
+  const timeStr = 'Just now'
   let notif: AppNotification
 
   switch (type) {
@@ -845,8 +845,8 @@ export function triggerSimulatedNotification(
       notif = {
         id: `notif-req-${Date.now()}`,
         type: 'new_request',
-        title: 'Nouvelle demande reçue',
-        body: 'Julien Mercier : « Auriez-vous des conseils de jardinage pour des plantes d’intérieur ? »',
+        title: 'New request received',
+        body: 'Julien Mercier: "Would you have advice on repotting indoor plants in autumn?"',
         timestamp: timeStr,
         read: false,
         linkHash: '#/helper',
@@ -856,8 +856,8 @@ export function triggerSimulatedNotification(
       notif = {
         id: `notif-msg-${Date.now()}`,
         type: 'new_message',
-        title: 'Nouveau message de Clara Fontaine',
-        body: '« Bonjour ! Avez-vous pu essayer la recette de brioches ? »',
+        title: 'New message from Clara Fontaine',
+        body: '"Hello! Did you get a chance to try the cinnamon rolls recipe?"',
         timestamp: timeStr,
         read: false,
         linkHash: '#/patient',
@@ -867,8 +867,8 @@ export function triggerSimulatedNotification(
       notif = {
         id: `notif-24h-${Date.now()}`,
         type: 'pending_24h',
-        title: 'Demande en attente (24h)',
-        body: 'Une demande de Thomas Lindqvist attend votre réponse (accepter ou refuser).',
+        title: 'Pending request (24h)',
+        body: 'A request from Thomas Lindqvist is waiting for your response (accept or decline).',
         timestamp: timeStr,
         read: false,
         linkHash: '#/patient',
@@ -878,8 +878,8 @@ export function triggerSimulatedNotification(
       notif = {
         id: `notif-limit-${Date.now()}`,
         type: 'declined_limit',
-        title: 'Alerte bien-être & rythme',
-        body: 'Vous avez refusé plus de 3 demandes. Prenez du temps pour vous, votre récupération passe avant tout.',
+        title: 'Rest & pacing reminder',
+        body: 'You have declined more than 3 requests. Take time for yourself—your recovery comes first.',
         timestamp: timeStr,
         read: false,
         linkHash: '#/patient',

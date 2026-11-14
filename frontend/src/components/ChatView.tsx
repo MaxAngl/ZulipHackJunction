@@ -91,23 +91,24 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
     if (!activeThread) return
     if (!inputText.trim() && attachments.length === 0) return
 
-    // Vérifier la limite anti-spam pour l'aidant (5 messages max par cycle)
+    // Check anti-spam limit for helper (max 5 messages per cycle)
     if (role === 'helper' && activeThread.helperMessageCount >= 5) {
       setLimitWarning(
-        'Limite de 5 messages atteinte pour éviter le spam. Laissez votre interlocuteur vous répondre ou relancez une demande.',
+        'Limit of 5 messages reached to prevent spam. Please wait for your peer to reply or start a new request cycle.',
       )
       return
     }
 
-    const timeStr = new Date().toLocaleTimeString('fr-FR', {
+    const timeStr = new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     })
 
     const newMsg = {
       id: `msg-${Date.now()}`,
       senderRole: role,
-      senderName: userName || (role === 'helper' ? 'Aidant' : 'Patient'),
+      senderName: userName || (role === 'helper' ? 'Helper' : 'Patient'),
       text: inputText.trim(),
       timestamp: timeStr,
       attachments: attachments.length > 0 ? attachments : undefined,
@@ -117,7 +118,7 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
       if (th.id === activeThread.id) {
         return {
           ...th,
-          lastMessageText: newMsg.text || 'Fichier partagé',
+          lastMessageText: newMsg.text || 'Shared file',
           lastMessageTime: timeStr,
           messages: [...th.messages, newMsg],
           helperMessageCount:
@@ -170,27 +171,27 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
     }
   }
 
-  // --- VUE 1 : Liste des conversations (Instagram / WhatsApp style) ---
+  // --- VIEW 1 : Conversations List ---
   if (!activeThread) {
     return (
       <section className="stack chat-list-section">
         <div className="chat-list-header">
           <h2>Messages</h2>
           <span className="quiet font-small">
-            {threads.filter((t) => !t.isRead).length} non lu(s)
+            {threads.filter((t) => !t.isRead).length} unread
           </span>
         </div>
 
         {threads.length === 0 ? (
           <div className="empty-state stack text-center">
-            <p className="quiet">Aucune conversation en cours.</p>
+            <p className="quiet">No active conversations yet.</p>
             {onStartNewRequest && (
               <button
                 type="button"
                 className="button button-primary button-wide"
                 onClick={onStartNewRequest}
               >
-                Faire une demande
+                New Request
               </button>
             )}
           </div>
@@ -214,8 +215,8 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
                     className="thread-avatar-wrapper thread-avatar-clickable"
                     title={
                       t.peerProfile?.allowProfileView === false
-                        ? 'Profil privé'
-                        : 'Voir le profil'
+                        ? 'Private profile'
+                        : 'View profile'
                     }
                     onClick={(e) => {
                       e.stopPropagation()
@@ -247,7 +248,7 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
                       <p className="thread-row-snippet">{t.lastMessageText}</p>
                       {t.isFinished && (
                         <span className="thread-status-badge">
-                          Service accompli
+                          Service completed
                         </span>
                       )}
                     </div>
@@ -274,7 +275,7 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
     )
   }
 
-  // --- VUE 2 : Conversation active libre et multimédia ---
+  // --- VIEW 2 : Active multimedia conversation ---
   const currentAvatar =
     activeThread.peerAvatar ??
     (activeThread.peerRole === 'patient'
@@ -283,12 +284,12 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
 
   return (
     <section className="stack chat-conversation-wrap">
-      {/* Barre de discussion individuelle */}
+      {/* Header */}
       <div className="chat-conv-header">
         <button
           type="button"
           className="chat-back-btn"
-          aria-label="Retour à la liste des messages"
+          aria-label="Back to conversations"
           onClick={() => setActiveThreadId(null)}
         >
           <svg
@@ -309,8 +310,8 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
           type="button"
           className="chat-conv-peer chat-conv-peer-clickable"
           onClick={() => handleOpenPeerProfile(activeThread)}
-          title="Voir le profil"
-          aria-label={`Voir le profil de ${activeThread.peerName}`}
+          title="View profile"
+          aria-label={`View ${activeThread.peerName}'s profile`}
         >
           {currentAvatar ? (
             <img
@@ -342,13 +343,13 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
             </div>
             <span className="quiet font-small block">
               {activeThread.peerRole === 'patient'
-                ? 'Patient en rémission'
-                : 'Aidant bénévole'}
+                ? 'Remission Patient'
+                : 'Volunteer Helper'}
             </span>
           </div>
         </button>
 
-        {/* Bouton pour clore ou relancer l'aide */}
+        {/* Action to finish or restart help */}
         {role === 'helper' && (
           <div>
             {!activeThread.isFinished ? (
@@ -357,7 +358,7 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
                 className="button button-ghost button-small"
                 onClick={handleMarkFinished}
               >
-                ✓ A fini de m'aider
+                ✓ Helped me
               </button>
             ) : (
               <button
@@ -365,7 +366,7 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
                 className="button button-primary button-small"
                 onClick={handleRestartHelp}
               >
-                + Nouvelle demande
+                + New request
               </button>
             )}
           </div>
@@ -375,8 +376,8 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
       {activeThread.isFinished && (
         <div className="chat-finished-notice">
           <span>
-            ✓ Vous avez validé l'aide reçue. La discussion reste ouverte si vous
-            souhaitez continuer d'échanger ou envoyer une nouvelle demande.
+            ✓ You confirmed the help received. The conversation remains open if
+            you wish to continue chatting or send a new request.
           </span>
         </div>
       )}
@@ -477,8 +478,8 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
         <button
           type="button"
           className="chat-attach-btn"
-          title="Joindre photo, vidéo ou fichier"
-          aria-label="Joindre un fichier"
+          title="Attach photo, video, or file"
+          aria-label="Attach file"
           onClick={() => fileInputRef.current?.click()}
         >
           <svg
@@ -498,7 +499,7 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
         <input
           type="text"
           value={inputText}
-          placeholder="Écrire un message..."
+          placeholder="Write a message..."
           className="chat-input-field"
           onChange={(e) => setInputText(e.target.value)}
         />
@@ -507,7 +508,7 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
           type="submit"
           className="chat-send-btn"
           disabled={!inputText.trim() && attachments.length === 0}
-          aria-label="Envoyer"
+          aria-label="Send"
         >
           <svg
             width="20"
@@ -525,7 +526,7 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
         </button>
       </form>
 
-      {/* Message d'avertissement lorsque le profil est privé */}
+      {/* Warning when profile is private */}
       {privateProfileNotice && (
         <div className="profile-private-toast" role="alert">
           <div className="flex-between">
@@ -544,7 +545,7 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
         </div>
       )}
 
-      {/* --- PAGE / MODAL DU PROFIL DE L'INTERLOCUTEUR --- */}
+      {/* --- PEER PROFILE MODAL --- */}
       {viewingPeerProfile && (
         <div
           className="peer-profile-modal-backdrop"
@@ -558,19 +559,19 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
             aria-labelledby="peer-profile-title"
           >
             <div className="peer-profile-modal-header">
-              <span className="eyebrow">Profil du membre</span>
+              <span className="eyebrow">Member Profile</span>
               <button
                 type="button"
                 className="peer-profile-modal-close"
                 onClick={() => setViewingPeerProfile(null)}
-                aria-label="Fermer"
+                aria-label="Close"
               >
                 ✕
               </button>
             </div>
 
             <div className="peer-profile-content-scroll stack">
-              {/* Photo en plus grand et Identité */}
+              {/* Identity hero */}
               <div className="peer-profile-hero">
                 <div className="peer-avatar-xlarge-wrap">
                   {viewingPeerProfile.peerProfile?.avatarUrl ||
@@ -599,23 +600,23 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
                 <div className="peer-profile-sub-badges">
                   <span className="peer-role-tag">
                     {viewingPeerProfile.peerRole === 'patient'
-                      ? 'Patient en rémission'
-                      : 'Aidant bénévole'}
+                      ? 'Remission Patient'
+                      : 'Volunteer Helper'}
                   </span>
                 </div>
               </div>
 
-              {/* Centres d'intérêt & Bio */}
+              {/* Interests & Bio */}
               <div className="peer-profile-section stack-compact">
-                <span className="eyebrow">Centres d'intérêt & Bio</span>
+                <span className="eyebrow">Interests & Bio</span>
                 <p className="peer-bio-text">
                   {viewingPeerProfile.peerProfile?.bio ||
                     (viewingPeerProfile.peerRole === 'patient'
-                      ? 'Passionné de cuisine au levain, de nature et de jardinage nordique.'
-                      : 'Bénévole engagé, passionné de photographie argentique et de vélo urbain.')}
+                      ? 'Passionate about sourdough baking, nature, and Nordic gardening.'
+                      : 'Dedicated volunteer, passionate about analog photography and urban cycling.')}
                 </p>
 
-                {/* Chips de centres d'intérêt */}
+                {/* Chips */}
                 <div className="peer-interests-chips">
                   {(
                     viewingPeerProfile.peerProfile?.interests ?? [
@@ -632,10 +633,10 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
                 </div>
               </div>
 
-              {/* Jusqu'à 3 photos de la passion */}
+              {/* Up to 3 passion photos */}
               <div className="peer-profile-section stack-compact">
                 <span className="eyebrow">
-                  Photos de passion (
+                  Passion photos (
                   {viewingPeerProfile.peerProfile?.passionPhotos?.length ?? 2}
                   /3)
                 </span>
@@ -657,13 +658,13 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
                 </div>
               </div>
 
-              {/* Bouton de retour à la conversation */}
+              {/* Back button */}
               <button
                 type="button"
                 className="button button-primary button-wide mt-2"
                 onClick={() => setViewingPeerProfile(null)}
               >
-                Retour à la conversation
+                Back to conversation
               </button>
             </div>
           </div>

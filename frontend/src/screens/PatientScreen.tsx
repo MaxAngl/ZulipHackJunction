@@ -41,9 +41,10 @@ function PatientScreen({ token, onLeave }: PatientScreenProps) {
           : (home?.user.name ?? 'Julien Mercier'),
       patientAvatar: profile?.avatarUrl ?? '/moomins/Muumipeikko2.jpg',
       text: needText,
-      timestamp: new Date().toLocaleTimeString('fr-FR', {
+      timestamp: new Date().toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
+        hour12: false,
       }),
       answered: false,
     })

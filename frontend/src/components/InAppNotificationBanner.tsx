@@ -145,7 +145,7 @@ function InAppNotificationBanner() {
         <button
           type="button"
           onClick={handleDismiss}
-          aria-label="Fermer la notification"
+          aria-label="Dismiss notification"
           style={{
             border: 'none',
             background: 'transparent',

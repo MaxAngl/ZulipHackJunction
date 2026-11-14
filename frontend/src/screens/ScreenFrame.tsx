@@ -34,8 +34,8 @@ function ScreenFrame({
               <a
                 href="#/settings"
                 className="topbar-settings-btn"
-                title="Paramètres"
-                aria-label="Paramètres"
+                title="Settings"
+                aria-label="Settings"
               >
                 <svg
                   width="22"

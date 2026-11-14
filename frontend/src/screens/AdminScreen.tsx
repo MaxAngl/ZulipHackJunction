@@ -93,7 +93,7 @@ function getInitialAdminData() {
     }
   }
 
-  // 2. Questions & Interactions entre les 3 aidants et 3 patients
+  // 2. Questions & Interactions between the 3 helpers and 3 patients
   const allQuestions: AdminQuestion[] = [
     {
       id: 'req-sim-1',
@@ -103,11 +103,11 @@ function getInitialAdminData() {
       toName: 'Julien Mercier',
       toRole: 'patient',
       toAvatar: '/moomins/Muumipeikko2.jpg',
-      text: 'Aurais-tu des astuces de jardinage pour rempoter des plantes d’intérieur en automne ?',
+      text: 'Would you have any gardening tips for repotting indoor plants in autumn?',
       status: 'resolved',
       timestamp: '10:15',
       replyText:
-        'Avec plaisir ! Il faut surtout choisir un pot percé avec un lit de billes d’argile au fond et un terreau léger.',
+        'With pleasure! Make sure to choose a drainage pot with clay pebbles at the bottom and a light potting mix.',
     },
     {
       id: 'req-sim-2',
@@ -117,7 +117,7 @@ function getInitialAdminData() {
       toName: 'Sofia Hakala',
       toRole: 'patient',
       toAvatar: '/moomins/Nuuskamuikkunen.png',
-      text: 'Je cherche des recommandations d’albums de jazz nordique pour une ambiance de lecture apaisante, as-tu des pépites ?',
+      text: 'I’m looking for soothing Nordic jazz album recommendations for quiet reading, do you have any favorites?',
       status: 'in_progress',
       timestamp: '11:30',
     },
@@ -129,15 +129,15 @@ function getInitialAdminData() {
       toName: 'Lucas Virtanen',
       toRole: 'patient',
       toAvatar: '/moomins/Characters-04-2.svg',
-      text: 'Je prépare une écharpe en laine mérinos pour l’hiver, quel type de maille conseilles-tu pour débuter sans stress ?',
+      text: 'I’m preparing a merino wool scarf for winter. What stitch would you suggest for a stress-free start?',
       status: 'resolved',
       timestamp: '14:20',
       replyText:
-        'Le point mousse ou les côtes 1/1 sont idéales et très relaxantes !',
+        'Garter stitch or 1x1 ribbing is ideal and deeply relaxing to start with!',
     },
   ]
 
-  // Questions issues des fils de discussion (ChatView)
+  // Questions from chat threads (ChatView)
   const helperThreads: ConversationThread[] = readThreads('helper')
   helperThreads.forEach((t) => {
     if (!allQuestions.some((q) => q.id === t.id || q.id === `thread-${t.id}`)) {
@@ -163,7 +163,7 @@ function getInitialAdminData() {
     }
   })
 
-  // Demandes directes de patients à la communauté (PatientCommunityNeed)
+  // Direct community needs from patients
   const communityNeeds: PatientCommunityNeed[] = readPatientCommunityNeeds()
   communityNeeds.forEach((need) => {
     allQuestions.push({
@@ -171,7 +171,7 @@ function getInitialAdminData() {
       fromName: need.patientName,
       fromRole: 'patient',
       fromAvatar: need.patientAvatar,
-      toName: 'Cercle des Aidants',
+      toName: 'Helpers Circle',
       toRole: 'helper',
       text: need.text,
       status: need.answered ? 'resolved' : 'in_progress',
@@ -180,7 +180,7 @@ function getInitialAdminData() {
     })
   })
 
-  // Déduplication par ID
+  // Deduplicate by ID
   const uniqueQuestionsMap = new Map<string, AdminQuestion>()
   allQuestions.forEach((q) => {
     if (!uniqueQuestionsMap.has(q.id)) {
@@ -207,7 +207,7 @@ function AdminScreen() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    document.title = 'Needed · Espace Administrateur'
+    document.title = 'Needed · Administrator Portal'
     return () => {
       document.title = 'Needed'
     }
@@ -241,7 +241,7 @@ function AdminScreen() {
 
   return (
     <div className="screen admin-screen">
-      {/* Header Administrateur */}
+      {/* Administrator Header */}
       <header className="topbar">
         <a className="brand" href="#/">
           <Logo size={36} />
@@ -251,36 +251,36 @@ function AdminScreen() {
           <a
             href="#/"
             className="button button-ghost button-small"
-            title="Retour à l'accueil"
+            title="Back to Home"
           >
-            Quitter
+            Exit
           </a>
         </div>
       </header>
 
       <main className="stack screen-body admin-body">
-        {/* Titre épuré */}
+        {/* Clean hero header */}
         <section className="admin-hero">
-          <h1>Espace Administrateur</h1>
+          <h1>Administrator Portal</h1>
         </section>
 
-        {/* Métriques globales */}
+        {/* Global metrics */}
         <div className="admin-metrics-grid">
           <div className="admin-stat-card">
             <span className="admin-stat-number">{users.length}</span>
-            <span className="admin-stat-label">Utilisateurs</span>
+            <span className="admin-stat-label">Community Users</span>
           </div>
           <div className="admin-stat-card">
             <span className="admin-stat-number stat-in-progress">
               {inProgressCount}
             </span>
-            <span className="admin-stat-label">En cours</span>
+            <span className="admin-stat-label">In Progress</span>
           </div>
           <div className="admin-stat-card">
             <span className="admin-stat-number stat-resolved">
               {resolvedCount}
             </span>
-            <span className="admin-stat-label">Résolues</span>
+            <span className="admin-stat-label">Resolved</span>
           </div>
           <div className="admin-stat-card">
             <span
@@ -289,14 +289,14 @@ function AdminScreen() {
             >
               {adminMessages.length}
             </span>
-            <span className="admin-stat-label">Messages</span>
+            <span className="admin-stat-label">Admin Inbox</span>
           </div>
         </div>
 
-        {/* SECTION 1 : Utilisateurs */}
+        {/* SECTION 1 : Users */}
         <section className="admin-card stack">
           <div className="flex-between">
-            <h2>Utilisateurs ({users.length})</h2>
+            <h2>Community Members ({users.length})</h2>
           </div>
 
           <div className="admin-users-list">
@@ -314,7 +314,7 @@ function AdminScreen() {
                       {u.name.charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <span className="user-status-dot" title="En ligne" />
+                  <span className="user-status-dot" title="Online" />
                 </div>
 
                 <div className="admin-user-info">
@@ -327,7 +327,7 @@ function AdminScreen() {
                           : 'role-badge-patient'
                       }`}
                     >
-                      {u.role === 'helper' ? 'Aidant' : 'Patient'}
+                      {u.role === 'helper' ? 'Helper' : 'Patient'}
                     </span>
                   </div>
                   {u.city && (
@@ -347,25 +347,25 @@ function AdminScreen() {
           </div>
         </section>
 
-        {/* SECTION 2 : Questions en cours & résolues */}
+        {/* SECTION 2 : Questions in progress & resolved */}
         <section className="admin-card stack">
           <div className="flex-between">
-            <h2>Questions ({filteredQuestions.length})</h2>
+            <h2>Questions & Exchanges ({filteredQuestions.length})</h2>
           </div>
 
-          {/* Filtres d'état et Recherche */}
+          {/* Filter and Search */}
           <div className="admin-filter-bar">
             <div
               className="segmented-control"
               role="tablist"
-              aria-label="Filtrer les questions"
+              aria-label="Filter questions"
             >
               <button
                 type="button"
                 className={`segmented-btn ${filter === 'all' ? 'active' : ''}`}
                 onClick={() => setFilter('all')}
               >
-                Toutes ({questions.length})
+                All ({questions.length})
               </button>
               <button
                 type="button"
@@ -374,7 +374,7 @@ function AdminScreen() {
                 }`}
                 onClick={() => setFilter('in_progress')}
               >
-                En cours ({inProgressCount})
+                In Progress ({inProgressCount})
               </button>
               <button
                 type="button"
@@ -383,24 +383,24 @@ function AdminScreen() {
                 }`}
                 onClick={() => setFilter('resolved')}
               >
-                Résolues ({resolvedCount})
+                Resolved ({resolvedCount})
               </button>
             </div>
 
             <input
               type="text"
               value={search}
-              placeholder="Rechercher par nom ou contenu..."
+              placeholder="Search by member name or content..."
               className="admin-search-input"
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
 
-          {/* Liste des questions avec lien émetteur ➜ destinataire */}
+          {/* Questions list with From ➜ To link */}
           <div className="admin-questions-list stack">
             {filteredQuestions.length === 0 ? (
               <p className="quiet font-small text-center py-4">
-                Aucune question ne correspond à ce filtre.
+                No questions match this filter.
               </p>
             ) : (
               filteredQuestions.map((q) => (
@@ -412,7 +412,7 @@ function AdminScreen() {
                       : 'card-resolved'
                   }`}
                 >
-                  {/* Bannière du lien : De QUI vers QUI */}
+                  {/* Link banner: From WHO to WHO */}
                   <div className="relation-header">
                     <div className="relation-party">
                       {q.fromAvatar ? (
@@ -429,14 +429,14 @@ function AdminScreen() {
                       <div>
                         <strong className="party-name">{q.fromName}</strong>
                         <span className="party-role">
-                          {q.fromRole === 'helper' ? 'Aidant' : 'Patient'}
+                          {q.fromRole === 'helper' ? 'Helper' : 'Patient'}
                         </span>
                       </div>
                     </div>
 
-                    <div className="relation-arrow-box" title="En lien avec">
+                    <div className="relation-arrow-box" title="Connected with">
                       <span className="relation-arrow">➜</span>
-                      <span className="relation-label">sollicite</span>
+                      <span className="relation-label">requests help from</span>
                     </div>
 
                     <div className="relation-party">
@@ -454,7 +454,7 @@ function AdminScreen() {
                       <div>
                         <strong className="party-name">{q.toName}</strong>
                         <span className="party-role">
-                          {q.toRole === 'helper' ? 'Aidant' : 'Patient'}
+                          {q.toRole === 'helper' ? 'Helper' : 'Patient'}
                         </span>
                       </div>
                     </div>
@@ -462,27 +462,29 @@ function AdminScreen() {
                     <div className="relation-status-badge">
                       {q.status === 'in_progress' ? (
                         <span className="badge-status-in-progress">
-                          ● En cours
+                          ● In Progress
                         </span>
                       ) : (
-                        <span className="badge-status-resolved">✓ Résolue</span>
+                        <span className="badge-status-resolved">
+                          ✓ Resolved
+                        </span>
                       )}
                     </div>
                   </div>
 
-                  {/* Contenu de la question */}
+                  {/* Question content */}
                   <div className="question-content-box">
                     <span className="question-timestamp">
-                      Heure de l'échange : {q.timestamp}
-                      {q.isCommunityNeed && ' · Besoin communautaire'}
+                      Exchange time: {q.timestamp}
+                      {q.isCommunityNeed && ' · Community need'}
                     </span>
                     <p className="question-text">« {q.text} »</p>
 
-                    {/* Réponse éventuelle */}
+                    {/* Possible reply */}
                     {q.replyText && (
                       <div className="question-reply-box">
                         <span className="reply-label">
-                          Réponse apportée par {q.toName} :
+                          Reply provided by {q.toName}:
                         </span>
                         <p className="reply-text">« {q.replyText} »</p>
                       </div>
@@ -494,19 +496,19 @@ function AdminScreen() {
           </div>
         </section>
 
-        {/* SECTION 3 : Messagerie & Signalements Administrateur */}
+        {/* SECTION 3 : Admin Messages & Reports */}
         <section className="admin-card stack">
           <div className="flex-between">
-            <h2>Messagerie Administrateur ({adminMessages.length})</h2>
+            <h2>Admin Inbox ({adminMessages.length})</h2>
             <span className="quiet font-small">
-              {adminMessages.filter((m) => !m.resolved).length} non traité(s)
+              {adminMessages.filter((m) => !m.resolved).length} pending
             </span>
           </div>
 
           <div className="admin-messages-list stack" style={{ gap: '10px' }}>
             {adminMessages.length === 0 ? (
               <p className="quiet font-small text-center py-4">
-                Aucun message reçu pour le moment.
+                No messages received yet.
               </p>
             ) : (
               adminMessages.map((msg) => (
@@ -564,17 +566,17 @@ function AdminScreen() {
                         {msg.category === 'bug' && 'Bug'}
                         {msg.category === 'question' && 'Question'}
                         {msg.category === 'suggestion' && 'Suggestion'}
-                        {msg.category === 'other' && 'Remarque'}
+                        {msg.category === 'other' && 'Note'}
                       </span>
                       <strong>{msg.senderName}</strong>
                       {msg.senderRole && (
                         <span className="quiet font-small">
                           (
                           {msg.senderRole === 'helper'
-                            ? 'Aidant'
+                            ? 'Helper'
                             : msg.senderRole === 'patient'
                               ? 'Patient'
-                              : 'Visiteur'}
+                              : 'Visitor'}
                           )
                         </span>
                       )}
@@ -592,7 +594,7 @@ function AdminScreen() {
                           handleToggleMessageResolved(msg.id, msg.resolved)
                         }
                       >
-                        {msg.resolved ? 'Rouvrir' : 'Marquer traité'}
+                        {msg.resolved ? 'Reopen' : 'Mark resolved'}
                       </button>
                     </div>
                   </div>
@@ -613,13 +615,13 @@ function AdminScreen() {
           </div>
         </section>
 
-        {/* Liens de navigation retour */}
+        {/* Navigation links */}
         <div className="admin-footer-links">
           <a href="#/" className="button button-wide">
-            Retour à l'accueil
+            Back to Home
           </a>
           <a href="#/clinician" className="button button-ghost button-wide">
-            Portail Clinicien
+            Clinician Portal
           </a>
         </div>
       </main>

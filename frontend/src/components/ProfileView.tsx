@@ -66,22 +66,22 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
     setPassionPhotos((prev) => prev.filter((_, i) => i !== idx))
   }
 
-  // Statistiques de services rendus (réalistes et inspirantes)
+  // Realistic support statistics
   const servicesCount = role === 'patient' ? 7 : 4
   const historyData = [
-    { day: 'Lun', count: 1 },
-    { day: 'Mar', count: 2 },
-    { day: 'Mer', count: 1 },
-    { day: 'Jeu', count: 3 },
-    { day: 'Ven', count: 5 },
-    { day: 'Sam', count: 6 },
-    { day: 'Dim', count: 7 },
+    { day: 'Mon', count: 1 },
+    { day: 'Tue', count: 2 },
+    { day: 'Wed', count: 1 },
+    { day: 'Thu', count: 3 },
+    { day: 'Fri', count: 5 },
+    { day: 'Sat', count: 6 },
+    { day: 'Sun', count: 7 },
   ]
   const maxVal = Math.max(...historyData.map((d) => d.count), 1)
 
   return (
     <section className="stack profile-view">
-      {/* Carte d'identité principale */}
+      {/* Identity hero card */}
       <div className="profile-hero-card">
         <div className="profile-avatar-large-wrap">
           {avatarUrl ? (
@@ -97,28 +97,28 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
         </h2>
         <span className="profile-role-pill">
           {role === 'helper'
-            ? 'Aidant bénévole · Community Helper'
-            : 'Patient en rémission · Clinic Member'}
+            ? 'Volunteer Helper · Community Helper'
+            : 'Remission Patient · Clinic Member'}
         </span>
       </div>
 
-      {/* --- TABLEAU DES ACHIEVEMENTS & IMPACT --- */}
+      {/* --- ACHIEVEMENTS & IMPACT CARD --- */}
       <div className="profile-achievements-card stack">
         <div className="achievements-header">
           <div>
-            <span className="eyebrow">Tableau d'impact</span>
-            <h3>Services & Réciprocité</h3>
+            <span className="eyebrow">Impact Dashboard</span>
+            <h3>Mutual Support & Reciprocity</h3>
           </div>
           <div className="achievements-counter-badge">
             <span className="achievements-number">{servicesCount}</span>
-            <span className="achievements-sub">services</span>
+            <span className="achievements-sub">acts</span>
           </div>
         </div>
 
-        {/* Graphique d'évolution dans le temps (Sparkline / Bar chart SVG propre) */}
+        {/* Support evolution chart */}
         <div className="achievements-graph-wrap">
           <span className="quiet font-small block mb-1">
-            Évolution des échanges positifs (7 derniers jours) :
+            Support exchanges over the last 7 days:
           </span>
           <div className="achievements-chart">
             {historyData.map((d, idx) => {
@@ -129,7 +129,7 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                     <div
                       className="chart-bar-fill"
                       style={{ height: `${heightPct}%` }}
-                      title={`${d.count} service(s) le ${d.day}`}
+                      title={`${d.count} act(s) on ${d.day}`}
                     />
                   </div>
                   <span className="chart-bar-label">{d.day}</span>
@@ -139,11 +139,11 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
           </div>
         </div>
 
-        {/* Médailles pour paliers (1er, 5e, 10e service, etc.) */}
+        {/* Milestone badges */}
         <div className="achievements-badges-section">
-          <span className="eyebrow">Médailles & Paliers</span>
+          <span className="eyebrow">Milestones & Badges</span>
           <div className="badges-grid">
-            {/* Médaille 1 : 1er service */}
+            {/* Badge 1 */}
             <div
               className={`badge-card ${servicesCount >= 1 ? 'badge-unlocked' : 'badge-locked'}`}
             >
@@ -162,14 +162,14 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                   <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
                 </svg>
               </div>
-              <strong className="badge-title">1er Service</strong>
-              <span className="badge-desc">Premier pas dans l’entraide</span>
+              <strong className="badge-title">1st Support Act</strong>
+              <span className="badge-desc">First step in peer support</span>
               {servicesCount >= 1 && (
-                <span className="badge-status-tag">Débloqué</span>
+                <span className="badge-status-tag">Unlocked</span>
               )}
             </div>
 
-            {/* Médaille 2 : 5e service */}
+            {/* Badge 2 */}
             <div
               className={`badge-card ${servicesCount >= 5 ? 'badge-unlocked' : 'badge-locked'}`}
             >
@@ -187,10 +187,10 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
               </div>
-              <strong className="badge-title">5e Service</strong>
-              <span className="badge-desc">Pilier de bienveillance</span>
+              <strong className="badge-title">5th Support Act</strong>
+              <span className="badge-desc">Pillar of kindness</span>
               {servicesCount >= 5 ? (
-                <span className="badge-status-tag">Débloqué</span>
+                <span className="badge-status-tag">Unlocked</span>
               ) : (
                 <span className="badge-status-tag tag-locked">
                   {servicesCount}/5
@@ -198,7 +198,7 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
               )}
             </div>
 
-            {/* Médaille 3 : 10e service */}
+            {/* Badge 3 */}
             <div
               className={`badge-card ${servicesCount >= 10 ? 'badge-unlocked' : 'badge-locked'}`}
             >
@@ -221,10 +221,10 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                   <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
                 </svg>
               </div>
-              <strong className="badge-title">10e Service</strong>
-              <span className="badge-desc">Maître de la communauté</span>
+              <strong className="badge-title">10th Support Act</strong>
+              <span className="badge-desc">Community champion</span>
               {servicesCount >= 10 ? (
-                <span className="badge-status-tag">Débloqué</span>
+                <span className="badge-status-tag">Unlocked</span>
               ) : (
                 <span className="badge-status-tag tag-locked">
                   {servicesCount}/10
@@ -235,10 +235,10 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
         </div>
       </div>
 
-      {/* Passions, Bio et Photos de hobbies */}
+      {/* Passions, Bio and Hobbies Photos */}
       <div className="profile-details-card stack">
         <div className="flex-between">
-          <span className="eyebrow">Passions & Centres d'intérêt</span>
+          <span className="eyebrow">Passions & Interests</span>
           {!isEditing ? (
             <button
               type="button"
@@ -250,7 +250,7 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                 setIsEditing(true)
               }}
             >
-              Modifier
+              Edit
             </button>
           ) : (
             <div className="row-align-center">
@@ -259,14 +259,14 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                 className="link quiet font-small"
                 onClick={() => setIsEditing(false)}
               >
-                Annuler
+                Cancel
               </button>
               <button
                 type="button"
                 className="button button-primary button-small"
                 onClick={handleSaveProfileExtras}
               >
-                Enregistrer
+                Save
               </button>
             </div>
           )}
@@ -277,15 +277,13 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
             {profile?.bio ? (
               <p className="profile-bio-text">{profile.bio}</p>
             ) : (
-              <p className="quiet font-small italic">
-                Aucune bio renseignée pour le moment.
-              </p>
+              <p className="quiet font-small italic">No bio provided yet.</p>
             )}
 
-            {/* Photos de passion */}
+            {/* Passion photos */}
             <div className="profile-passion-photos-section">
               <span className="font-small quiet block mb-1">
-                Photos de passions ({profile?.passionPhotos?.length ?? 0}/3) :
+                Passion photos ({profile?.passionPhotos?.length ?? 0}/3):
               </span>
               {(profile?.passionPhotos?.length ?? 0) > 0 ? (
                 <div className="passion-photos-grid">
@@ -301,18 +299,18 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                 </div>
               ) : (
                 <p className="quiet font-small italic">
-                  Aucune photo de passion ajoutée.
+                  No passion photos added yet.
                 </p>
               )}
             </div>
 
-            {/* Confidentialité du profil */}
+            {/* Profile privacy */}
             <div className="profile-privacy-status-pill">
               <span className="status-dot-indicator" />
               <span className="font-small">
                 {profile?.allowProfileView !== false
-                  ? 'Profil partagé dans vos conversations'
-                  : 'Profil masqué (vos correspondants ne peuvent pas le consulter)'}
+                  ? 'Profile visible in your conversations'
+                  : 'Private profile (peers cannot view details)'}
               </span>
             </div>
           </div>
@@ -320,22 +318,20 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
           <div className="stack-compact">
             <label className="field">
               <span className="font-small">
-                Quelques mots sur vous & vos passions
+                A few words about you & your passions
               </span>
               <textarea
                 rows={3}
                 value={bioInput}
                 maxLength={300}
-                placeholder="Ex : Passionné de pain au levain, jardinage nordique et musique jazz..."
+                placeholder="E.g., Sourdough baker, Nordic gardening and jazz enthusiast..."
                 onChange={(e) => setBioInput(e.target.value)}
               />
             </label>
 
             <div className="field">
               <div className="flex-between">
-                <span className="font-small">
-                  Photos de passion (jusqu'à 3)
-                </span>
+                <span className="font-small">Passion photos (up to 3)</span>
                 <span className="quiet font-small">
                   {passionPhotos.length}/3
                 </span>
@@ -351,7 +347,7 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                     <button
                       type="button"
                       className="passion-photo-remove-btn"
-                      title="Supprimer la photo"
+                      title="Delete photo"
                       onClick={() => handleRemovePassionPhoto(idx)}
                     >
                       ×
@@ -368,7 +364,7 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                       onChange={handleAddPassionPhoto}
                     />
                     <span className="passion-add-icon">+</span>
-                    <span className="font-small quiet">Ajouter</span>
+                    <span className="font-small quiet">Add</span>
                   </label>
                 )}
               </div>
@@ -381,10 +377,10 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
                 onChange={(e) => setAllowProfileView(e.target.checked)}
               />
               <div className="privacy-toggle-info">
-                <strong>Autoriser mes correspondants à voir mon profil</strong>
+                <strong>Allow chat partners to view my profile</strong>
                 <p className="quiet font-small">
-                  Si décoché, cliquer sur votre profil dans la messagerie
-                  indiquera que votre profil est privé.
+                  If unchecked, tapping your profile in conversations will
+                  indicate that your profile is private.
                 </p>
               </div>
             </label>
@@ -392,24 +388,24 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
         )}
       </div>
 
-      {/* Informations personnelles */}
+      {/* Personal information */}
       <div className="profile-details-card stack-compact">
-        <span className="eyebrow">Informations personnelles</span>
+        <span className="eyebrow">Personal Information</span>
         {profile?.birthDate && (
           <div className="profile-info-row">
-            <span className="profile-info-label">Date de naissance</span>
+            <span className="profile-info-label">Date of birth</span>
             <strong className="profile-info-value">{profile.birthDate}</strong>
           </div>
         )}
         {profile?.city && (
           <div className="profile-info-row">
-            <span className="profile-info-label">Lieu de résidence</span>
+            <span className="profile-info-label">Location</span>
             <strong className="profile-info-value">{profile.city}</strong>
           </div>
         )}
         {role === 'patient' && profile?.clinicianEmail && (
           <div className="profile-info-row">
-            <span className="profile-info-label">Clinicien référent</span>
+            <span className="profile-info-label">Referring clinician</span>
             <strong className="profile-info-value">
               {profile.clinicianEmail}
             </strong>
@@ -419,7 +415,7 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
 
       <div className="profile-actions-stack stack">
         <a href="#/settings" className="button button-ghost button-wide">
-          Paramètres & Confidentialité
+          Settings & Privacy
         </a>
         {onLeave && (
           <button
@@ -427,7 +423,7 @@ function ProfileView({ role, name, onLeave }: ProfileViewProps) {
             className="button button-wide"
             onClick={onLeave}
           >
-            Déconnexion / Quitter ce compte
+            Sign out / Switch account
           </button>
         )}
       </div>

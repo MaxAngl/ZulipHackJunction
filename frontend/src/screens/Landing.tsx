@@ -44,10 +44,10 @@ function Landing() {
           <a
             href="#/admin"
             className="button-admin-pill"
-            title="Accéder à l'espace administrateur"
+            title="Access Administrator Portal"
           >
             <span className="admin-pill-icon">🛡️</span>
-            <span>Espace Administrateur</span>
+            <span>Admin Portal</span>
           </a>
         </div>
 

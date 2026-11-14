@@ -6,15 +6,15 @@ type BottomNavProps = {
   unreadBadge?: number
 }
 
-// Barre des tâches en bas, légèrement transparente avec effet de flou (glassmorphism crème).
-// Trois actions principales : Faire une demande (gauche), Messagerie (milieu), Mon profil (droite).
+// Bottom navigation bar, slightly translucent with cream glassmorphism.
+// Three primary actions: New Request (left), Messages (middle), Profile (right).
 function BottomNav({
   activeTab,
   onSelectTab,
   unreadBadge = 0,
 }: BottomNavProps) {
   return (
-    <nav className="bottom-nav" aria-label="Navigation principale">
+    <nav className="bottom-nav" aria-label="Main navigation">
       <button
         type="button"
         className={`bottom-nav-item ${
@@ -38,7 +38,7 @@ function BottomNav({
           <line x1="12" y1="8" x2="12" y2="16" />
           <line x1="8" y1="12" x2="16" y2="12" />
         </svg>
-        <span className="bottom-nav-label">Faire une demande</span>
+        <span className="bottom-nav-label">New Request</span>
       </button>
 
       <button
@@ -92,7 +92,7 @@ function BottomNav({
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
           <circle cx="12" cy="7" r="4" />
         </svg>
-        <span className="bottom-nav-label">Mon profil</span>
+        <span className="bottom-nav-label">Profile</span>
       </button>
     </nav>
   )
