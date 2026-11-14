@@ -3,6 +3,8 @@
 Ce que Claude a décidé seul pour faire tourner la boucle, sans validation de l'équipe.
 Chaque ligne dit où le changer. Ce qui avait été validé en discussion n'est pas repris ici.
 
+> Ce fichier décrit **le code tel qu'il tourne aujourd'hui**. Le modèle que l'équipe a arrêté depuis (données brutes θ, vecteur d'état L(θ), zone sur plusieurs axes, trois réseaux) est dans [docs/modele.md](docs/modele.md). Les sections « Zone et mesure » et « Ce qui est faux ou simulé » ci-dessous seront remplacées quand ce modèle sera codé.
+
 ## À faire en premier
 
 1. **Mettre une clé Gemini** dans `.env` à la racine (`GEMINI_API_KEY=...`), puis lancer `uv run python -m ml.check_gemini`. **La connexion à Gemini n'a jamais été testée en réel** : il n'y avait pas de clé sur la machine. Sans clé, l'app tourne avec une banque de secours.

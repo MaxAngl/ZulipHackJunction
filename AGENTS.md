@@ -10,7 +10,8 @@ Le guide pratique pour les humains (installation, boucle de travail, prompts typ
 
 **Sujet :** Needed (nom provisoire), pour le challenge Junction sur le maintien à domicile après un traitement de la dépression par TMS. Une communauté où ce sont les patients en rémission qui rendent service : une IA décide quoi leur demander, quand et de la part de qui, selon leur état.
 **Démo attendue :** deux choses. La **vraie app** (`#/helper`, `#/patient`) : deux personnes s'inscrivent sur leur téléphone, l'une demande un service, l'autre répond, la première remercie. Et la **console** (`#/demo`) : la boucle fermée pour un patient simulé, où l'on voit l'état θ bouger, la zone λ(θ) se déplacer, les demandes générées, mesurées et filtrées, puis la zone s'ajuster.
-**À lire :** [HYPOTHESES.md](HYPOTHESES.md) liste ce qui a été décidé sans validation de l'équipe et ce qui est simulé.
+**À lire :** [HYPOTHESES.md](HYPOTHESES.md) liste ce qui a été décidé sans validation de l'équipe et ce qui est simulé dans le code actuel.
+**Modèle cible :** [docs/modele.md](docs/modele.md) définit les objets, les axes d'une demande, les trois réseaux, leur entraînement et leur évaluation. Il n'est pas encore codé : avant de toucher à `ml/`, lire ce document et sa section « Écarts avec le code actuel ».
 
 ## Règles d'or (pour chaque agent, à chaque tâche)
 
@@ -106,6 +107,8 @@ ml/
   check_gemini.py    # vérification de la clé Gemini
   tests/             # tests du contrat ML
   data/, models/     # données et poids : ignorés par git (trop lourds)
+docs/
+  modele.md          # le modèle cible : objets, axes, réseaux, entraînement (pas encore codé)
 contract/
   openapi.json       # GÉNÉRÉ, commité : la référence partagée front/back
 frontend/
@@ -180,6 +183,11 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Le modèle cible est fixé dans `docs/modele.md` et remplacera la règle écrite à la main — le code actuel tient l'état en un seul nombre ; la cible sépare les données brutes θ du vecteur d'état L(θ).
+- 2026-11-14 — Trois réseaux : un autoencodeur pour L(θ), B (un Transformer) qui sort la zone, A (petit réseau dense) qui prédit la récompense. **A ne sert qu'à l'entraînement, B décide seul** — la décision tient en un réseau, et la réalité corrige A, qui corrige B.
+- 2026-11-14 — Poids généraux partagés, plus une dernière couche par patient dans A et dans B — un réseau entier par patient n'aurait pas assez de données.
+- 2026-11-14 — Une demande se décrit sur 8 axes (6 en phase 1) et la zone donne un intervalle par axe, avec un plafond seul pour le coût de démarrage et la compétence exigée — l'ancien « effort » mélangeait durée, échange et passage à l'action.
+- 2026-11-14 — L_ref est l'état d'une personne saine, et la récompense va de 0 à 100 en comparant L avant et après la demande — une cible lisible pour mesurer une amélioration.
 - 2026-11-14 — Vraie app à côté de la console de démo : comptes par jeton d'appareil, sans mot de passe — assez pour une démo sur deux téléphones ; à remplacer avant tout usage avec de vrais patients.
 - 2026-11-14 — Stockage SQLite avec la bibliothèque standard (`data/needed.db`, ignoré par git) — persistance sans dépendance ni service à installer.
 - 2026-11-14 — Dans la vraie app, θ est estimé d'après le comportement du patient, et un capteur externe peut le pousser par l'API — pas de capteur réel disponible ; la règle n'est pas validée.
