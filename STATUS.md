@@ -19,12 +19,16 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 - [14/11 07:00] **Contrat d'API étendu** (issue #3) : nouvelles routes `/api/app/*` pour la vraie app (inscription, aidant, patient). L'en-tête `X-Needed-Token` identifie l'appareil. Rien n'est retiré.
 - [14/11 09:00] Relectures automatiques des PR retirées (issue #7) : faire relire sa PR par l'agent d'un coéquipier, prompt dans `ONBOARDING.md`. Ignorer les anciens jobs Claude ou Gemini rouges.
 - [14/11 07:00] La console de démo est maintenant sur `#/demo`. L'accueil `#/` mène à la vraie app. Base locale dans `data/` (ignorée par git), aucune dépendance ajoutée.
+- [14/11 12:30] **Modèle cible fixé dans `docs/modele.md`** (issue #12) : objets, axes d'une demande, trois réseaux, entraînement, évaluation. `AGENTS.md` est modifié : un lien et cinq décisions. Aucun code ni contrat touché. À lire avant tout travail dans `ml/`.
 
 ## Max (Claude Code)
 
-- **En cours :** — _(#1, la boucle de démo, et #3, la vraie app, sont livrées par la PR #4)_
+- **En cours :** — _(dernière tâche livrée : #12, le modèle cible, dans `docs/modele.md`)_
 - **Bloqué :** pas de clé Gemini sur la machine, donc la connexion à Gemini n'est pas testée en réel. Mettre la clé dans `.env`, puis `uv run python -m ml.check_gemini`.
 - **Notes pour la suite :**
+  - Prochaine étape : les deux générateurs de données (états, patient simulé), décrits en section 6 de `docs/modele.md`. Ce qui reste à définir avant de les écrire est en section 10 : contenu de θ, composantes de L, formule de la récompense.
+  - Le modèle cible n'est pas codé. Le code actuel est décrit par `HYPOTHESES.md` ; les écarts sont en section 8 de `docs/modele.md`. Le coder changera les deux contrats (API et ML).
+  - #13 reste ouverte : `docs/modele.md` en couvre l'essentiel, sauf les définitions encore ouvertes de la section 10.
   - Le modèle de zone (`ml/model.py`) et le capteur θ (`backend/sensor.py`) sont simulés. Garder leurs signatures en les remplaçant.
   - Si Gemini donne des λ tassés ou incohérents, regarder `lambda_position` dans `ml/pipeline.py` et les trois phrases de référence de `ml/check_gemini.py`.
   - Démo sur deux téléphones : `?view=helper` et `?view=patient`, avec `npm --prefix frontend run dev -- --host`.
