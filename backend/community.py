@@ -44,6 +44,14 @@ def _clamp(value: float) -> float:
     return max(0.02, min(0.98, value))
 
 
+def suggestion_seed() -> int:
+    """Graine du tirage des propositions. Prise sur l'horloge pour varier d'une fois à l'autre.
+
+    Elle ne sert qu'au générateur de secours. Les tests la remplacent par une valeur fixe.
+    """
+    return int(time.time())
+
+
 def _clean(interests: list[str]) -> list[str]:
     return list(dict.fromkeys(item.strip().lower() for item in interests if item.strip()))
 
@@ -118,7 +126,7 @@ class Community:
                     helper_name=helper.name,
                     patient_name=patient.name,
                     avoid=[candidate.text for candidate in candidates],
-                    seed=int(time.time()) + attempt,
+                    seed=suggestion_seed() + attempt,
                 )
                 chosen = select_three(candidates, zone, set(patient.tried_formats))
                 if len(chosen) >= PROPOSALS_WANTED:

@@ -9,13 +9,16 @@ from backend.community import Community
 from backend.main import app, get_community
 from backend.schemas import ErrorResponse, HelperHome, PatientHome, SessionResponse
 from backend.store import Store
+from ml.model import ZoneParams, zone_for
 
 client = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def empty_database() -> None:
+def empty_database(monkeypatch: pytest.MonkeyPatch) -> None:
     get_community.cache_clear()  # nouvelle base en mémoire pour chaque test
+    # Les propositions ne dépendent plus de l'horloge : mêmes tirages à chaque lancement.
+    monkeypatch.setattr("backend.community.suggestion_seed", lambda: 1234)
 
 
 def _join(role: str, name: str, interests: list[str]) -> dict[str, str]:
@@ -93,12 +96,58 @@ def test_a_patient_gets_one_request_at_a_time():
     assert inbox[0].with_name == "Mikko"
 
     client.post("/api/app/patient/decline", json={"request_id": inbox[0].id}, headers=patient)
-    inbox = _patient_home(patient).inbox
-    assert [request.with_name for request in inbox] == ["Sara"]
 
-    # L'aidant dont la demande a été mise de côté ne voit aucune différence.
-    home = HelperHome.model_validate(client.get("/api/app/helper", headers=first).json())
-    assert home.requests[0].status == "on_its_way"
+    # Le patient est libre. La demande en attente part si elle entre encore dans sa zone, qui a
+    # bougé puisqu'il vient de mettre une demande de côté. Sinon elle reste retenue.
+    store = get_community().store
+    stored = store.patients()[0]
+    waiting = next(r for r in store.requests_of("patient", stored.id) if r.status != "declined")
+    zone = zone_for(stored.theta, ZoneParams(stored.zone_offset, stored.zone_obs))
+    fits = zone.contains(waiting.lam, waiting.effort)
+    assert waiting.status == ("delivered" if fits else "held")
+    inbox = _patient_home(patient).inbox
+    assert [request.with_name for request in inbox] == (["Sara"] if fits else [])
+
+    # Mise de côté, retenue ou transmise : aucun des deux aidants ne voit de différence.
+    for helper in (first, second):
+        home = HelperHome.model_validate(client.get("/api/app/helper", headers=helper).json())
+        assert home.requests[0].status == "on_its_way"
+
+
+def _waiting_request(store: Store, helper_id: str, patient_id: str, lam: float, status: str):
+    return store.add_request(
+        helper_id=helper_id,
+        patient_id=patient_id,
+        text="A small favour",
+        patient_interest="gardening",
+        helper_interest="cooking",
+        lam=lam,
+        format="opinion",
+        effort=0.15,
+        source="suggested",
+        status=status,
+        hold_reason=None if status == "delivered" else "busy",
+        delivered_at=None,
+    )
+
+
+@pytest.mark.parametrize(("lam", "released"), [(0.64, True), (0.30, False)])
+def test_a_waiting_request_is_released_only_if_it_still_fits(lam: float, released: bool):
+    """Sans aucun tirage : les positions sont fixées à la main, le résultat est certain."""
+    community = Community(Store(":memory:"))
+    patient = community.store.add_user("patient", "Aino", ["gardening"], 0.6)
+    helper = community.store.add_user("helper", "Mikko", ["cooking"], 0.6)
+    current = _waiting_request(community.store, helper.id, patient.id, 0.64, "delivered")
+    waiting = _waiting_request(community.store, helper.id, patient.id, lam, "held")
+
+    community.decline(patient, current.id)
+
+    # Après ce refus, l'état estimé passe de 0,60 à 0,51 et la zone couvre λ de 0,55 à 0,84.
+    after = community.store.request(waiting.id)
+    assert after is not None
+    assert after.status == ("delivered" if released else "held")
+    inbox = community.patient_home(community.store.user(patient.id)).inbox
+    assert len(inbox) == (1 if released else 0)
 
 
 def test_an_unrelated_real_need_is_held_and_the_helper_cannot_tell():
