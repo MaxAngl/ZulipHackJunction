@@ -16,7 +16,7 @@ Chaque ligne dit où le changer. Ce qui avait été validé en discussion n'est 
 | Nom provisoire : **Needed** | `frontend/index.html`, `frontend/src/App.tsx`, `backend/main.py` |
 | **Interface en anglais**, pour un jury international. Cela déroge à la convention « messages en français » | Textes dans `frontend/src/components/` |
 | Logo : poignée de main au trait, une main encre, une main cyan. Le tracé vient de l'icône « handshake » de Lucide (licence ISC), il n'est pas original | `frontend/src/components/Logo.tsx`, `frontend/public/favicon.svg` |
-| Charte : cyan `#0891B2` (clair) et `#22D3EE` (sombre), gris froids, police système sans empattement | `frontend/src/index.css` |
+| Charte minimaliste : noir sur blanc, traits fins, sans ombres, un seul accent cyan vif `#00D8FF` (`#00E0FF` en mode sombre), police système sans empattement | `frontend/src/index.css` |
 | Personas : Aino, patiente (gardening, jazz, baking) ; Mikko (cooking, cycling), Sara (photography, hiking) et Leo (woodworking, board games), aidants | `backend/loop.py` |
 | Un écran à trois panneaux : aidant, console, patient. `?view=helper` et `?view=patient` affichent un seul téléphone, pour une démo sur deux appareils | `frontend/src/App.tsx` |
 | Un seul patient, état en mémoire, ni comptes ni base de données | `backend/loop.py` |
