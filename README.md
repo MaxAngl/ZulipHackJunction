@@ -1,6 +1,10 @@
-# Hackathon
+# Needed
 
-_Sujet à compléter._
+Une communauté où ce sont les patients en rémission qui rendent service. Projet Junction 2026, challenge du maintien à domicile après un traitement de la dépression par TMS.
+
+Une IA mesure l'état du patient, en déduit la zone des demandes qui lui conviennent, fait écrire ces demandes par Gemini, les mesure, et en propose trois à un membre de la communauté. Le patient reçoit la demande d'une personne, pas d'une app, et sa réaction ajuste la zone.
+
+Ce qui est simulé et ce qui a été décidé sans validation de l'équipe : **[HYPOTHESES.md](HYPOTHESES.md)**.
 
 Toutes les règles, commandes et conventions sont dans **[AGENTS.md](AGENTS.md)** (lu aussi par les agents IA).
 L'avancement de chacun est dans **[STATUS.md](STATUS.md)**.
@@ -24,6 +28,14 @@ npm --prefix frontend run dev
 ```
 
 Ouvrir http://localhost:5173.
+
+Pour brancher Gemini, copier `.env.example` en `.env`, y mettre `GEMINI_API_KEY`, puis vérifier :
+
+```bash
+uv run python -m ml.check_gemini
+```
+
+Sans clé, l'app tourne avec une banque de demandes hors ligne.
 
 ## Agents IA
 

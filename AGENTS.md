@@ -8,8 +8,9 @@ Le guide pratique pour les humains (installation, boucle de travail, prompts typ
 
 ## Projet
 
-**Sujet :** _à compléter (une phrase : quoi, pour qui)._
-**Démo attendue :** _à compléter._
+**Sujet :** Needed (nom provisoire), pour le challenge Junction sur le maintien à domicile après un traitement de la dépression par TMS. Une communauté où ce sont les patients en rémission qui rendent service : une IA décide quoi leur demander, quand et de la part de qui, selon leur état.
+**Démo attendue :** la boucle fermée pour un patient, sur un écran. L'état θ bouge, la zone λ(θ) se déplace, Gemini génère des demandes, elles sont mesurées et filtrées, l'aidant en choisit une, le patient répond, la zone s'ajuste.
+**À lire :** [HYPOTHESES.md](HYPOTHESES.md) liste ce qui a été décidé sans validation de l'équipe et ce qui est simulé.
 
 ## Règles d'or (pour chaque agent, à chaque tâche)
 
@@ -41,6 +42,7 @@ Pour ne pas se marcher dessus :
 
 - **Backend** : Python 3.12, FastAPI, Pydantic v2, uvicorn. Gestionnaire : **uv** (jamais `pip install`).
 - **ML** : Python 3.12, dans le même environnement uv que le backend.
+- **IA générative** : API Gemini appelée en REST avec la bibliothèque standard (`ml/gemini.py`), sans SDK. Clé dans `.env` (`GEMINI_API_KEY`). Sans clé, ou si Gemini échoue, `ml/lexicon.py` prend le relais.
 - **Frontend** : React 19, TypeScript 7, Vite 8. Gestionnaire : **npm 11.19 ou plus** (comme la CI). Un npm plus ancien écrit un `package-lock.json` incomplet que la CI refuse (« Missing: … from lock file »). Mise à jour : `npm install -g npm@latest`.
 - **Qualité** : ruff (lint + format Python), prettier (format front), oxlint (lint front), pytest, pre-commit, CI GitHub Actions.
 
@@ -62,6 +64,8 @@ npm --prefix frontend run dev                           # UI sur http://localhos
 uv run pytest                              # tests contrat API + ML
 npm --prefix frontend run typecheck        # types TS
 uv run pre-commit run --all-files          # tous les hooks (format, lint, tests)
+
+uv run python -m ml.check_gemini           # vérifie la clé Gemini et la mesure λ
 
 # Contrat d'API (voir plus bas)
 uv run python -m backend.export_openapi    # régénère contract/openapi.json
@@ -86,11 +90,18 @@ gh pr merge --squash --delete-branch       # merger quand la CI est verte
 backend/
   main.py            # routes FastAPI (toutes sous /api)
   schemas.py         # CONTRAT : modèles Pydantic requête/réponse
+  loop.py            # la boucle en 12 étapes, pour un patient de démo (état en mémoire)
+  sensor.py          # capteur d'état θ SIMULÉ
   errors.py          # ApiError + format d'erreur unique
   export_openapi.py  # schemas -> contract/openapi.json
   tests/             # tests du contrat d'API
 ml/
-  model.py           # CONTRAT : predict(text) -> Prediction
+  model.py           # CONTRAT : zone_for, learn (modèle de zone SIMULÉ) et tout ce que le backend importe
+  pipeline.py        # générer -> mesurer λ -> filtrer -> choisir trois demandes
+  gemini.py          # client REST Gemini (génération JSON, embeddings)
+  lexicon.py         # mode hors ligne : banque de demandes et mesure par mots-clés
+  formats.py         # grille fixe des formats et de leur effort
+  check_gemini.py    # vérification de la clé Gemini
   tests/             # tests du contrat ML
   data/, models/     # données et poids : ignorés par git (trop lourds)
 contract/
@@ -98,6 +109,7 @@ contract/
 frontend/
   src/api/schema.d.ts  # GÉNÉRÉ depuis contract/openapi.json, ne pas éditer
   src/api/client.ts    # seul endroit qui appelle fetch()
+  src/components/      # un composant par fichier (téléphones, console, plan des demandes)
   src/App.tsx
 ```
 
@@ -110,8 +122,8 @@ backend/schemas.py  ──export──▶  contract/openapi.json  ──gen:api�
 ```
 
 - **Front ↔ back** : `backend/schemas.py` est la source de vérité. Le front n'écrit **jamais** de types d'API à la main : il importe ceux de `schema.d.ts` via `src/api/client.ts`.
-- **Back ↔ ML** : la signature de `ml.model.predict` et la dataclass `Prediction`. L'intérieur est libre.
-- **Garde-fou** : `backend/tests/test_api_contract.py` échoue si l'API ne correspond plus à `contract/openapi.json`. `ml/tests/` vérifie la signature de `predict`.
+- **Back ↔ ML** : le backend n'importe que depuis `ml.model`. Le contrat est la liste `__all__` de ce fichier : la zone (`zone_for`, `learn`), la chaîne de demandes (`generate_candidates`, `measure_message`, `select_three`) et leurs types. L'intérieur est libre.
+- **Garde-fou** : `backend/tests/test_api_contract.py` échoue si l'API ne correspond plus à `contract/openapi.json`. `ml/tests/` vérifie le comportement attendu de `ml.model`. Les tests coupent Gemini (`conftest.py`) : ils ne touchent jamais le réseau.
 
 **Pour changer le contrat** (et seulement si c'est voulu) :
 1. Modifier `backend/schemas.py` (ou `ml/model.py` pour le contrat ML).
@@ -132,7 +144,7 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 ## Conventions
 
 **Général**
-- Identifiants de code en anglais, commentaires et messages utilisateur en français.
+- Identifiants de code en anglais, commentaires en français. **Textes de l'interface et messages d'erreur de l'API en anglais** : le jury est international.
 - Petites fonctions, pas de code mort, pas de `TODO` sans nom : `TODO(prénom): …`.
 
 **Python** (`backend/`, `ml/`)
@@ -166,6 +178,12 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Challenge technique visé : Best Use of Gemini API — Gemini écrit les demandes, ses embeddings les mesurent, et il relit les messages de l'aidant.
+- 2026-11-14 — Gemini appelé en REST avec la bibliothèque standard, sans SDK — aucune dépendance à ajouter, et un repli hors ligne si l'API échoue.
+- 2026-11-14 — Modèle de zone et capteur d'état simulés derrière `ml/model.py` et `backend/sensor.py` — pas de données pour entraîner ; les signatures resteront quand le vrai modèle arrivera.
+- 2026-11-14 — Interface et messages d'erreur en anglais — jury international ; les commentaires restent en français.
+- 2026-11-14 — Mesure λ = (a·p − s) / ((a·p − s) + (a·h − s)), avec s = p·h — sans retirer s, de vrais embeddings tassent tout autour de 0,5.
+- 2026-11-14 — État de la démo en mémoire, un seul patient — pas de base de données tant que la boucle n'est pas validée.
 - 2026-11-13 — Relecture automatique des PR par Claude et par Gemini — deux modèles différents ne ratent pas les mêmes bugs.
 - 2026-11-13 — Context7 (MCP, sans clé) branché sur Claude et Gemini — la stack est plus récente que les connaissances des modèles.
 - 2026-11-13 — CI GitHub Actions qui relance les hooks pre-commit — filet de sécurité si les hooks locaux ne sont pas installés.

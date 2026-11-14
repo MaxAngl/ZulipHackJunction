@@ -11,12 +11,21 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 
 - [13/11 12:50] Repo initialisé : squelette `frontend/`, `backend/`, `ml/`, contrat d'API, pre-commit. Compléter l'équipe (prénoms + agent) dans `AGENTS.md`.
 - [13/11 14:00] Tâches dans les issues GitHub, tout passe par des PR, CI sur chaque PR. Installer `gh` et faire `gh auth login`.
+- [14/11 06:00] **Contrat d'API changé** (issue #1) : `/api/predict` est supprimé, la boucle est sous `/api/loop/*`. `contract/openapi.json` et `schema.d.ts` sont régénérés.
+- [14/11 06:00] **Contrat ML changé** (issue #1) : `ml.model.predict` est supprimé. Le backend importe la zone et la chaîne de demandes depuis `ml.model` (voir `__all__`).
+- [14/11 06:00] Nouvelle variable `GEMINI_API_KEY` dans `.env` (modèle dans `.env.example`). Sans elle, l'app tourne hors ligne. Aucune dépendance ajoutée.
+- [14/11 06:00] Lire `HYPOTHESES.md` : tout ce qui a été décidé sans validation de l'équipe, et ce qui est simulé.
+- [14/11 06:00] Interface et messages d'erreur en anglais (voir « Décisions » d'`AGENTS.md`).
 
-## _<prénom A>_
+## Max (Claude Code)
 
-- **En cours :** — _(numéro d'issue)_
-- **Bloqué :** —
-- **Notes pour la suite :** — _(où j'en suis, ce qui reste, pièges rencontrés)_
+- **En cours :** #1, boucle IA de bout en bout (PR ouverte).
+- **Bloqué :** pas de clé Gemini sur la machine, donc la connexion à Gemini n'est pas testée en réel. Mettre la clé dans `.env`, puis `uv run python -m ml.check_gemini`.
+- **Notes pour la suite :**
+  - Le modèle de zone (`ml/model.py`) et le capteur θ (`backend/sensor.py`) sont simulés. Garder leurs signatures en les remplaçant.
+  - Si Gemini donne des λ tassés ou incohérents, regarder `lambda_position` dans `ml/pipeline.py` et les trois phrases de référence de `ml/check_gemini.py`.
+  - Démo sur deux téléphones : `?view=helper` et `?view=patient`, avec `npm --prefix frontend run dev -- --host`.
+  - Le serveur garde l'état en mémoire : un redémarrage remet la démo à zéro.
 
 ## _<prénom B>_
 
