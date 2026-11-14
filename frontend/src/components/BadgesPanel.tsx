@@ -34,6 +34,58 @@ type Badge = {
 
 const HOUR = 3600
 
+type Shape = 'rosette' | 'hex' | 'coin'
+
+const SHAPES: Record<string, Shape> = {
+  'first-hand': 'rosette',
+  'hat-trick': 'rosette',
+  pillar: 'rosette',
+  champion: 'rosette',
+  'first-ask': 'rosette',
+  curious: 'rosette',
+  builder: 'rosette',
+  'warm-thanks': 'hex',
+  'many-faces': 'hex',
+  'good-company': 'hex',
+  grateful: 'hex',
+  connector: 'hex',
+  'first-answer': 'hex',
+  'quick-spark': 'coin',
+  regular: 'coin',
+  'show-and-tell': 'coin',
+}
+
+// Centre et rayon d'une médaille, dans un dessin de 100 x 112.
+const CX = 50
+const CY = 46
+const R = 40
+
+function ring(count: number, radius: (index: number) => number, turn = 0) {
+  return Array.from({ length: count }, (_, index) => {
+    const angle = turn + (index / count) * Math.PI * 2 - Math.PI / 2
+    const r = radius(index)
+    return `${(CX + r * Math.cos(angle)).toFixed(2)},${(CY + r * Math.sin(angle)).toFixed(2)}`
+  }).join(' ')
+}
+
+// Le contour : une rosette crantée, un hexagone ou un disque.
+function outline(shape: Shape): string {
+  if (shape === 'rosette') {
+    return `M${ring(28, (index) => (index % 2 ? R - 4 : R + 1)).replaceAll(' ', 'L')}Z`
+  }
+  if (shape === 'hex') {
+    return `M${ring(6, () => R + 1, Math.PI / 6).replaceAll(' ', 'L')}Z`
+  }
+  return `M${CX - R},${CY}a${R},${R} 0 1 0 ${2 * R},0a${R},${R} 0 1 0 ${-2 * R},0Z`
+}
+
+// Les deux petites étoiles qui scintillent autour d'une médaille débloquée.
+const SPARKLES = [
+  { x: 12, y: 14, size: 1 },
+  { x: 88, y: 20, size: 0.8 },
+  { x: 86, y: 76, size: 0.6 },
+]
+
 // Ce que la personne a fait, lu dans ses fils : rien n'est compté à part.
 function activity(threads: Thread[]) {
   const mine = threads.flatMap((thread) =>
@@ -238,7 +290,7 @@ function helperBadges(a: ReturnType<typeof activity>): Badge[] {
   ]
 }
 
-function icon(name: Icon) {
+function glyph(name: Icon) {
   const paths: Record<Icon, React.ReactNode> = {
     heart: (
       <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
@@ -301,19 +353,87 @@ function icon(name: Icon) {
       </>
     ),
   }
+  return paths[name]
+}
+
+// Une médaille en SVG : contour, anneau, disque, icône ; rubans pour les paliers.
+// À débloquer : en gris, avec un anneau de progression autour.
+function medal(badge: Badge, done: boolean, progress: number) {
+  const shape = SHAPES[badge.key] ?? 'coin'
+  const clip = `medal-clip-${badge.key}`
   return (
     <svg
-      viewBox="0 0 24 24"
-      width="26"
-      height="26"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      className={`medal medal-${shape}`}
+      viewBox="0 0 100 112"
+      width="96"
+      height="108"
       aria-hidden="true"
     >
-      {paths[name]}
+      <defs>
+        <clipPath id={clip}>
+          <path d={outline(shape)} />
+        </clipPath>
+      </defs>
+      {shape === 'rosette' && (
+        <g className="medal-ribbon">
+          <polygon points="36,70 50,78 42,108 34,100 26,104" />
+          <polygon
+            className="medal-ribbon-back"
+            points="64,70 50,78 58,108 66,100 74,104"
+          />
+        </g>
+      )}
+      <g className="medal-body">
+        <path className="medal-edge" d={outline(shape)} />
+        {shape === 'coin' && (
+          <circle className="medal-dots" cx={CX} cy={CY} r={R - 5} />
+        )}
+        <circle className="medal-ring" cx={CX} cy={CY} r={R - 9} />
+        <circle className="medal-disc" cx={CX} cy={CY} r={R - 13} />
+        <g
+          className="medal-glyph"
+          transform={`translate(${CX} ${CY}) scale(1.35) translate(-12 -12)`}
+        >
+          {glyph(badge.icon)}
+        </g>
+        {done && (
+          <g clipPath={`url(#${clip})`}>
+            <rect
+              className="medal-shine"
+              x="-30"
+              y="-10"
+              width="18"
+              height="120"
+            />
+          </g>
+        )}
+      </g>
+      {!done && <circle className="medal-track" cx={CX} cy={CY} r={R + 6} />}
+      {!done && progress > 0 && (
+        <circle
+          className="medal-progress"
+          cx={CX}
+          cy={CY}
+          r={R + 6}
+          pathLength={100}
+          strokeDasharray={`${progress * 100} 100`}
+          transform={`rotate(-90 ${CX} ${CY})`}
+        />
+      )}
+      {done &&
+        SPARKLES.map((sparkle, index) => (
+          // Le groupe place l'étoile ; l'animation (CSS) ne touche que l'étoile elle-même.
+          <g
+            key={index}
+            transform={`translate(${sparkle.x} ${sparkle.y}) scale(${sparkle.size})`}
+          >
+            <path
+              className="medal-sparkle"
+              style={{ '--s': index } as CSSProperties}
+              d="M0,-7 C1,-1 1,-1 7,0 C1,1 1,1 0,7 C-1,1 -1,1 -7,0 C-1,-1 -1,-1 0,-7Z"
+            />
+          </g>
+        ))}
     </svg>
   )
 }
@@ -365,9 +485,8 @@ function BadgesPanel({ role, userId, threads }: BadgesPanelProps) {
               className={`badge ${done ? 'badge-done' : 'badge-todo'} ${fresh ? 'badge-fresh' : ''}`}
               style={{ '--i': index, '--p': progress } as CSSProperties}
             >
-              <div className="badge-tile">
-                {icon(badge.icon)}
-                {done && <span className="badge-shine" aria-hidden="true" />}
+              <div className="badge-medal">
+                {medal(badge, done, progress)}
                 {fresh && (
                   <span className="badge-burst" aria-hidden="true">
                     {Array.from({ length: 8 }, (_, ray) => (

@@ -1,9 +1,13 @@
-/* Badges du profil (issue #61). Dans la charte : aplats, filets, un seul accent cyan ; sur le
-   cyan, l'encre de marque reste fixe (#0a0a0a), quel que soit le thème.
-   Les animations : arrivée en cascade, badge débloqué qui « pop » puis brille de temps en temps,
-   remplissage de la progression, et une petite gerbe pour un badge tout neuf. */
+/* Badges du profil (issue #61) : de vraies médailles, sans cadre ni filet.
+   Trois formes : rosette à rubans (paliers), hexagone (liens), pièce à double anneau (habitudes).
+   Couleurs de marque fixes sur les médailles (cyan, encre, crème), quel que soit le thème.
+   Débloquée : couleur, petit flottement, éclat qui la traverse, étoiles qui scintillent.
+   À débloquer : en gris, avec un anneau de progression cyan qui se dessine. */
 
 .badges-panel {
+  --medal-cyan: #00d8ff;
+  --medal-ink: #0a0a0a;
+  --medal-cream: #faf8f2;
   display: grid;
   gap: var(--space-3);
 }
@@ -28,9 +32,9 @@
 }
 
 .badges-meter {
-  height: 10px;
-  border: var(--stroke-thin) solid var(--rule);
-  border-radius: var(--radius);
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
   overflow: hidden;
 }
 
@@ -38,24 +42,19 @@
   display: block;
   height: 100%;
   width: calc(var(--share) * 100%);
-  background: var(--cyan);
+  border-radius: inherit;
+  background: var(--medal-cyan);
   transform-origin: left;
   animation: badges-meter 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms both;
 }
 
 .badges-list {
   list-style: none;
-  margin: 0;
+  margin: var(--space-2) 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4) var(--space-3);
-}
-
-@media (min-width: 520px) {
-  .badges-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-2);
 }
 
 .badge {
@@ -63,92 +62,185 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: var(--space-1);
-  padding-top: var(--space-3);
-  border-top: var(--stroke-thin) solid var(--rule);
+  gap: 2px;
   animation: badge-enter 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: calc(var(--i) * 70ms);
 }
 
-.badge-tile {
+.badge-medal {
   position: relative;
-  width: 64px;
-  height: 64px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius);
+  width: 84px;
   margin-bottom: var(--space-1);
 }
 
-.badge-tile svg {
-  position: relative;
-  z-index: 1;
+.medal {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
 }
 
-/* --- Débloqué : aplat cyan, « pop », éclat de temps en temps, petit balancement au survol --- */
+/* --- Les couleurs d'une médaille débloquée, par forme --- */
 
-.badge-done .badge-tile {
-  background: var(--cyan);
-  color: #0a0a0a;
-  animation: badge-pop 620ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
-  animation-delay: calc(var(--i) * 70ms + 180ms);
+.medal-glyph {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.badge-done:hover .badge-tile {
-  animation: badge-wiggle 520ms ease-in-out;
+.medal-ring {
+  fill: none;
+  stroke-width: 2;
 }
 
-.badge-shine {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: inherit;
-  pointer-events: none;
+.medal-dots {
+  fill: none;
+  stroke-width: 2;
+  stroke-dasharray: 0.1 5.4;
+  stroke-linecap: round;
 }
 
-.badge-shine::before {
-  content: '';
-  position: absolute;
-  top: -40%;
-  left: -70%;
-  width: 34%;
-  height: 180%;
-  background: rgba(255, 255, 255, 0.6);
-  transform: rotate(20deg);
-  animation: badge-shine 4.2s ease-in-out infinite;
-  animation-delay: calc(var(--i) * 350ms + 1.2s);
+.badge-done .medal-rosette .medal-edge {
+  fill: var(--medal-cyan);
+  stroke: var(--medal-ink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+.badge-done .medal-rosette .medal-ring {
+  stroke: var(--medal-ink);
+}
+.badge-done .medal-rosette .medal-disc {
+  fill: var(--medal-ink);
+}
+.badge-done .medal-rosette .medal-glyph {
+  stroke: var(--medal-cyan);
+}
+.badge-done .medal-ribbon polygon {
+  fill: var(--medal-ink);
+}
+.badge-done .medal-ribbon .medal-ribbon-back {
+  fill: var(--medal-cyan);
+  stroke: var(--medal-ink);
+  stroke-width: 2;
+  stroke-linejoin: round;
 }
 
-/* --- À débloquer : contour, icône discrète, la progression monte en aplat --- */
-
-.badge-todo .badge-tile {
-  border: var(--stroke) solid var(--rule);
-  color: var(--muted);
-  overflow: hidden;
+.badge-done .medal-hex .medal-edge {
+  fill: var(--medal-ink);
+  stroke: var(--medal-cyan);
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.badge-done .medal-hex .medal-ring {
+  stroke: var(--medal-cyan);
+}
+.badge-done .medal-hex .medal-disc {
+  fill: var(--medal-cyan);
+}
+.badge-done .medal-hex .medal-glyph {
+  stroke: var(--medal-ink);
 }
 
-.badge-todo .badge-tile::before {
-  content: '';
-  position: absolute;
-  inset: auto 0 0 0;
-  height: calc(var(--p) * 100%);
-  background: var(--cyan);
-  opacity: 0.45;
-  transform-origin: bottom;
-  animation: badge-fill 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  animation-delay: calc(var(--i) * 70ms + 250ms);
+.badge-done .medal-coin .medal-edge {
+  fill: var(--medal-cream);
+  stroke: var(--medal-ink);
+  stroke-width: 3;
+}
+.badge-done .medal-coin .medal-dots {
+  stroke: var(--medal-ink);
+}
+.badge-done .medal-coin .medal-ring {
+  stroke: var(--medal-ink);
+}
+.badge-done .medal-coin .medal-disc {
+  fill: var(--medal-cyan);
+}
+.badge-done .medal-coin .medal-glyph {
+  stroke: var(--medal-ink);
 }
 
-/* --- Tout neuf : un pop plus marqué et une gerbe de rayons, une seule fois --- */
+/* --- À débloquer : la même médaille en gris, et sa progression autour --- */
 
-.badge-fresh .badge-tile {
-  animation: badge-pop-big 900ms cubic-bezier(0.3, 1.8, 0.5, 1) both;
+.badge-todo .medal-edge,
+.badge-todo .medal-ribbon polygon {
+  fill: color-mix(in srgb, var(--muted) 12%, transparent);
+  stroke: color-mix(in srgb, var(--muted) 55%, transparent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.badge-todo .medal-ring,
+.badge-todo .medal-dots {
+  stroke: color-mix(in srgb, var(--muted) 35%, transparent);
+}
+.badge-todo .medal-disc {
+  fill: color-mix(in srgb, var(--muted) 14%, transparent);
+}
+.badge-todo .medal-glyph {
+  stroke: var(--muted);
+}
+
+.medal-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--muted) 22%, transparent);
+  stroke-width: 4;
+}
+
+.medal-progress {
+  fill: none;
+  stroke: var(--medal-cyan);
+  stroke-width: 4;
+  stroke-linecap: round;
+  animation: medal-progress 1100ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   animation-delay: calc(var(--i) * 70ms + 300ms);
+}
+
+/* --- Animations d'une médaille débloquée --- */
+
+.badge-done .medal {
+  transform-origin: 50% 42%;
+  animation:
+    medal-pop 640ms cubic-bezier(0.3, 1.6, 0.5, 1) both,
+    medal-float 3.4s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 70ms + 180ms), calc(var(--i) * 70ms + 900ms);
+}
+
+.badge-done:hover .medal {
+  animation: medal-wiggle 600ms ease-in-out;
+}
+
+.medal-shine {
+  fill: rgba(255, 255, 255, 0.55);
+  transform: skewX(-20deg);
+  animation: medal-shine 4.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 400ms + 1.4s);
+}
+
+.medal-sparkle {
+  fill: var(--medal-cyan);
+  stroke: var(--medal-ink);
+  stroke-width: 1;
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: medal-twinkle 2.6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 120ms + var(--s) * 700ms + 900ms);
+}
+
+/* --- Tout neuf : pop plus marqué, gerbe, étiquette --- */
+
+.badge-fresh .medal {
+  animation:
+    medal-pop-big 900ms cubic-bezier(0.3, 1.8, 0.5, 1) both,
+    medal-float 3.4s ease-in-out infinite;
+  animation-delay:
+    calc(var(--i) * 70ms + 300ms), calc(var(--i) * 70ms + 1300ms);
 }
 
 .badge-burst {
   position: absolute;
-  inset: 50% auto auto 50%;
+  left: 50%;
+  top: 41%;
   width: 0;
   height: 0;
   pointer-events: none;
@@ -161,11 +253,10 @@
   width: 4px;
   height: 18px;
   border-radius: 2px;
-  background: var(--cyan);
-  transform: rotate(calc(var(--r) * 45deg)) translateY(0);
+  background: var(--medal-cyan);
   opacity: 0;
   animation: badge-ray 900ms ease-out both;
-  animation-delay: calc(var(--i) * 70ms + 520ms);
+  animation-delay: calc(var(--i) * 70ms + 560ms);
 }
 
 .badge-burst i:nth-child(even) {
@@ -178,33 +269,34 @@
 
 .badge-name {
   font-family: var(--font-display);
-  font-size: var(--text-md);
+  font-size: 0.92rem;
   font-weight: 700;
   line-height: 1.15;
 }
 
 .badge-hint {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   color: var(--muted);
   line-height: 1.3;
 }
 
 .badge-progress {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: var(--cyan-deep);
 }
 
 .badge-tag {
-  font-size: 0.7rem;
+  margin-top: 2px;
+  font-size: 0.66rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  padding: 1px 6px;
-  border-radius: var(--radius);
-  background: var(--ink);
-  color: var(--bg);
-  animation: badge-tag 1.4s ease-in-out 1.2s 2 both;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--medal-cyan);
+  color: var(--medal-ink);
+  animation: badge-tag 1.4s ease-in-out 1.4s 2 both;
 }
 
 /* --- Images clés --- */
@@ -218,31 +310,17 @@
 @keyframes badge-enter {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(14px);
   }
 }
 
-@keyframes badge-pop {
+@keyframes medal-pop {
   0% {
-    transform: scale(0.4);
+    transform: scale(0.3) rotate(-12deg);
     opacity: 0;
   }
   70% {
-    transform: scale(1.08);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-@keyframes badge-pop-big {
-  0% {
-    transform: scale(0.2) rotate(-25deg);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.22) rotate(6deg);
+    transform: scale(1.08) rotate(3deg);
     opacity: 1;
   }
   100% {
@@ -250,45 +328,81 @@
   }
 }
 
-@keyframes badge-wiggle {
-  25% {
-    transform: rotate(-8deg) scale(1.05);
+@keyframes medal-pop-big {
+  0% {
+    transform: scale(0.2) rotate(-30deg);
+    opacity: 0;
   }
   60% {
-    transform: rotate(6deg) scale(1.05);
+    transform: scale(1.22) rotate(8deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@keyframes medal-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes medal-wiggle {
+  25% {
+    transform: rotate(-9deg) scale(1.06);
+  }
+  60% {
+    transform: rotate(7deg) scale(1.06);
   }
   100% {
     transform: rotate(0) scale(1);
   }
 }
 
-@keyframes badge-shine {
+@keyframes medal-shine {
   0%,
-  70% {
-    left: -70%;
+  65% {
+    transform: translateX(0) skewX(-20deg);
   }
   100% {
-    left: 140%;
+    transform: translateX(150px) skewX(-20deg);
   }
 }
 
-@keyframes badge-fill {
+@keyframes medal-twinkle {
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1) rotate(45deg);
+  }
+}
+
+@keyframes medal-progress {
   from {
-    transform: scaleY(0);
+    stroke-dasharray: 0 100;
   }
 }
 
 @keyframes badge-ray {
   0% {
     opacity: 0;
-    transform: rotate(calc(var(--r) * 45deg)) translateY(-10px) scaleY(0.4);
+    transform: rotate(calc(var(--r) * 45deg)) translateY(-14px) scaleY(0.4);
   }
   30% {
     opacity: 1;
   }
   100% {
     opacity: 0;
-    transform: rotate(calc(var(--r) * 45deg)) translateY(-52px) scaleY(1);
+    transform: rotate(calc(var(--r) * 45deg)) translateY(-62px) scaleY(1);
   }
 }
 
@@ -300,8 +414,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .badges-panel,
-  .badges-panel *,
-  .badges-panel *::before {
+  .badges-panel * {
     animation: none !important;
+  }
+  .medal-sparkle {
+    opacity: 1;
   }
 }
