@@ -185,6 +185,7 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Hooks `pre-commit-hooks` lancés via `python -m` (champ `entry`) — Smart App Control de Windows 11 bloque les .exe non signés que pip génère, ce qui rendait tout commit impossible.
 - 2026-11-14 — La partie personnelle se réduit à un vecteur de 8 nombres par patient, lu par A et par B. **Cela remplace la dernière couche par patient décidée plus bas** — 715 nombres pour B, c'était trop pour une trentaine de réactions par mois.
 - 2026-11-14 — B ne reçoit pas le texte des centres d'intérêt — sa sortie sur cet axe est une position entre les deux sujets, quels qu'ils soient ; le texte sert au choix de la paire, à Gemini et à la mesure.
 - 2026-11-14 — Les réseaux restent petits, environ 45 000 paramètres au total, et la taille de B se choisit par un essai de capacité — peu d'entrées, un générateur simple ; un petit modèle s'explique et tourne sur un téléphone.
