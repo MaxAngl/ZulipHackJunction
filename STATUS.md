@@ -54,8 +54,10 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
   - Le repli hors ligne (trigrammes de lettres) ne comprend pas le sens : « ski » et « montagne » n'y sont pas proches. Il ne sert qu'à ne jamais casser sans clé Gemini.
   - Un profil enregistré n'est pas recalculé si les intérêts changent : supprimer sa ligne dans la table `profiles` pour le recalculer.
 
-## _<prénom C>_
+## Rami (Antigravity)
 
-- **En cours :** —
-- **Bloqué :** —
-- **Notes pour la suite :** —
+- **En cours :** #33, branchage et robustesse de l'API Gemini (génération, embeddings, fallback modèles et endpoints régionaux).
+- **Bloqué :** En attente de la clé GEMINI_API_KEY fournie par l'utilisateur pour validation avec check_gemini en conditions réelles.
+- **Notes pour la suite :**
+  - #11 est mergée dans main.
+  - L'implémentation Gemini utilise par défaut `gemini-1.5-flash` et `text-embedding-004` avec repli automatique en cas de 404/400 et support d'endpoints régionaux/proxy (`GEMINI_API_ROOT`).
