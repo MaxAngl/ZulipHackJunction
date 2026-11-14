@@ -1,9 +1,8 @@
 """Les fils de discussion de la vraie app, tels que chacun des deux les lit.
 
-Un fil naît d'une demande (un aidant écrit à un patient, choisi par la boucle) ou d'un besoin
-(un patient écrit à la communauté, un aidant le prend). La demande, la réponse et le merci restent
-dans la table des demandes, parce que la boucle en apprend ; les messages qui suivent sont dans
-la table `messages`.
+Un fil naît d'une demande : un aidant écrit à un patient, choisi par la boucle. La demande, la
+réponse et le merci restent dans la table des demandes, parce que la boucle en apprend ; les
+messages qui suivent sont dans la table `messages`.
 
 Ce que chacun voit :
 - l'aidant voit toutes ses demandes, mais jamais si l'une est retenue, transmise ou déclinée :
@@ -11,12 +10,10 @@ Ce que chacun voit :
 - le patient ne voit que les demandes qui lui sont transmises et celles auxquelles il a répondu.
 """
 
-import time
-
 from backend import schemas
 from backend.community import Community
 from backend.errors import ApiError
-from backend.store import StoredNeed, StoredRequest, User
+from backend.store import StoredRequest, User
 from backend.views import public_profile
 
 
@@ -29,12 +26,9 @@ class Threads:
 
     def for_user(self, user: User) -> schemas.ThreadsResponse:
         threads = [
-            *(
-                thread
-                for request in self.store.requests_of(user.role, user.id)
-                if (thread := self._request_thread(user, request)) is not None
-            ),
-            *(self._need_thread(user, need) for need in self.store.needs_of(user.role, user.id)),
+            thread
+            for request in self.store.requests_of(user.role, user.id)
+            if (thread := self._request_thread(user, request)) is not None
         ]
         threads.sort(key=lambda thread: thread.updated_at, reverse=True)
         return schemas.ThreadsResponse(threads=threads)
@@ -88,38 +82,12 @@ class Threads:
         messages.sort(key=lambda message: message.created_at)
         return schemas.Thread(
             id=request.id,
-            kind="request",
             status=status,
             peer=public_profile(peer) if peer else None,
             messages=messages,
             updated_at=messages[-1].created_at,
             can_write=status in ("answered", "to_answer"),
             thanked=bool(request.thanks),
-        )
-
-    def _need_thread(self, user: User, need: StoredNeed) -> schemas.Thread:
-        patient = self.store.user(need.patient_id)
-        helper = self.store.user(need.helper_id) if need.helper_id else None
-        names = {need.patient_id: patient.name if patient else "Someone"}
-        if helper is not None:
-            names[helper.id] = helper.name
-        messages = [
-            self._message(
-                user, f"{need.id}-n", need.patient_id, names, "need", need.text, need.created_at
-            ),
-            *self._extra(user, need.id, names),
-        ]
-        messages.sort(key=lambda message: message.created_at)
-        peer = helper if user.role == "patient" else patient
-        return schemas.Thread(
-            id=need.id,
-            kind="need",
-            status="taken" if helper is not None else "open",
-            peer=public_profile(peer) if peer else None,
-            messages=messages,
-            updated_at=messages[-1].created_at,
-            can_write=helper is not None,
-            thanked=False,
         )
 
     def _extra(
@@ -171,18 +139,10 @@ class Threads:
             raise ApiError(422, "empty_message", "Write something first.")
 
         request = self.store.request(thread_id)
-        if request is not None and user.id in (request.helper_id, request.patient_id):
-            self._post_on_request(user, request, text, attachments, body.typing)
-            return self.for_user(user)
-
-        need = self.store.need(thread_id)
-        if need is not None and user.id in (need.patient_id, need.helper_id):
-            if need.helper_id is None:
-                raise ApiError(409, "nobody_yet", "Nobody has picked up this request yet.")
-            self.store.add_message(need.id, user.id, text, attachments)
-            return self.for_user(user)
-
-        raise ApiError(404, "thread_not_found", "This conversation does not exist.")
+        if request is None or user.id not in (request.helper_id, request.patient_id):
+            raise ApiError(404, "thread_not_found", "This conversation does not exist.")
+        self._post_on_request(user, request, text, attachments, body.typing)
+        return self.for_user(user)
 
     def _post_on_request(
         self,
@@ -212,22 +172,3 @@ class Threads:
     def decline(self, patient: User, thread_id: str) -> schemas.ThreadsResponse:
         self.community.decline(patient, thread_id)
         return self.for_user(patient)
-
-    def post_need(self, patient: User, text: str) -> schemas.ThreadsResponse:
-        cleaned = text.strip()
-        if not cleaned:
-            raise ApiError(422, "empty_message", "Write what you need first.")
-        self.store.add_need(patient.id, cleaned)
-        return self.for_user(patient)
-
-    def take_need(self, helper: User, need_id: str) -> schemas.ThreadsResponse:
-        with self.store.lock:
-            need = self.store.need(need_id)
-            if need is None:
-                raise ApiError(404, "need_not_found", "This request no longer exists.")
-            if need.status != "open":
-                raise ApiError(409, "need_taken", "Someone already picked up this request.")
-            self.store.update_need(
-                need.id, status="taken", helper_id=helper.id, taken_at=time.time()
-            )
-        return self.for_user(helper)

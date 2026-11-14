@@ -22,7 +22,6 @@ export type SessionResponse = Schemas['SessionResponse']
 export type SignupRequest = Schemas['SignupRequest']
 export type ProfileUpdate = Schemas['ProfileUpdate']
 export type PublicProfile = Schemas['PublicProfile']
-export type OpenNeed = Schemas['OpenNeed']
 export type Thread = Schemas['Thread']
 export type ThreadMessage = Schemas['ThreadMessage']
 export type ThreadsResponse = Schemas['ThreadsResponse']
@@ -176,7 +175,7 @@ export function sendFeedback(
   )
 }
 
-// --- Fils de discussion : demandes et besoins ------------------------------------------
+// --- Fils de discussion : une demande et sa suite ------------------------------------------
 
 export function getThreads(token: string): Promise<ThreadsResponse> {
   return request<ThreadsResponse>('/api/app/threads', undefined, token)
@@ -204,24 +203,6 @@ export function declineThread(
 ): Promise<ThreadsResponse> {
   return post<ThreadsResponse>(
     `/api/app/threads/${encodeURIComponent(threadId)}/decline`,
-    undefined,
-    token,
-  )
-}
-
-export function postNeed(
-  token: string,
-  text: string,
-): Promise<ThreadsResponse> {
-  return post<ThreadsResponse>('/api/app/patient/needs', { text }, token)
-}
-
-export function takeNeed(
-  token: string,
-  needId: string,
-): Promise<ThreadsResponse> {
-  return post<ThreadsResponse>(
-    `/api/app/helper/needs/${encodeURIComponent(needId)}/take`,
     undefined,
     token,
   )

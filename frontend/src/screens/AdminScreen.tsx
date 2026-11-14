@@ -30,7 +30,6 @@ type AdminQuestion = {
   status: 'in_progress' | 'resolved'
   timestamp: string
   replyText?: string
-  isCommunityNeed?: boolean
 }
 
 type AdminContactMessage = {
@@ -74,24 +73,19 @@ function adminView(home: AdminHome) {
       status: member.activity > 0 ? 'active' : 'idle',
     }))
   const questions: AdminQuestion[] = home.exchanges.map((exchange) => {
-    const isNeed = exchange.kind === 'need'
-    const toName = exchange.to_name ?? 'Helpers Circle'
+    const toName = exchange.to_name ?? 'Someone'
     return {
       id: exchange.id,
       fromName: exchange.from_name,
-      fromRole: isNeed ? 'patient' : 'helper',
+      fromRole: 'helper',
       fromAvatar: avatars.get(exchange.from_name),
       toName,
-      toRole: isNeed ? 'helper' : 'patient',
+      toRole: 'patient',
       toAvatar: avatars.get(toName),
       text: exchange.text,
-      status:
-        exchange.status === 'answered' || exchange.status === 'taken'
-          ? 'resolved'
-          : 'in_progress',
+      status: exchange.status === 'answered' ? 'resolved' : 'in_progress',
       timestamp: when(exchange.created_at),
       replyText: exchange.reply ?? undefined,
-      isCommunityNeed: isNeed,
     }
   })
   const messages: AdminContactMessage[] = home.feedback.map((item) => ({
@@ -412,7 +406,6 @@ function AdminScreen({ token, onLeave }: AdminScreenProps) {
                   <div className="question-content-box">
                     <span className="question-timestamp">
                       Exchange time: {q.timestamp}
-                      {q.isCommunityNeed && ' · Community need'}
                     </span>
                     <p className="question-text">« {q.text} »</p>
 

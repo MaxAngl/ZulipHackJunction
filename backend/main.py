@@ -23,7 +23,6 @@ from backend.schemas import (
     LoginRequest,
     LoopState,
     MessageRequest,
-    NeedRequest,
     PatientHome,
     ProfileUpdate,
     ReplyRequest,
@@ -207,7 +206,7 @@ def feedback(body: FeedbackRequest, token: Token = None) -> Ack:
     return Ack()
 
 
-# --- Fils de discussion : demandes et besoins, des deux côtés --------------------------------
+# --- Fils de discussion : une demande, sa réponse, le merci et la suite --------------------
 
 
 @app.get("/api/app/threads", responses=ERROR_RESPONSES)
@@ -225,18 +224,6 @@ def post_message(thread_id: str, body: MessageRequest, user: Member) -> ThreadsR
 def decline_thread(thread_id: str, user: Patient) -> ThreadsResponse:
     """Le patient laisse passer une demande ; elle sort de son fil, la boucle en apprend."""
     return get_threads().decline(user, thread_id)
-
-
-@app.post("/api/app/patient/needs", responses=ERROR_RESPONSES)
-def post_need(body: NeedRequest, user: Patient) -> ThreadsResponse:
-    """Le patient demande un coup de main à la communauté."""
-    return get_threads().post_need(user, body.text)
-
-
-@app.post("/api/app/helper/needs/{need_id}/take", responses=ERROR_RESPONSES)
-def take_need(need_id: str, user: Helper) -> ThreadsResponse:
-    """Un aidant prend le besoin d'un patient ; un fil s'ouvre entre eux."""
-    return get_threads().take_need(user, need_id)
 
 
 # --- Portails : clinicien et admin ----------------------------------------------------------

@@ -97,7 +97,6 @@ def admin_home(store: Store, admin: User) -> schemas.AdminHome:
     exchanges = [
         schemas.AdminExchange(
             id=request.id,
-            kind="request",
             from_name=names.get(request.helper_id, "Someone"),
             to_name=names.get(request.patient_id),
             text=request.text,
@@ -106,18 +105,6 @@ def admin_home(store: Store, admin: User) -> schemas.AdminHome:
             created_at=request.created_at,
         )
         for request in requests
-    ] + [
-        schemas.AdminExchange(
-            id=need.id,
-            kind="need",
-            from_name=names.get(need.patient_id, "Someone"),
-            to_name=names.get(need.helper_id) if need.helper_id else None,
-            text=need.text,
-            status="taken" if need.helper_id else "open",
-            reply=None,
-            created_at=need.created_at,
-        )
-        for need in store.needs()
     ]
     exchanges.sort(key=lambda item: item.created_at, reverse=True)
 

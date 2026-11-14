@@ -319,46 +319,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/app/patient/needs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Post Need
-         * @description Le patient demande un coup de main à la communauté.
-         */
-        post: operations["post_need_api_app_patient_needs_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/app/helper/needs/{need_id}/take": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Take Need
-         * @description Un aidant prend le besoin d'un patient ; un fil s'ouvre entre eux.
-         */
-        post: operations["take_need_api_app_helper_needs__need_id__take_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/clinician": {
         parameters: {
             query?: never;
@@ -719,15 +679,13 @@ export interface components {
              */
             status: "ok";
         };
-        /** AdminExchange */
+        /**
+         * AdminExchange
+         * @description Une demande d'aidant à patient, avec sa réponse.
+         */
         AdminExchange: {
             /** Id */
             id: string;
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "request" | "need";
             /** From Name */
             from_name: string;
             /** To Name */
@@ -738,7 +696,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "held" | "delivered" | "answered" | "declined" | "open" | "taken";
+            status: "held" | "delivered" | "answered" | "declined";
             /** Reply */
             reply: string | null;
             /** Created At */
@@ -1157,8 +1115,6 @@ export interface components {
             proposals: components["schemas"]["AppProposal"][];
             /** Requests */
             requests: components["schemas"]["AppRequest"][];
-            /** Needs */
-            needs?: components["schemas"]["OpenNeed"][];
         };
         /** HistoryEntry */
         HistoryEntry: {
@@ -1364,24 +1320,6 @@ export interface components {
              * @description Vecteur personnel du patient : 8 nombres
              */
             vector?: number[];
-        };
-        /** NeedRequest */
-        NeedRequest: {
-            /** Text */
-            text: string;
-        };
-        /**
-         * OpenNeed
-         * @description Un besoin publié par un patient, que personne n'a encore pris.
-         */
-        OpenNeed: {
-            /** Id */
-            id: string;
-            /** Text */
-            text: string;
-            /** Created At */
-            created_at: number;
-            patient: components["schemas"]["PublicProfile"];
         };
         /** PatientHome */
         PatientHome: {
@@ -1610,22 +1548,17 @@ export interface components {
         };
         /**
          * Thread
-         * @description Un fil vu par l'un des deux. `id` est celui de la demande ou du besoin.
+         * @description Une demande vue par l'aidant ou par le patient. `id` est celui de la demande.
          */
         Thread: {
             /** Id */
             id: string;
             /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "request" | "need";
-            /**
              * Status
              * @enum {string}
              */
-            status: "to_answer" | "on_its_way" | "answered" | "declined" | "open" | "taken";
-            /** @description Vide tant qu'aucun aidant n'a pris le besoin */
+            status: "to_answer" | "on_its_way" | "answered";
+            /** @description Vide si le compte de l'autre a disparu */
             peer: components["schemas"]["PublicProfile"] | null;
             /** Messages */
             messages: components["schemas"]["ThreadMessage"][];
@@ -1651,7 +1584,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "request" | "reply" | "thanks" | "need" | "message";
+            kind: "request" | "reply" | "thanks" | "message";
             /** Text */
             text: string;
             /** Attachments */
@@ -2984,164 +2917,6 @@ export interface operations {
             };
             path: {
                 thread_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ThreadsResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Unprocessable Entity */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    post_need_api_app_patient_needs_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Needed-Token"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NeedRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ThreadsResponse"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Unprocessable Entity */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    take_need_api_app_helper_needs__need_id__take_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "X-Needed-Token"?: string | null;
-            };
-            path: {
-                need_id: string;
             };
             cookie?: never;
         };
