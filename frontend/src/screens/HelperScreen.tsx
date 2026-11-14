@@ -1,432 +1,87 @@
-import { useMemo, useState } from 'react'
-import { getHelperHome, sendToPatient } from '../api/client'
+import { useEffect, useRef, useState } from 'react'
+import {
+  type AppUser,
+  getHelperHome,
+  type OpenNeed,
+  postMessage,
+  type SendRequest,
+  sendToPatient,
+  skipSuggestions,
+  suggest,
+  takeNeed,
+} from '../api/client'
 import BottomNav, { type TabType } from '../components/BottomNav'
 import ChatView from '../components/ChatView'
 import ProfileView from '../components/ProfileView'
-import {
-  dismissPatientCommunityNeed,
-  readPatientCommunityNeeds,
-  readThreads,
-  readUserProfile,
-  saveThreads,
-  SIMULATION_ACCOUNTS,
-  type ConversationThread,
-} from '../session'
 import ScreenFrame from './ScreenFrame'
 import { useHome } from './useHome'
+import { useThreads } from './useThreads'
 
 type HelperScreenProps = {
   token: string
   onLeave: () => void
 }
 
-type CommunityPatient = {
-  id: string
-  firstName: string
-  lastName: string
-  name: string
-  city: string
-  avatar: string
-  interests: string[]
-  bio: string
+function clock(seconds: number): string {
+  return new Date(seconds * 1000).toLocaleTimeString('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
-const DEFAULT_PATIENT_PROPOSALS: Record<
-  string,
-  Array<{ id: string; text: string; topic: string }>
-> = {
-  'p-julien': [
-    {
-      id: 'prop-julien-1',
-      text: 'Could you share your favorite indoor herb care tip for basil or mint?',
-      topic: 'gardening',
-    },
-    {
-      id: 'prop-julien-2',
-      text: 'Would you recommend a calming book to read on a quiet Sunday afternoon?',
-      topic: 'reading',
-    },
-    {
-      id: 'prop-julien-3',
-      text: 'Do you have an easy sourdough or quick bread recipe I could try?',
-      topic: 'baking',
-    },
-  ],
-  'p-sofia': [
-    {
-      id: 'prop-sofia-1',
-      text: 'Could you share your favorite comfort soup recipe for chilly evenings?',
-      topic: 'cooking',
-    },
-    {
-      id: 'prop-sofia-2',
-      text: 'What is a soothing jazz or acoustic album you love listening to?',
-      topic: 'jazz',
-    },
-    {
-      id: 'prop-sofia-3',
-      text: 'Do you have a simple tip for capturing warm light in city photography?',
-      topic: 'photography',
-    },
-  ],
-  'p-lucas': [
-    {
-      id: 'prop-lucas-1',
-      text: 'What is your favorite scenic and peaceful cycling route around Helsinki?',
-      topic: 'cycling',
-    },
-    {
-      id: 'prop-lucas-2',
-      text: 'Could you recommend an easy beginner knitting stitch for a warm scarf?',
-      topic: 'knitting',
-    },
-    {
-      id: 'prop-lucas-3',
-      text: 'Any must-pack essentials for a peaceful nature walk in the forest?',
-      topic: 'hiking',
-    },
-  ],
-}
-
-// L'écran de l'aidant, dans la vraie app. Il consulte les profils patients,
-// découvre leurs centres d'intérêt, et leur adresse une demande adaptée.
+// L'écran de l'aidant. La boucle choisit la personne et écrit trois demandes à sa mesure ;
+// l'aidant en envoie une, la modifie, écrit la sienne, ou en demande d'autres.
+// Il peut aussi prendre le besoin qu'un patient a confié à la communauté.
 function HelperScreen({ token, onLeave }: HelperScreenProps) {
-  const { home, error, busy, run } = useHome(token, getHelperHome, onLeave)
+  const { home, error, busy, run, refresh } = useHome(
+    token,
+    getHelperHome,
+    onLeave,
+  )
+  const chat = useThreads(token, 'helper', onLeave)
   const [activeTab, setActiveTab] = useState<TabType>('request')
+  const [openId, setOpenId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [ownText, setOwnText] = useState('')
-  const [patientNeeds, setPatientNeeds] = useState(() =>
-    readPatientCommunityNeeds(),
-  )
+  const [updatedUser, setUpdatedUser] = useState<AppUser | null>(null)
+  const asked = useRef(false)
 
-  const communityPatients = useMemo<CommunityPatient[]>(() => {
-    const list: CommunityPatient[] = SIMULATION_ACCOUNTS.filter(
-      (acc) => acc.role === 'patient',
-    ).map((acc) => ({
-      id: acc.id,
-      firstName: acc.firstName,
-      lastName: acc.lastName,
-      name: `${acc.firstName} ${acc.lastName}`,
-      city: acc.city,
-      interests: acc.interests,
-      bio: acc.bio,
-      avatar: acc.avatarUrl ?? '/moomins/Muumipeikko2.jpg',
-    }))
-
-    const registered = readUserProfile('patient')
-    if (registered && registered.firstName) {
-      const regFullName =
-        `${registered.firstName} ${registered.lastName}`.trim()
-      if (
-        !list.some((p) => p.name.toLowerCase() === regFullName.toLowerCase())
-      ) {
-        const regInterests =
-          registered.interests && registered.interests.length > 0
-            ? registered.interests
-            : ['gardening', 'baking', 'reading']
-        list.unshift({
-          id: 'p-registered',
-          firstName: registered.firstName,
-          lastName: registered.lastName,
-          name: regFullName,
-          city: registered.city || 'Helsinki',
-          interests: regInterests,
-          bio: registered.bio || 'Patient member of the Needed community.',
-          avatar: registered.avatarUrl ?? '/moomins/Muumipeikko2.jpg',
-        })
-      }
+  // Rien à proposer en ouvrant l'onglet : on demande une fois à la boucle de chercher.
+  const hasProposals = (home?.proposals.length ?? 0) > 0
+  useEffect(() => {
+    if (!home || activeTab !== 'request' || hasProposals || asked.current) {
+      return
     }
+    asked.current = true
+    void run(() => suggest(token))
+  }, [home, activeTab, hasProposals, run, token])
 
-    if (home?.patient_name) {
-      const matchedName = home.patient_name
-      const found = list.find(
-        (p) =>
-          p.name.toLowerCase() === matchedName.toLowerCase() ||
-          matchedName.toLowerCase().includes(p.firstName.toLowerCase()),
-      )
-      if (!found) {
-        list.unshift({
-          id: `p-${matchedName.toLowerCase().replace(/\s+/g, '-')}`,
-          firstName: matchedName.split(' ')[0] || matchedName,
-          lastName: matchedName.split(' ')[1] || '',
-          name: matchedName,
-          city: 'Helsinki',
-          interests: home.proposals
-            .map((p) => p.patient_interest)
-            .filter(Boolean),
-          bio: 'Patient member of the Needed community.',
-          avatar: '/moomins/Muumipeikko2.jpg',
-        })
-      }
-    }
-
-    return list
-  }, [home?.patient_name, home?.proposals])
-
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(() => {
-    if (home?.patient_name) {
-      const match = communityPatients.find(
-        (p) =>
-          p.name.toLowerCase() === home.patient_name!.toLowerCase() ||
-          home.patient_name!.toLowerCase().includes(p.firstName.toLowerCase()),
-      )
-      if (match) return match.id
-    }
-    return communityPatients[0]?.id ?? 'p-julien'
-  })
-
-  const selectedPatient = useMemo(() => {
-    return (
-      communityPatients.find((p) => p.id === selectedPatientId) ??
-      communityPatients[0]
-    )
-  }, [communityPatients, selectedPatientId])
-
-  const activeProposals = useMemo(() => {
-    if (!selectedPatient) return []
-
-    if (
-      home?.patient_name &&
-      (home.patient_name.toLowerCase() === selectedPatient.name.toLowerCase() ||
-        home.patient_name
-          .toLowerCase()
-          .includes(selectedPatient.firstName.toLowerCase())) &&
-      home.proposals.length > 0
-    ) {
-      return home.proposals.map((p) => ({
-        id: p.id,
-        text: p.text,
-        topic: p.patient_interest,
-        isBackend: true,
-      }))
-    }
-
-    const preset = DEFAULT_PATIENT_PROPOSALS[selectedPatient.id]
-    if (preset) {
-      return preset.map((p) => ({ ...p, isBackend: false }))
-    }
-
-    const t1 = selectedPatient.interests[0] || 'daily life'
-    const t2 = selectedPatient.interests[1] || 'wellness'
-    const t3 = selectedPatient.interests[2] || 'relaxation'
-    return [
-      {
-        id: `prop-${selectedPatient.id}-1`,
-        text: `Could you share a helpful tip or experience about ${t1}?`,
-        topic: t1,
-        isBackend: false,
-      },
-      {
-        id: `prop-${selectedPatient.id}-2`,
-        text: `What do you enjoy most when spending time on ${t2}?`,
-        topic: t2,
-        isBackend: false,
-      },
-      {
-        id: `prop-${selectedPatient.id}-3`,
-        text: `Do you have a good recommendation related to ${t3}?`,
-        topic: t3,
-        isBackend: false,
-      },
-    ]
-  }, [selectedPatient, home?.patient_name, home?.proposals])
-
-  function recordSentMessage(
-    peerName: string,
-    peerAvatar: string | undefined,
-    text: string,
-  ) {
-    const existingThreads = readThreads('helper')
-    const threadId = `thread-patient-${peerName.toLowerCase().replace(/\s+/g, '-')}`
-    const existingThread = existingThreads.find((t) => t.id === threadId)
-
-    const timeStr = new Date().toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      senderRole: 'helper' as const,
-      senderName: home?.user.name ?? 'Helper',
-      text: text,
-      timestamp: timeStr,
-    }
-
-    let updatedThreads: ConversationThread[]
-    if (existingThread) {
-      updatedThreads = existingThreads.map((t) =>
-        t.id === threadId
-          ? {
-              ...t,
-              lastMessageText: text,
-              lastMessageTime: timeStr,
-              isRead: true,
-              messages: [...t.messages, newMsg],
-              helperMessageCount: (t.helperMessageCount || 0) + 1,
-            }
-          : t,
-      )
-    } else {
-      const newThread: ConversationThread = {
-        id: threadId,
-        peerName: peerName,
-        peerRole: 'patient',
-        peerAvatar: peerAvatar,
-        lastMessageText: text,
-        lastMessageTime: timeStr,
-        isRead: true,
-        isFinished: false,
-        helperMessageCount: 1,
-        messages: [newMsg],
-      }
-      updatedThreads = [newThread, ...existingThreads]
-    }
-    saveThreads('helper', updatedThreads)
-  }
-
-  async function handleSendProposal(proposal: {
-    id: string
-    text: string
-    isBackend: boolean
-  }) {
-    if (!selectedPatient) return
-    recordSentMessage(
-      selectedPatient.name,
-      selectedPatient.avatar,
-      proposal.text,
-    )
-
-    if (proposal.isBackend) {
-      await run(() =>
-        sendToPatient(token, {
-          proposal_id: proposal.id,
-        }),
-      )
-    } else {
-      await run(() =>
-        sendToPatient(token, {
-          text: proposal.text,
-        }),
-      )
-    }
-    setActiveTab('messages')
-  }
-
-  async function handleSendEdited(
-    proposalId: string,
-    editedContent: string,
-    isBackend: boolean,
-  ) {
-    if (!selectedPatient) return
-    const textToSend = editedContent.trim()
-    if (!textToSend) return
+  async function sendRequest(body: SendRequest) {
+    const next = await run(() => sendToPatient(token, body))
+    if (!next) return
     setEditingId(null)
-    recordSentMessage(selectedPatient.name, selectedPatient.avatar, textToSend)
-
-    if (isBackend) {
-      await run(() =>
-        sendToPatient(token, {
-          proposal_id: proposalId,
-          text: textToSend,
-        }),
-      )
-    } else {
-      await run(() =>
-        sendToPatient(token, {
-          text: textToSend,
-        }),
-      )
-    }
-    setActiveTab('messages')
-  }
-
-  async function handleSendOwn() {
-    if (!selectedPatient) return
-    const textToSend = ownText.trim()
-    if (!textToSend) return
     setOwnText('')
-    recordSentMessage(selectedPatient.name, selectedPatient.avatar, textToSend)
-
-    await run(() =>
-      sendToPatient(token, {
-        text: textToSend,
-      }),
-    )
+    asked.current = false // au retour sur l'onglet, une nouvelle personne
+    await chat.refresh()
+    setOpenId(next.requests[0]?.id ?? null)
     setActiveTab('messages')
   }
 
-  function handleAcceptPatientNeed(need: {
-    id: string
-    patientName: string
-    patientAvatar?: string
-    text: string
-  }) {
-    const existingThreads = readThreads('helper')
-    const threadId = `thread-patient-${need.patientName.toLowerCase().replace(/\s+/g, '-')}`
-    const existingThread = existingThreads.find((t) => t.id === threadId)
-
-    const timeStr = new Date().toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
+  async function otherIdeas() {
+    setEditingId(null)
+    await run(async () => {
+      await skipSuggestions(token)
+      return suggest(token)
     })
-
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      senderRole: 'patient' as const,
-      senderName: need.patientName,
-      text: need.text,
-      timestamp: timeStr,
-    }
-
-    let updatedThreads: ConversationThread[]
-    if (existingThread) {
-      updatedThreads = existingThreads.map((t) =>
-        t.id === threadId
-          ? {
-              ...t,
-              lastMessageText: need.text,
-              lastMessageTime: timeStr,
-              isRead: false,
-              isFinished: false,
-              messages: [...t.messages, newMsg],
-            }
-          : t,
-      )
-    } else {
-      const newThread: ConversationThread = {
-        id: threadId,
-        peerName: need.patientName,
-        peerRole: 'patient',
-        peerAvatar: need.patientAvatar,
-        lastMessageText: need.text,
-        lastMessageTime: timeStr,
-        isRead: false,
-        isFinished: false,
-        helperMessageCount: 0,
-        messages: [newMsg],
-        peerProfile: {
-          firstName: need.patientName.split(' ')[0] || need.patientName,
-          lastName: need.patientName.split(' ')[1] || '',
-          avatarUrl: need.patientAvatar,
-          bio: 'Patient member of the Needed community.',
-          interests: ['gardening', 'reading', 'nature'],
-          allowProfileView: true,
-        },
-      }
-      updatedThreads = [newThread, ...existingThreads]
-    }
-
-    saveThreads('helper', updatedThreads)
-    dismissPatientCommunityNeed(need.id)
-    setPatientNeeds((prev) => prev.filter((item) => item.id !== need.id))
-    setActiveTab('messages')
   }
 
-  function handleDismissPatientNeed(id: string) {
-    dismissPatientCommunityNeed(id)
-    setPatientNeeds((prev) => prev.filter((item) => item.id !== id))
+  async function pickUpNeed(need: OpenNeed) {
+    const taken = await chat.run(() => takeNeed(token, need.id))
+    void refresh()
+    if (!taken) return
+    setOpenId(need.id)
+    setActiveTab('messages')
   }
 
   if (!home) {
@@ -437,59 +92,64 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
     )
   }
 
-  const profile = readUserProfile('helper')
-
-  const pendingRepliesCount = home.requests.filter(
-    (r) => r.status === 'answered' && !r.thanks,
+  const me = updatedUser ?? home.user
+  const threads = chat.threads ?? []
+  const patient = home.patient
+  const needs = home.needs ?? []
+  const toThank = threads.filter(
+    (thread) =>
+      thread.kind === 'request' &&
+      thread.status === 'answered' &&
+      !thread.thanked,
   ).length
 
   return (
     <ScreenFrame
-      name={home.user.name}
-      avatarUrl={profile?.avatarUrl}
+      name={me.first_name}
+      avatarUrl={me.avatar_url ?? undefined}
       onLeave={onLeave}
       bottomNav={
         <BottomNav
           activeTab={activeTab}
           onSelectTab={setActiveTab}
-          unreadBadge={pendingRepliesCount}
+          unreadBadge={toThank}
         />
       }
     >
       <main className="stack">
-        {error && (
+        {(error || chat.error) && (
           <p className="error" role="alert">
-            {error}
+            {error ?? chat.error}
           </p>
         )}
 
-        {/* Tab 1 : Make a request */}
         {activeTab === 'request' && (
           <div className="helper-screen-content">
-            {/* Direct patient community requests */}
-            {patientNeeds.length > 0 && (
+            {needs.length > 0 && (
               <section className="stack patient-needs-banner-section">
                 <div className="flex-between">
                   <p className="eyebrow">Direct patient requests</p>
-                  <span className="badge-highlight">
-                    {patientNeeds.length} active request(s)
-                  </span>
+                  <span className="badge-highlight">{needs.length} open</span>
                 </div>
-                {patientNeeds.map((need) => (
+                {needs.map((need) => (
                   <div key={need.id} className="card-patient-need-banner">
                     <div className="patient-need-header">
                       <div className="row-align-center-tight">
-                        <img
-                          src={
-                            need.patientAvatar ?? '/moomins/Muumipeikko2.jpg'
-                          }
-                          alt={need.patientName}
-                          className="patient-need-avatar"
-                        />
+                        {need.patient.avatar_url ? (
+                          <img
+                            src={need.patient.avatar_url}
+                            alt={need.patient.name}
+                            className="patient-need-avatar"
+                          />
+                        ) : (
+                          <div className="thread-avatar-fallback">
+                            {need.patient.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div>
-                          <strong>{need.patientName}</strong>
+                          <strong>{need.patient.name}</strong>
                           <span className="quiet font-small block">
-                            Patient · {need.timestamp}
+                            Patient · {clock(need.created_at)}
                           </span>
                         </div>
                       </div>
@@ -497,23 +157,15 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                         Community request
                       </span>
                     </div>
-
                     <p className="patient-need-body">« {need.text} »</p>
-
                     <div className="row">
                       <button
                         type="button"
                         className="button button-primary button-small"
-                        onClick={() => handleAcceptPatientNeed(need)}
+                        disabled={chat.busy}
+                        onClick={() => void pickUpNeed(need)}
                       >
-                        Reply to {need.patientName}
-                      </button>
-                      <button
-                        type="button"
-                        className="button button-ghost button-small"
-                        onClick={() => handleDismissPatientNeed(need.id)}
-                      >
-                        Dismiss
+                        Reply to {need.patient.name}
                       </button>
                     </div>
                   </div>
@@ -521,113 +173,109 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
               </section>
             )}
 
-            {/* Profile Selector */}
             <section className="stack">
               <div className="helper-screen-header">
-                <h1 className="helper-screen-title">Community Members</h1>
+                <h1 className="helper-screen-title">Someone you could ask</h1>
                 <p className="quiet" style={{ margin: 0, fontSize: '0.88rem' }}>
-                  Select a member to discover their hobbies and send a friendly
-                  request.
+                  Needed picks a member whose interests meet yours, and drafts
+                  three requests at their pace.
                 </p>
-              </div>
-
-              <div
-                className="helper-patient-selector"
-                role="tablist"
-                aria-label="Select community member"
-              >
-                {communityPatients.map((patient) => {
-                  const isSelected = patient.id === selectedPatient?.id
-                  return (
-                    <button
-                      key={patient.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={isSelected}
-                      className={`helper-patient-pill ${isSelected ? 'active' : ''}`}
-                      onClick={() => {
-                        setSelectedPatientId(patient.id)
-                        setEditingId(null)
-                      }}
-                    >
-                      <img
-                        src={patient.avatar}
-                        alt={patient.name}
-                        className="helper-pill-avatar"
-                      />
-                      <span>{patient.firstName}</span>
-                    </button>
-                  )
-                })}
               </div>
             </section>
 
-            {/* Selected Profile Card & Hobbies */}
-            {selectedPatient && (
-              <section className="card-helper-patient">
-                <div className="helper-patient-top">
-                  <img
-                    src={selectedPatient.avatar}
-                    alt={selectedPatient.name}
-                    className="helper-patient-avatar-large"
-                  />
-                  <div className="helper-patient-meta">
-                    <h2 className="helper-patient-name">
-                      {selectedPatient.name}
-                    </h2>
-                    <span className="helper-patient-city">
-                      {selectedPatient.city} · Patient
-                    </span>
-                  </div>
-                </div>
-
-                {selectedPatient.bio && (
-                  <p className="helper-patient-bio">
-                    « {selectedPatient.bio} »
-                  </p>
+            {!patient && (
+              <section className="card-helper-patient stack text-center">
+                <p className="quiet">
+                  {busy
+                    ? 'Finding someone who would enjoy your question…'
+                    : 'Nobody to suggest right now.'}
+                </p>
+                {!busy && (
+                  <button
+                    type="button"
+                    className="button button-primary"
+                    onClick={() => void run(() => suggest(token))}
+                  >
+                    Try again
+                  </button>
                 )}
-
-                {/* HOBBIES OF THE PERSON */}
-                <div className="helper-hobbies-section">
-                  <div className="helper-hobbies-label">
-                    <span>Hobbies & Interests</span>
-                    <span className="badge-highlight-subtle">
-                      {selectedPatient.interests.length} topics
-                    </span>
-                  </div>
-                  <div className="helper-hobbies-chips">
-                    {selectedPatient.interests.map((hobby) => (
-                      <span key={hobby} className="helper-hobby-chip">
-                        {hobby}
-                      </span>
-                    ))}
-                  </div>
-                </div>
               </section>
             )}
 
-            {/* AI Proposals Section */}
-            {selectedPatient && (
+            {patient && (
+              <section className="card-helper-patient">
+                <div className="helper-patient-top">
+                  {patient.avatar_url ? (
+                    <img
+                      src={patient.avatar_url}
+                      alt={patient.name}
+                      className="helper-patient-avatar-large"
+                    />
+                  ) : (
+                    <div className="thread-avatar-fallback">
+                      {patient.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="helper-patient-meta">
+                    <h2 className="helper-patient-name">
+                      {`${patient.name} ${patient.last_name}`.trim()}
+                    </h2>
+                    <span className="helper-patient-city">
+                      {patient.city ? `${patient.city} · ` : ''}Community member
+                    </span>
+                  </div>
+                </div>
+
+                {patient.bio && (
+                  <p className="helper-patient-bio">« {patient.bio} »</p>
+                )}
+
+                {patient.interests.length > 0 ? (
+                  <div className="helper-hobbies-section">
+                    <div className="helper-hobbies-label">
+                      <span>Hobbies & Interests</span>
+                      <span className="badge-highlight-subtle">
+                        {patient.interests.length} topics
+                      </span>
+                    </div>
+                    <div className="helper-hobbies-chips">
+                      {patient.interests.map((hobby) => (
+                        <span key={hobby} className="helper-hobby-chip">
+                          {hobby}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="quiet font-small">
+                    {patient.name} keeps their profile private.
+                  </p>
+                )}
+              </section>
+            )}
+
+            {patient && (
               <section className="helper-ai-section">
                 <div className="helper-ai-header">
                   <h2 className="helper-ai-title">
-                    AI Suggestions to write to {selectedPatient.firstName}
+                    Suggestions to write to {patient.name}
                   </h2>
                   <span className="badge-ai-pill">Gemini AI</span>
                 </div>
                 <p className="quiet font-small" style={{ margin: 0 }}>
-                  Crafted to match {selectedPatient.firstName}&apos;s hobbies
-                  and wellness pace.
+                  Written between your interests and {patient.name}&apos;s, at a
+                  pace that suits them today.
                 </p>
 
                 <div className="proposals" style={{ marginTop: '4px' }}>
-                  {activeProposals.map((proposal) => (
+                  {home.proposals.map((proposal) => (
                     <div key={proposal.id} className="helper-proposal-card">
                       {editingId === proposal.id ? (
                         <>
                           <textarea
                             value={editText}
                             rows={3}
+                            maxLength={600}
                             aria-label="Edit request"
                             onChange={(e) => setEditText(e.target.value)}
                           />
@@ -637,11 +285,10 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                               className="button button-primary"
                               disabled={busy || editText.trim() === ''}
                               onClick={() =>
-                                void handleSendEdited(
-                                  proposal.id,
-                                  editText,
-                                  proposal.isBackend,
-                                )
+                                void sendRequest({
+                                  proposal_id: proposal.id,
+                                  text: editText.trim(),
+                                })
                               }
                             >
                               Send
@@ -659,7 +306,10 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                         <>
                           <div className="helper-proposal-header">
                             <span className="helper-proposal-topic">
-                              {proposal.topic}
+                              {proposal.patient_interest}
+                              {proposal.helper_interest !==
+                                proposal.patient_interest &&
+                                ` × ${proposal.helper_interest}`}
                             </span>
                           </div>
                           <p className="helper-proposal-text">
@@ -670,9 +320,11 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                               type="button"
                               className="button button-primary"
                               disabled={busy}
-                              onClick={() => void handleSendProposal(proposal)}
+                              onClick={() =>
+                                void sendRequest({ proposal_id: proposal.id })
+                              }
                             >
-                              Ask {selectedPatient.firstName}
+                              Ask {patient.name}
                             </button>
                             <button
                               type="button"
@@ -691,17 +343,27 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                     </div>
                   ))}
                 </div>
+                <div className="button-center-wrap">
+                  <button
+                    type="button"
+                    className="button button-ghost"
+                    disabled={busy}
+                    onClick={() => void otherIdeas()}
+                  >
+                    {busy ? 'Thinking…' : 'Other ideas'}
+                  </button>
+                </div>
               </section>
             )}
 
-            {/* Or Ask in your own words with CENTERED "Send mine" button */}
-            {selectedPatient && (
+            {patient && (
               <section className="helper-own-section">
                 <h2 className="helper-own-title">Or ask in your own words</h2>
                 <textarea
                   value={ownText}
                   rows={3}
-                  placeholder={`Something you would like to ask ${selectedPatient.firstName}...`}
+                  maxLength={600}
+                  placeholder={`Something you would like to ask ${patient.name}...`}
                   aria-label="Your own request"
                   onChange={(e) => setOwnText(e.target.value)}
                 />
@@ -714,7 +376,7 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                     className="button button-primary"
                     style={{ minWidth: '180px' }}
                     disabled={busy || ownText.trim() === ''}
-                    onClick={() => void handleSendOwn()}
+                    onClick={() => void sendRequest({ text: ownText.trim() })}
                   >
                     Send mine
                   </button>
@@ -724,18 +386,32 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
           </div>
         )}
 
-        {/* Tab 2 : Messages & Conversation */}
         {activeTab === 'messages' && (
           <ChatView
             role="helper"
-            userName={home.user.name}
-            onStartNewRequest={() => setActiveTab('request')}
+            userId={me.id}
+            threads={threads}
+            busy={chat.busy}
+            openId={openId}
+            onOpen={setOpenId}
+            onSend={(threadId, text, attachments) =>
+              chat.run(() => postMessage(token, threadId, text, attachments))
+            }
+            onStartNewRequest={() => {
+              setOpenId(null)
+              setActiveTab('request')
+            }}
           />
         )}
 
-        {/* Tab 3 : My Profile */}
         {activeTab === 'profile' && (
-          <ProfileView role="helper" name={home.user.name} onLeave={onLeave} />
+          <ProfileView
+            user={me}
+            token={token}
+            threads={threads}
+            onUpdated={setUpdatedUser}
+            onLeave={onLeave}
+          />
         )}
       </main>
     </ScreenFrame>

@@ -9,7 +9,7 @@ Le guide pratique pour les humains (installation, boucle de travail, prompts typ
 ## Projet
 
 **Sujet :** Needed (nom provisoire), pour le challenge Junction sur le maintien à domicile après un traitement de la dépression par TMS. Une communauté où ce sont les patients en rémission qui rendent service : une IA décide quoi leur demander, quand et de la part de qui, selon leur état.
-**Démo attendue :** deux choses. La **vraie app** (`#/helper`, `#/patient`) : deux personnes s'inscrivent sur leur téléphone, l'une demande un service, l'autre répond, la première remercie. Et la **console** (`#/demo`) : la boucle fermée pour un patient simulé, où l'on voit les signaux θ, l'état L(θ) lu par l'autoencodeur, la zone sur six axes sortie par le réseau B, les demandes générées, mesurées et filtrées, la récompense de 0 à 100 et le vecteur du patient qui s'ajuste.
+**Démo attendue :** deux choses. La **vraie app** (`#/helper`, `#/patient`) : deux personnes s'inscrivent sur leur téléphone (e-mail et mot de passe), l'une demande un service, l'autre répond, la première remercie ; un patient peut aussi confier un besoin à la communauté, et le clinicien (`#/clinician`) et l'équipe (`#/admin`) ont chacun leur portail. Tout vient du backend : le navigateur ne garde que les jetons de session, le thème et les fils déjà lus. Et la **console** (`#/demo`) : la boucle fermée pour un patient simulé, où l'on voit les signaux θ, l'état L(θ) lu par l'autoencodeur, la zone sur six axes sortie par le réseau B, les demandes générées, mesurées et filtrées, la récompense de 0 à 100 et le vecteur du patient qui s'ajuste.
 **À lire :** [HYPOTHESES.md](HYPOTHESES.md) liste ce qui a été décidé sans validation de l'équipe et ce qui est simulé dans le code actuel.
 **Modèle cible :** [docs/modele.md](docs/modele.md) définit les objets, les axes d'une demande, les trois réseaux, leur entraînement et leur évaluation. Les trois réseaux sont codés, entraînés (`ml/nets`, poids dans `ml/weights`, résultats en section 14) et branchés dans l'app, console et vraie app. Seul le patient lui-même reste simulé : sa montre et la façon dont une demande agit sur lui (`ml/virtual.py`). Avant de toucher à `ml/`, lire ce document et sa section 8, « Ce qui reste simulé ».
 
@@ -66,6 +66,7 @@ uv run pytest                              # tests contrat API + ML
 npm --prefix frontend run typecheck        # types TS
 uv run pre-commit run --all-files          # tous les hooks (format, lint, tests)
 
+uv run python -m backend.seed              # base de démo neuve : comptes fictifs (mot de passe « needed »), ancienne base mise de côté
 uv run python -m ml.check_gemini           # vérifie la clé Gemini et la mesure λ
 uv run python -m ml.simulation             # génère les données simulées dans ml/data/sim (hors git)
 uv run python -m garmin login              # montre : première connexion Garmin, dans son propre terminal
@@ -101,9 +102,14 @@ backend/
   schemas.py         # CONTRAT : modèles Pydantic requête/réponse
   loop.py            # console de démo : la boucle en 12 étapes sur les réseaux, un patient virtuel, état en mémoire
   community.py       # vraie app : comptes, demandes, réponses ; même boucle, un corps virtuel par patient
+  threads.py         # vraie app : les fils (demande, réponse, merci, messages) et les besoins des patients
+  portals.py         # vraie app : portails du clinicien (sans le contenu des échanges) et de l'admin
+  auth.py            # mots de passe (PBKDF2, bibliothèque standard) et jetons de session
+  views.py           # un compte vu par son propriétaire, ou par un autre membre (profil privé respecté)
+  seed.py            # remise à zéro de la base et comptes fictifs
   readout.py         # traduit ce que rendent les réseaux vers le contrat d'API
   watch.py           # vraie app : montre Garmin liée par code, ses mesures, sa réponse aux demandes
-  store.py           # vraie app : stockage SQLite (data/needed.db, ignoré par git)
+  store.py           # vraie app : stockage SQLite (data/needed.db, ignoré par git), schéma versionné
   errors.py          # ApiError + format d'erreur unique
   export_openapi.py  # schemas -> contract/openapi.json
   tests/             # tests du contrat d'API
@@ -137,8 +143,9 @@ frontend/
   src/api/client.ts    # seul endroit qui appelle fetch()
   src/components/      # console de démo : un composant par fichier (téléphones, plan des demandes, état, six axes)
   src/typing.ts        # relevé de la frappe du patient (durées et comptes, jamais le texte)
-  src/screens/         # vraie app (accueil, inscription, aidant, patient) et écran de la console
-  src/session.ts       # jeton de l'appareil, par rôle
+  src/screens/         # vraie app (accueil, connexion, inscription, aidant, patient, clinicien, admin) et console
+  src/session.ts       # ce que garde le navigateur : jetons de session par rôle, thème, notifications, fils lus
+  src/images.ts        # photos réduites avant l'envoi au backend
   src/App.tsx          # routes : #/ accueil, #/helper, #/patient, #/demo
 ```
 
@@ -205,6 +212,11 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — Comptes à e-mail et mot de passe (PBKDF2-SHA256 de la bibliothèque standard, un sel par compte), une session par connexion (table `sessions`, en-tête `X-Needed-Token`). **Cela remplace les comptes par jeton d'appareil décidés plus bas** — il fallait pouvoir se reconnecter depuis un autre téléphone ; aucune dépendance ajoutée.
+- 2026-11-14 — Tout ce que l'app affiche vient du backend : profils, fils, besoins des patients, notes du clinicien, messages à l'équipe. Le navigateur ne garde que les jetons, le thème, les notifications du bandeau et les fils lus — deux téléphones doivent voir la même chose.
+- 2026-11-14 — Quatre rôles de compte : aidant et patient s'inscrivent eux-mêmes ; clinicien et admin sont créés par l'équipe (`backend/seed.py`). Le clinicien voit les patients qui ont donné son e-mail, leur bien-être et leur activité, jamais le contenu de leurs échanges.
+- 2026-11-14 — Schéma SQLite versionné (`PRAGMA user_version`) : au démarrage, une base plus ancienne est renommée en `.bak` et une base neuve la remplace, sans migration — on est en démo, aucune donnée réelle à garder.
+- 2026-11-14 — Photos et pièces jointes stockées en base sous forme d'images encodées (data URL), réduites à 800 ou 1 200 px par le front ; 2 Mo au plus pour un autre fichier — pas de service de fichiers à installer.
 - 2026-11-14 — Montre Garmin lue par Garmin Connect avec la bibliothèque non officielle `garminconnect` (nouvelle dépendance), sans app sur la montre — la montre se synchronise déjà en Bluetooth avec le téléphone ; l'API santé officielle de Garmin demande un partenariat de plusieurs semaines.
 - 2026-11-14 — App Connect IQ sur la montre (`watch/`), liée au patient par un code à 6 chiffres saisi dans l'écran patient, avec un jeton propre à la montre ; elle envoie ses mesures et traite la demande en attente (`/api/watch/*`) — pas de jeton à recopier, et délier la montre ne déconnecte pas le téléphone. Elle n'envoie rien quand elle est fermée.
 - 2026-11-14 — En attendant l'autoencodeur, `ml/watch.py` tire un seul `theta` d'un relevé de la montre en inversant le générateur de `ml/simulation` pour une personne moyenne — l'app n'accepte qu'un nombre ; règle provisoire, sans normalisation par personne.

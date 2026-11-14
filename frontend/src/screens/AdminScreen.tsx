@@ -1,16 +1,11 @@
-import { useEffect, useState } from 'react'
-import Logo from '../components/Logo'
+import { useCallback, useEffect, useState } from 'react'
 import {
-  type AdminContactMessage,
-  type ConversationThread,
-  type PatientCommunityNeed,
-  SIMULATION_ACCOUNTS,
-  readAdminContactMessages,
-  readPatientCommunityNeeds,
-  readThreads,
-  readUserProfile,
-  updateAdminContactMessageStatus,
-} from '../session'
+  type AdminHome,
+  ApiError,
+  getAdminHome,
+  resolveFeedback,
+} from '../api/client'
+import Logo from '../components/Logo'
 
 type AdminUser = {
   id: string
@@ -38,169 +33,109 @@ type AdminQuestion = {
   isCommunityNeed?: boolean
 }
 
-function getInitialAdminData() {
-  const helperProfile = readUserProfile('helper')
-  const patientProfile = readUserProfile('patient')
-
-  // 1. Charger les 6 profils simulés officiels (3 aidants, 3 patients)
-  const loadedUsers: AdminUser[] = SIMULATION_ACCOUNTS.map((acc) => ({
-    id: acc.id,
-    name: `${acc.firstName} ${acc.lastName}`.trim(),
-    role: acc.role,
-    city: acc.city,
-    interests: acc.interests,
-    bio: acc.bio,
-    avatarUrl: acc.avatarUrl,
-    status: 'active' as const,
-  }))
-
-  // S'il existe des profils personnalisés enregistrés localement avec un nom différent, on les inclut
-  if (helperProfile) {
-    const fullName =
-      `${helperProfile.firstName} ${helperProfile.lastName}`.trim()
-    if (
-      !loadedUsers.some((u) => u.name.toLowerCase() === fullName.toLowerCase())
-    ) {
-      loadedUsers.push({
-        id: 'u-custom-helper',
-        name: fullName,
-        role: 'helper',
-        city: helperProfile.city,
-        interests: helperProfile.interests ?? [],
-        bio: helperProfile.bio,
-        avatarUrl: helperProfile.avatarUrl,
-        status: 'active',
-      })
-    }
-  }
-
-  if (patientProfile) {
-    const fullName =
-      `${patientProfile.firstName} ${patientProfile.lastName}`.trim()
-    if (
-      !loadedUsers.some((u) => u.name.toLowerCase() === fullName.toLowerCase())
-    ) {
-      loadedUsers.push({
-        id: 'u-custom-patient',
-        name: fullName,
-        role: 'patient',
-        city: patientProfile.city,
-        interests: patientProfile.interests ?? [],
-        bio: patientProfile.bio,
-        avatarUrl: patientProfile.avatarUrl,
-        status: 'active',
-      })
-    }
-  }
-
-  // 2. Questions & Interactions between the 3 helpers and 3 patients
-  const allQuestions: AdminQuestion[] = [
-    {
-      id: 'req-sim-1',
-      fromName: 'Clara Fontaine',
-      fromRole: 'helper',
-      fromAvatar: '/moomins/Characters-04-2.svg',
-      toName: 'Julien Mercier',
-      toRole: 'patient',
-      toAvatar: '/moomins/Muumipeikko2.jpg',
-      text: 'Would you have any gardening tips for repotting indoor plants in autumn?',
-      status: 'resolved',
-      timestamp: '10:15',
-      replyText:
-        'With pleasure! Make sure to choose a drainage pot with clay pebbles at the bottom and a light potting mix.',
-    },
-    {
-      id: 'req-sim-2',
-      fromName: 'Thomas Lindqvist',
-      fromRole: 'helper',
-      fromAvatar: '/moomins/Muumipappa2.jpg',
-      toName: 'Sofia Hakala',
-      toRole: 'patient',
-      toAvatar: '/moomins/Nuuskamuikkunen.png',
-      text: 'I’m looking for soothing Nordic jazz album recommendations for quiet reading, do you have any favorites?',
-      status: 'in_progress',
-      timestamp: '11:30',
-    },
-    {
-      id: 'req-sim-3',
-      fromName: 'Elena Sjöberg',
-      fromRole: 'helper',
-      fromAvatar: '/moomins/Nuuskamuikkunen.png',
-      toName: 'Lucas Virtanen',
-      toRole: 'patient',
-      toAvatar: '/moomins/Characters-04-2.svg',
-      text: 'I’m preparing a merino wool scarf for winter. What stitch would you suggest for a stress-free start?',
-      status: 'resolved',
-      timestamp: '14:20',
-      replyText:
-        'Garter stitch or 1x1 ribbing is ideal and deeply relaxing to start with!',
-    },
-  ]
-
-  // Questions from chat threads (ChatView)
-  const helperThreads: ConversationThread[] = readThreads('helper')
-  helperThreads.forEach((t) => {
-    if (!allQuestions.some((q) => q.id === t.id || q.id === `thread-${t.id}`)) {
-      const isResolved = t.isFinished
-      allQuestions.push({
-        id: `thread-${t.id}`,
-        fromName: helperProfile
-          ? `${helperProfile.firstName} ${helperProfile.lastName}`.trim()
-          : 'Clara Fontaine',
-        fromRole: 'helper',
-        fromAvatar: helperProfile?.avatarUrl ?? '/moomins/Characters-04-2.svg',
-        toName: t.peerName,
-        toRole: t.peerRole,
-        toAvatar: t.peerAvatar,
-        text:
-          t.messages.find((m) => m.senderRole === 'helper')?.text ??
-          t.lastMessageText,
-        status: isResolved ? 'resolved' : 'in_progress',
-        timestamp: t.lastMessageTime,
-        replyText:
-          t.messages.find((m) => m.senderRole === 'patient')?.text ?? undefined,
-      })
-    }
-  })
-
-  // Direct community needs from patients
-  const communityNeeds: PatientCommunityNeed[] = readPatientCommunityNeeds()
-  communityNeeds.forEach((need) => {
-    allQuestions.push({
-      id: need.id,
-      fromName: need.patientName,
-      fromRole: 'patient',
-      fromAvatar: need.patientAvatar,
-      toName: 'Helpers Circle',
-      toRole: 'helper',
-      text: need.text,
-      status: need.answered ? 'resolved' : 'in_progress',
-      timestamp: need.timestamp,
-      isCommunityNeed: true,
-    })
-  })
-
-  // Deduplicate by ID
-  const uniqueQuestionsMap = new Map<string, AdminQuestion>()
-  allQuestions.forEach((q) => {
-    if (!uniqueQuestionsMap.has(q.id)) {
-      uniqueQuestionsMap.set(q.id, q)
-    }
-  })
-
-  return {
-    users: loadedUsers,
-    questions: Array.from(uniqueQuestionsMap.values()),
-  }
+type AdminContactMessage = {
+  id: string
+  senderName: string
+  senderRole?: 'helper' | 'patient' | 'visitor'
+  category: 'bug' | 'question' | 'suggestion' | 'other'
+  message: string
+  timestamp: string
+  resolved: boolean
 }
 
-function AdminScreen() {
-  const [data] = useState(() => getInitialAdminData())
+type AdminScreenProps = {
+  token: string
+  onLeave: () => void
+}
+
+function when(seconds: number): string {
+  return new Date(seconds * 1000).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// Ce que renvoie le backend, mis dans la forme que l'écran affiche.
+function adminView(home: AdminHome) {
+  const avatars = new Map(
+    home.members.map((member) => [member.name, member.avatar_url ?? undefined]),
+  )
+  const users: AdminUser[] = home.members
+    .filter((member) => member.role === 'helper' || member.role === 'patient')
+    .map((member) => ({
+      id: member.id,
+      name: member.name,
+      role: member.role as 'helper' | 'patient',
+      city: member.city || undefined,
+      interests: member.interests,
+      avatarUrl: member.avatar_url ?? undefined,
+      status: member.activity > 0 ? 'active' : 'idle',
+    }))
+  const questions: AdminQuestion[] = home.exchanges.map((exchange) => {
+    const isNeed = exchange.kind === 'need'
+    const toName = exchange.to_name ?? 'Helpers Circle'
+    return {
+      id: exchange.id,
+      fromName: exchange.from_name,
+      fromRole: isNeed ? 'patient' : 'helper',
+      fromAvatar: avatars.get(exchange.from_name),
+      toName,
+      toRole: isNeed ? 'helper' : 'patient',
+      toAvatar: avatars.get(toName),
+      text: exchange.text,
+      status:
+        exchange.status === 'answered' || exchange.status === 'taken'
+          ? 'resolved'
+          : 'in_progress',
+      timestamp: when(exchange.created_at),
+      replyText: exchange.reply ?? undefined,
+      isCommunityNeed: isNeed,
+    }
+  })
+  const messages: AdminContactMessage[] = home.feedback.map((item) => ({
+    id: item.id,
+    senderName: item.sender_name,
+    senderRole:
+      item.sender_role === 'helper' || item.sender_role === 'patient'
+        ? item.sender_role
+        : 'visitor',
+    category: item.category,
+    message: item.message,
+    timestamp: when(item.created_at),
+    resolved: item.resolved,
+  }))
+  return { users, questions, messages }
+}
+
+// Le portail de l'équipe (`#/admin`) : la communauté, les échanges et les messages reçus.
+function AdminScreen({ token, onLeave }: AdminScreenProps) {
+  const [home, setHome] = useState<AdminHome | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const data = home
+    ? adminView(home)
+    : { users: [], questions: [], messages: [] }
   const users = data.users
   const questions = data.questions
-  const [adminMessages, setAdminMessages] = useState<AdminContactMessage[]>(
-    () => readAdminContactMessages(),
+  const adminMessages = data.messages
+
+  const fail = useCallback(
+    (err: unknown) => {
+      if (err instanceof ApiError && err.status === 401) onLeave()
+      else
+        setError(
+          err instanceof ApiError
+            ? err.message
+            : 'The server is not responding.',
+        )
+    },
+    [onLeave],
   )
+
+  useEffect(() => {
+    getAdminHome(token).then(setHome).catch(fail)
+  }, [token, fail])
   const [filter, setFilter] = useState<'all' | 'in_progress' | 'resolved'>(
     'all',
   )
@@ -214,11 +149,7 @@ function AdminScreen() {
   }, [])
 
   function handleToggleMessageResolved(id: string, currentStatus: boolean) {
-    const nextStatus = !currentStatus
-    updateAdminContactMessageStatus(id, nextStatus)
-    setAdminMessages((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, resolved: nextStatus } : m)),
-    )
+    resolveFeedback(token, id, !currentStatus).then(setHome).catch(fail)
   }
 
   const filteredQuestions = questions.filter((q) => {
@@ -248,17 +179,22 @@ function AdminScreen() {
           <span className="brand-name">Needed</span>
         </a>
         <div className="topbar-actions">
-          <a
-            href="#/"
+          <button
+            type="button"
             className="button button-ghost button-small"
-            title="Back to Home"
+            onClick={onLeave}
           >
-            Exit
-          </a>
+            Sign out
+          </button>
         </div>
       </header>
 
       <main className="stack screen-body admin-body">
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
         {/* Clean hero header */}
         <section className="admin-hero">
           <h1>Administrator Portal</h1>

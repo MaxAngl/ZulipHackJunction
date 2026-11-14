@@ -1,28 +1,55 @@
 import { useEffect, useState } from 'react'
-import Logo from '../components/Logo'
 import {
+  ApiError,
+  type ClinicianHome,
   type ClinicianNotes,
-  readClinicianEmail,
-  readClinicianNotes,
-  readToken,
-  readUserProfile,
+  type ClinicianPatient,
+  getClinicianHome,
   saveClinicianNotes,
-  type UserProfile,
-} from '../session'
+} from '../api/client'
+import Logo from '../components/Logo'
 
-// Écran clinicien accessible via `#/clinician`.
-// Permet au médecin / thérapeute de renseigner le profil thérapeutique et la personnalité
-// du patient (mood, fiertés, centres d'intérêt) et de suivre sa stabilité post-TMS sans questionnaires.
-function ClinicianScreen() {
-  const [email] = useState(
-    () => readClinicianEmail() ?? 'dr.virtanen@helsinki-tms.fi',
-  )
-  const hasPatientSession = readToken('patient') !== null
-  const [patientProfile] = useState<UserProfile | null>(() =>
-    readUserProfile('patient'),
-  )
+type ClinicianScreenProps = {
+  token: string
+  onLeave: () => void
+}
 
-  const [notes, setNotes] = useState<ClinicianNotes>(() => readClinicianNotes())
+const EMPTY_NOTES: ClinicianNotes = { mood: '', proud: '', loves: '' }
+
+function when(seconds: number): string {
+  return new Date(seconds * 1000).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// Lecture indicative du bien-être que lisent les réseaux : jamais un diagnostic.
+function climate(patient: ClinicianPatient): { label: string; gain: boolean } {
+  if (patient.wellbeing >= 0.6) return { label: 'Steady', gain: true }
+  if (patient.wellbeing >= 0.4) return { label: 'Watch gently', gain: false }
+  return { label: 'Consider reaching out', gain: false }
+}
+
+function trendText(patient: ClinicianPatient): string {
+  const points = patient.trend
+  if (points.length < 2) return 'Not enough exchanges yet'
+  const delta = points[points.length - 1].wellbeing - points[0].wellbeing
+  if (delta > 0.02) return `↑ +${delta.toFixed(2)} since the first request`
+  if (delta < -0.02) return `↓ ${delta.toFixed(2)} since the first request`
+  return 'Stable since the first request'
+}
+
+// Le portail du clinicien (`#/clinician`) : les patients qui l'ont désigné à l'inscription,
+// leur bien-être lu par les réseaux, leur activité et ses notes. Jamais le contenu des échanges.
+function ClinicianScreen({ token, onLeave }: ClinicianScreenProps) {
+  const [home, setHome] = useState<ClinicianHome | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Notes en cours d'écriture, par patient ; sinon celles enregistrées.
+  const [drafts, setDrafts] = useState<Record<string, ClinicianNotes>>({})
+  const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState(false)
 
   useEffect(() => {
@@ -32,35 +59,59 @@ function ClinicianScreen() {
     }
   }, [])
 
-  function handleSaveNotes(e: React.FormEvent) {
-    e.preventDefault()
-    const updated: ClinicianNotes = {
-      ...notes,
-      updatedAt: new Date().toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
-    }
-    setNotes(updated)
-    saveClinicianNotes(updated)
-    setSaveSuccess(true)
-    setTimeout(() => {
-      setSaveSuccess(false)
-    }, 3500)
+  useEffect(() => {
+    getClinicianHome(token)
+      .then(setHome)
+      .catch((err: unknown) => {
+        if (err instanceof ApiError && err.status === 401) onLeave()
+        else
+          setError(
+            err instanceof ApiError
+              ? err.message
+              : 'The server is not responding.',
+          )
+      })
+  }, [token, onLeave])
+
+  const patient =
+    home?.patients.find((item) => item.id === selectedId) ??
+    home?.patients[0] ??
+    null
+
+  const saved = patient?.notes
+  const notes: ClinicianNotes =
+    (patient && drafts[patient.id]) ??
+    (saved
+      ? { mood: saved.mood, proud: saved.proud, loves: saved.loves }
+      : EMPTY_NOTES)
+
+  function setNotes(update: (current: ClinicianNotes) => ClinicianNotes) {
+    if (!patient) return
+    setDrafts((current) => ({ ...current, [patient.id]: update(notes) }))
   }
 
-  const patientName = patientProfile
-    ? `${patientProfile.firstName} ${patientProfile.lastName}`.trim()
-    : hasPatientSession
-      ? 'Patient Suivi'
-      : 'Julien Mercier (Cohorte Suivie)'
-
-  const patientAvatar = patientProfile?.avatarUrl ?? '/moomins/Muumipeikko2.jpg'
-  const patientCity = patientProfile?.city ?? 'Helsinki, Punavuori'
-  const patientBirth = patientProfile?.birthDate ?? '1994-05-14'
+  async function handleSaveNotes(event: React.FormEvent) {
+    event.preventDefault()
+    if (!patient) return
+    setSaving(true)
+    setError(null)
+    try {
+      setHome(await saveClinicianNotes(token, patient.id, notes))
+      setDrafts((current) => {
+        const next = { ...current }
+        delete next[patient.id]
+        return next
+      })
+      setSaveSuccess(true)
+      window.setTimeout(() => setSaveSuccess(false), 3500)
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : 'The server is not responding.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="screen clinician-screen">
@@ -74,9 +125,13 @@ function ClinicianScreen() {
         </div>
         <div className="topbar-actions">
           <span className="badge-clinic">Medical Portal</span>
-          <a href="#/" className="button button-ghost button-small">
-            Exit Portal
-          </a>
+          <button
+            type="button"
+            className="button button-ghost button-small"
+            onClick={onLeave}
+          >
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -85,207 +140,257 @@ function ClinicianScreen() {
           <p className="eyebrow">Passive Telemetry & Personality Insights</p>
           <h1>Post-TMS Patient Oversight</h1>
           <p className="quiet">
-            Continuous remission tracking without invasive questionnaires.
-            Well-being and emotional agency are inferred from spontaneous peer
-            reciprocity.
+            Continuous remission tracking without questionnaires. Well-being is
+            read from the watch and in-app signals; the content of exchanges
+            stays private to the patient.
           </p>
         </section>
+
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
 
         <div className="clinic-meta-box">
           <div>
             <span className="meta-label">Clinician on duty</span>
-            <strong className="meta-value">{email}</strong>
+            <strong className="meta-value">
+              {home ? `${home.user.first_name} ${home.user.last_name}` : '…'}
+            </strong>
           </div>
           <div>
-            <span className="meta-label">Protocol</span>
+            <span className="meta-label">Followed patients</span>
             <strong className="meta-value">
-              rTMS Post-Care · Junction Protocol
+              {home ? home.patients.length : '…'}
             </strong>
           </div>
         </div>
 
-        {/* Fiche Patient : Identité & Avatar */}
-        <section className="card-patient-oversight">
-          <div className="patient-header">
-            <div className="patient-identity-cluster">
-              <img
-                src={patientAvatar}
-                alt={patientName}
-                className="clinic-avatar-large"
-              />
-              <div>
-                <span className="eyebrow">Monitored Patient</span>
-                <h2>{patientName}</h2>
-                <div className="patient-tags">
-                  <span className="tag-quiet">Born: {patientBirth}</span>
-                  <span className="tag-quiet">City: {patientCity}</span>
-                  {patientProfile?.clinicianEmail && (
+        {home && home.patients.length === 0 && (
+          <p className="quiet">
+            No patient has given your email ({home.user.email}) yet. Patients
+            enter it when they join.
+          </p>
+        )}
+
+        {home && home.patients.length > 1 && (
+          <div
+            className="helper-patient-selector"
+            role="tablist"
+            aria-label="Followed patients"
+          >
+            {home.patients.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={item.id === patient?.id}
+                className={`helper-patient-pill ${item.id === patient?.id ? 'active' : ''}`}
+                onClick={() => setSelectedId(item.id)}
+              >
+                <span>{item.first_name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {patient && (
+          <section className="card-patient-oversight">
+            <div className="patient-header">
+              <div className="patient-identity-cluster">
+                {patient.avatar_url ? (
+                  <img
+                    src={patient.avatar_url}
+                    alt={patient.first_name}
+                    className="clinic-avatar-large"
+                  />
+                ) : (
+                  <div className="thread-avatar-fallback">
+                    {patient.first_name.charAt(0)}
+                  </div>
+                )}
+                <div>
+                  <span className="eyebrow">Monitored Patient</span>
+                  <h2>{`${patient.first_name} ${patient.last_name}`.trim()}</h2>
+                  <div className="patient-tags">
+                    {patient.birth_date && (
+                      <span className="tag-quiet">
+                        Born: {patient.birth_date}
+                      </span>
+                    )}
+                    {patient.city && (
+                      <span className="tag-quiet">City: {patient.city}</span>
+                    )}
                     <span className="tag-quiet">
-                      Assigned to: {patientProfile.clinicianEmail}
+                      Joined: {when(patient.joined_at)}
                     </span>
-                  )}
+                  </div>
                 </div>
               </div>
-            </div>
-            <span className="status-pill status-pill-active">
-              <span className="status-dot"></span> Remission Stable
-            </span>
-          </div>
-
-          <div className="clinical-grid">
-            <div className="clinical-metric">
-              <span className="metric-title">Behavioral State θ</span>
-              <span className="metric-score">0.74</span>
-              <span className="metric-trend text-gain">↑ Stable recovery</span>
-            </div>
-
-            <div className="clinical-metric">
-              <span className="metric-title">Safety Zone λ(θ)</span>
-              <span className="metric-score">0.45 – 0.68</span>
-              <span className="metric-trend">Low-effort boundary</span>
-            </div>
-
-            <div className="clinical-metric">
-              <span className="metric-title">Peer Exchanges</span>
-              <span className="metric-score">3 completed</span>
-              <span className="metric-trend">100% positive gratitude</span>
-            </div>
-
-            <div className="clinical-metric">
-              <span className="metric-title">Survey Burden</span>
-              <span className="metric-score">0 queries</span>
-              <span className="metric-trend text-gain">
-                Zero intrusive load
+              <span className="status-pill status-pill-active">
+                <span className="status-dot"></span> {climate(patient).label}
               </span>
             </div>
-          </div>
 
-          <div className="clinical-notice">
-            <p className="note">
-              <strong>Clinical Guardrail:</strong> The peer-matching algorithm
-              automatically filters out high-effort tasks whenever behavioural
-              signals dip below θ = 0.50. The patient experiences genuine
-              community agency without therapeutic pressure.
-            </p>
-          </div>
-        </section>
+            <div className="clinical-grid">
+              <div className="clinical-metric">
+                <span className="metric-title">Well-being reading</span>
+                <span className="metric-score">
+                  {patient.wellbeing.toFixed(2)}
+                </span>
+                <span
+                  className={`metric-trend ${climate(patient).gain ? 'text-gain' : ''}`}
+                >
+                  {trendText(patient)}
+                </span>
+              </div>
 
-        {/* Section ÉDITION : Mood & Personnalité du patient */}
-        <section className="card-notes-editor stack">
-          <div className="editor-header">
-            <div>
-              <span className="eyebrow">Therapeutic Profile</span>
-              <h2>Patient Personality & Mood Baseline</h2>
-              <p className="quiet">
-                Document what makes the patient proud and what brings them joy.
-                These qualitative cues configure the matching engine to suggest
-                delightful, low-friction interactions.
+              <div className="clinical-metric">
+                <span className="metric-title">Peer Exchanges</span>
+                <span className="metric-score">
+                  {patient.answered} answered
+                </span>
+                <span className="metric-trend">
+                  {patient.waiting > 0
+                    ? `${patient.waiting} waiting for them`
+                    : 'Nothing waiting'}
+                </span>
+              </div>
+
+              <div className="clinical-metric">
+                <span className="metric-title">Let pass</span>
+                <span className="metric-score">{patient.declined}</span>
+                <span className="metric-trend">
+                  &laquo; Not now &raquo; is always allowed
+                </span>
+              </div>
+
+              <div className="clinical-metric">
+                <span className="metric-title">Survey Burden</span>
+                <span className="metric-score">0 queries</span>
+                <span className="metric-trend text-gain">
+                  Zero intrusive load
+                </span>
+              </div>
+            </div>
+
+            <div className="clinical-notice">
+              <p className="note">
+                <strong>Clinical Guardrail:</strong> the lower the well-being
+                reading, the closer requests stay to the patient&apos;s own
+                interests and the lighter they get. The reading is indicative,
+                never a diagnosis.
               </p>
             </div>
-            <span className="last-saved-badge">
-              Last saved: {notes.updatedAt}
-            </span>
-          </div>
+          </section>
+        )}
 
-          <form onSubmit={handleSaveNotes} className="stack">
-            <label className="field">
-              <span>
-                <strong>Patient mood & emotional climate</strong>
+        {patient && (
+          <section className="card-notes-editor stack">
+            <div className="editor-header">
+              <div>
+                <span className="eyebrow">Therapeutic Profile</span>
+                <h2>Patient Personality & Mood Baseline</h2>
+                <p className="quiet">
+                  Document what makes {patient.first_name} proud and what brings
+                  them joy.
+                </p>
+              </div>
+              <span className="last-saved-badge">
+                {patient.notes
+                  ? `Last saved: ${when(patient.notes.updated_at)}`
+                  : 'Not saved yet'}
               </span>
-              <span className="quiet font-small">
-                Current affect, receptivity, energy reserves and emotional
-                stability.
-              </span>
-              <textarea
-                rows={3}
-                value={notes.mood}
-                placeholder="e.g. Calm, receptive, gradual resurgence of daily motivation"
-                onChange={(e) =>
-                  setNotes((n) => ({ ...n, mood: e.target.value }))
-                }
-              />
-            </label>
-
-            <label className="field">
-              <span>
-                <strong>What makes them proud (ce qui la rend fier)</strong>
-              </span>
-              <span className="quiet font-small">
-                Core competencies, meaningful achievements, craft, or personal
-                victories that restore self-worth.
-              </span>
-              <textarea
-                rows={3}
-                value={notes.whatMakesThemProud}
-                placeholder="e.g. Mastering sourdough baking; woodworking; volunteering at community greenhouse"
-                onChange={(e) =>
-                  setNotes((n) => ({
-                    ...n,
-                    whatMakesThemProud: e.target.value,
-                  }))
-                }
-              />
-            </label>
-
-            <label className="field">
-              <span>
-                <strong>What they love doing (ce qu'elle aime faire)</strong>
-              </span>
-              <span className="quiet font-small">
-                Soothing passions, comforting hobbies, and conversational topics
-                that spark natural joy.
-              </span>
-              <textarea
-                rows={3}
-                value={notes.whatTheyLoveDoing}
-                placeholder="e.g. Caring for houseplants, listening to classic jazz vinyl, Scandinavian literature"
-                onChange={(e) =>
-                  setNotes((n) => ({
-                    ...n,
-                    whatTheyLoveDoing: e.target.value,
-                  }))
-                }
-              />
-            </label>
-
-            <div className="row-align-center">
-              <button
-                type="submit"
-                className="button button-primary button-medium"
-              >
-                Save Clinical Notes
-              </button>
-              {saveSuccess && (
-                <span className="success-pill">
-                  ✓ Notes successfully saved to medical record
-                </span>
-              )}
             </div>
-          </form>
-        </section>
 
-        {/* Journal d'activité récente */}
-        <section className="stack">
-          <h2>Recent Reciprocal Events</h2>
-          <ul className="clinical-events">
-            <li className="clinical-event-item">
-              <span className="event-time">Today, 09:20</span>
-              <div className="event-body">
-                <strong>Gave advice on sourdough baking</strong> to Mikko.
-                Received heartfelt thanks:{' '}
-                <em>« Thanks so much, loaf turned out amazing! »</em>
+            <form onSubmit={handleSaveNotes} className="stack">
+              <label className="field">
+                <span>
+                  <strong>Patient mood & emotional climate</strong>
+                </span>
+                <textarea
+                  rows={3}
+                  maxLength={300}
+                  value={notes.mood}
+                  placeholder="e.g. Calm, receptive, gradual return of daily motivation"
+                  onChange={(e) =>
+                    setNotes((n) => ({ ...n, mood: e.target.value }))
+                  }
+                />
+              </label>
+
+              <label className="field">
+                <span>
+                  <strong>What makes them proud</strong>
+                </span>
+                <textarea
+                  rows={3}
+                  maxLength={300}
+                  value={notes.proud}
+                  placeholder="e.g. Mastering sourdough baking; volunteering at the community greenhouse"
+                  onChange={(e) =>
+                    setNotes((n) => ({ ...n, proud: e.target.value }))
+                  }
+                />
+              </label>
+
+              <label className="field">
+                <span>
+                  <strong>What they love doing</strong>
+                </span>
+                <textarea
+                  rows={3}
+                  maxLength={300}
+                  value={notes.loves}
+                  placeholder="e.g. Houseplants, jazz records, Scandinavian novels"
+                  onChange={(e) =>
+                    setNotes((n) => ({ ...n, loves: e.target.value }))
+                  }
+                />
+              </label>
+
+              <div className="row-align-center">
+                <button
+                  type="submit"
+                  className="button button-primary button-medium"
+                  disabled={saving}
+                >
+                  {saving ? 'Saving…' : 'Save Clinical Notes'}
+                </button>
+                {saveSuccess && (
+                  <span className="success-pill">✓ Notes saved</span>
+                )}
               </div>
-            </li>
-            <li className="clinical-event-item">
-              <span className="event-time">Yesterday, 14:15</span>
-              <div className="event-body">
-                <strong>Declined a photography request</strong> via « Not now »
-                button. System recorded normal agency with zero clinical
-                friction.
-              </div>
-            </li>
-          </ul>
-        </section>
+            </form>
+          </section>
+        )}
+
+        {patient && (
+          <section className="stack">
+            <h2>Recent Reciprocal Events</h2>
+            {patient.trend.length === 0 ? (
+              <p className="quiet">No request handled yet.</p>
+            ) : (
+              <ul className="clinical-events">
+                {[...patient.trend].reverse().map((point, index) => (
+                  <li key={index} className="clinical-event-item">
+                    <span className="event-time">{when(point.at)}</span>
+                    <div className="event-body">
+                      {index === patient.trend.length - 1 &&
+                      patient.trend.length > 1 ? (
+                        <strong>Before the first request</strong>
+                      ) : (
+                        <strong>Handled a community request</strong>
+                      )}{' '}
+                      · well-being {point.wellbeing.toFixed(2)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
       </main>
     </div>
   )

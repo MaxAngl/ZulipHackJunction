@@ -7,8 +7,15 @@ from fastapi.testclient import TestClient
 
 from backend.community import Community
 from backend.main import app, get_community
-from backend.schemas import ErrorResponse, HelperHome, PatientHome, SessionResponse
+from backend.schemas import (
+    ErrorResponse,
+    HelperHome,
+    PatientHome,
+    SessionResponse,
+    SignupRequest,
+)
 from backend.store import Store
+from backend.tests.accounts import account, signup_body
 from ml.model import SIGNALS, request_axes
 
 client = TestClient(app)
@@ -24,9 +31,7 @@ def empty_database(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _join(role: str, name: str, interests: list[str]) -> dict[str, str]:
-    response = client.post(
-        "/api/app/join", json={"role": role, "name": name, "interests": interests}
-    )
+    response = client.post("/api/app/signup", json=signup_body(role, name, interests))
     assert response.status_code == 200, response.text
     session = SessionResponse.model_validate(response.json())
     assert session.user.role == role
@@ -138,8 +143,8 @@ def _waiting_request(store: Store, helper_id: str, patient_id: str, lam: float, 
 def test_a_waiting_request_is_released_only_if_it_still_fits(released: bool):
     """Les positions sont fixées à la main : au cœur de la zone, ou tout à l'opposé."""
     community = Community(Store(":memory:"))
-    patient = community.store.add_user("patient", "Aino", ["gardening"], 0.6)
-    helper = community.store.add_user("helper", "Mikko", ["cooking"], 0.6)
+    patient = account(community.store, "patient", "Aino", ["gardening"])
+    helper = account(community.store, "helper", "Mikko", ["cooking"])
     center = community._zone(patient).center
     current = _waiting_request(community.store, helper.id, patient.id, center, "delivered")
     lam = center if released else 0.05
@@ -164,12 +169,12 @@ def test_a_never_asked_patient_waits_from_their_sign_up(monkeypatch: pytest.Monk
     now = {"t": 100.0}
     monkeypatch.setattr("backend.store.time.time", lambda: now["t"])
     community = Community(Store(":memory:"))
-    aino = community.store.add_user("patient", "Aino", ["gardening"], 0.6)
-    helper = community.store.add_user("helper", "Mikko", ["cooking"], 0.6)
+    aino = account(community.store, "patient", "Aino", ["gardening"])
+    helper = account(community.store, "helper", "Mikko", ["cooking"])
     now["t"] = 150.0
     _waiting_request(community.store, helper.id, aino.id, 0.64, "answered")
     now["t"] = 300.0
-    community.store.add_user("patient", "Bob", ["gardening"], 0.6)
+    account(community.store, "patient", "Bob", ["gardening"])
 
     assert community.suggest(helper).patient_name == "Aino"
 
@@ -230,8 +235,8 @@ def test_the_demo_entry_sets_the_level_and_the_networks_read_it_back():
 
 def test_an_answer_is_scored_and_tunes_the_patient_vector(tmp_path: Path):
     community = Community(Store(tmp_path / "needed.db"))
-    patient = community.store.add_user("patient", "Aino", ["gardening"], 0.6)
-    helper = community.store.add_user("helper", "Mikko", ["cooking"], 0.6)
+    patient = account(community.store, "patient", "Aino", ["gardening"])
+    helper = account(community.store, "helper", "Mikko", ["cooking"])
     home = community.suggest(helper)
     community.send(helper, home.proposals[0].id, None)
     request = community.store.requests_of("patient", patient.id)[0]
@@ -276,7 +281,7 @@ def test_typing_signals_measured_by_the_app_are_accepted():
 def test_data_survives_a_restart(tmp_path: Path):
     path = tmp_path / "needed.db"
     first = Community(Store(path))
-    session = first.join("patient", "Aino", ["gardening"])
+    session = first.signup(SignupRequest(**signup_body("patient", "Aino", ["gardening"])))
 
     second = Community(Store(path))
     assert second.signed_in(session.token).name == "Aino"
@@ -286,8 +291,8 @@ def test_what_the_networks_learned_about_a_patient_survives_a_restart(tmp_path: 
     """Rien du corps virtuel n'est enregistré : il se reconstruit en rejouant les demandes."""
     path = tmp_path / "needed.db"
     first = Community(Store(path))
-    patient = first.store.add_user("patient", "Aino", ["gardening"], 0.6)
-    helper = first.store.add_user("helper", "Mikko", ["cooking"], 0.6)
+    patient = account(first.store, "patient", "Aino", ["gardening"])
+    helper = account(first.store, "helper", "Mikko", ["cooking"])
     for answer in ("Start with basil.", None):
         home = first.suggest(helper)
         first.send(helper, home.proposals[0].id, None)

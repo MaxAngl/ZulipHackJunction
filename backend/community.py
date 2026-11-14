@@ -19,9 +19,11 @@ from dataclasses import asdict, dataclass, field
 import numpy as np
 
 from backend import schemas
+from backend.auth import hash_password, new_token, verify_password
 from backend.errors import ApiError
 from backend.readout import measured_typing
 from backend.store import Store, StoredRequest, User
+from backend.views import app_user, public_profile
 from ml.model import (
     Candidate,
     InterestPair,
@@ -84,21 +86,89 @@ class Community:
 
     # --- Comptes -------------------------------------------------------------------------
 
-    def join(self, role: schemas.Role, name: str, interests: list[str]) -> schemas.SessionResponse:
-        cleaned = _clean(interests)
-        if not name.strip() or not cleaned:
+    def signup(self, body: schemas.SignupRequest) -> schemas.SessionResponse:
+        cleaned = _clean(body.interests)
+        if not body.first_name.strip() or not cleaned:
             raise ApiError(422, "missing_profile", "Give a first name and at least one interest.")
-        user = self.store.add_user(role, name.strip(), cleaned, INITIAL_THETA)
-        self._profile(user)  # vecteurs d'intérêts calculés une fois, ici
-        return schemas.SessionResponse(token=user.token, user=_user(user))
+        with self.store.lock:
+            if self.store.user_by_email(body.email) is not None:
+                raise ApiError(409, "email_taken", "An account already uses this email.")
+            user = self.create_account(
+                role=body.role,
+                email=body.email,
+                password=body.password,
+                first_name=body.first_name,
+                last_name=body.last_name,
+                city=body.city.strip(),
+                birth_date=body.birth_date.strip(),
+                interests=cleaned,
+                bio=body.bio.strip(),
+                avatar_url=body.avatar_url,
+                passion_photos=body.passion_photos,
+                clinician_email=_email(body.clinician_email),
+                allow_profile_view=body.allow_profile_view,
+            )
+        return self._session(user)
 
-    def signed_in(self, token: str | None, role: schemas.Role | None = None) -> User:
-        user = self.store.user_by_token(token) if token else None
-        if user is None:
-            raise ApiError(401, "not_signed_in", "Please join first.")
-        if role is not None and user.role != role:
-            raise ApiError(403, "wrong_role", f"This screen is for {role}s.")
+    def create_account(self, role: str, email: str, password: str, **profile: object) -> User:
+        """Compte neuf, profil d'intérêts compris. Sert à l'inscription et aux comptes de démo."""
+        first_name = str(profile.pop("first_name", "")).strip()
+        last_name = str(profile.pop("last_name", "")).strip()
+        user = self.store.add_user(
+            email=_email(email),
+            password_hash=hash_password(password),
+            role=role,
+            first_name=first_name,
+            last_name=last_name,
+            theta=INITIAL_THETA,
+            **profile,
+        )
+        if role in ("helper", "patient"):
+            self._profile(user)  # vecteurs d'intérêts calculés une fois, ici
         return user
+
+    def login(self, email: str, password: str) -> schemas.SessionResponse:
+        user = self.store.user_by_email(email)
+        if user is None or not verify_password(password, user.password_hash):
+            raise ApiError(401, "wrong_credentials", "Wrong email or password.")
+        return self._session(user)
+
+    def logout(self, token: str | None) -> None:
+        if token:
+            self.store.delete_session(token)
+
+    def signed_in(self, token: str | None, *roles: str) -> User:
+        user = self.store.user_by_session(token) if token else None
+        if user is None:
+            raise ApiError(401, "not_signed_in", "Please sign in first.")
+        if roles and user.role not in roles:
+            raise ApiError(403, "wrong_role", f"This screen is for {' or '.join(roles)} accounts.")
+        return user
+
+    def update_profile(self, user: User, body: schemas.ProfileUpdate) -> schemas.AppUser:
+        changes = body.model_dump(exclude_none=True)
+        if "interests" in changes:
+            changes["interests"] = _clean(changes["interests"])
+            if not changes["interests"]:
+                raise ApiError(422, "missing_profile", "Keep at least one interest.")
+        if "clinician_email" in changes:
+            changes["clinician_email"] = _email(changes["clinician_email"])
+        for key in ("first_name", "last_name", "city", "birth_date", "bio"):
+            if key in changes:
+                changes[key] = changes[key].strip()
+        with self.store.lock:
+            self.store.update_user(user.id, **changes)
+            fresh = self._fresh(user)
+            if user.role in ("helper", "patient") and ({"interests", "bio"} & changes.keys()):
+                self.store.save_profile(
+                    user.id, build_profile(fresh.interests, fresh.bio).to_dict()
+                )
+        return app_user(fresh)
+
+    def _session(self, user: User) -> schemas.SessionResponse:
+        token = new_token()
+        self.store.add_session(user.id, token)
+        return schemas.SessionResponse(token=token, user=app_user(user))
 
     # --- Aidant : étapes 2 à 8 ---------------------------------------------------------------
 
@@ -121,14 +191,32 @@ class Community:
                 )
             ]
         return schemas.HelperHome(
-            user=_user(helper),
+            user=app_user(helper),
             patient_name=patient.name if patient else None,
+            patient=public_profile(patient) if patient else None,
             proposals=proposals,
             requests=[
                 self._view(request, "helper")
                 for request in reversed(self.store.requests_of("helper", helper.id))
             ],
+            needs=self.open_needs(),
         )
+
+    def open_needs(self) -> list[schemas.OpenNeed]:
+        """Besoins publiés par des patients et encore libres ; le plus récent d'abord."""
+        needs = []
+        for need in reversed(self.store.needs("open")):
+            patient = self.store.user(need.patient_id)
+            if patient is not None:
+                needs.append(
+                    schemas.OpenNeed(
+                        id=need.id,
+                        text=need.text,
+                        created_at=need.created_at,
+                        patient=public_profile(patient),
+                    )
+                )
+        return needs
 
     def suggest(self, helper: User) -> schemas.HelperHome:
         """Choisit un patient, calcule sa zone, génère, mesure et garde trois propositions."""
@@ -220,7 +308,9 @@ class Community:
         request = self.store.request(request_id)
         if request is None or request.helper_id != helper.id or request.status != "answered":
             raise ApiError(404, "request_not_found", "This request has no answer to thank for.")
-        self.store.update_request(request.id, thanks=text.strip())
+        if request.thanks:
+            raise ApiError(409, "already_thanked", "You already said thank you for this answer.")
+        self.store.update_request(request.id, thanks=text.strip(), thanked_at=time.time())
         return self.helper_home(helper)
 
     # --- Patient : étapes 9 à 12 -------------------------------------------------------------
@@ -228,7 +318,7 @@ class Community:
     def patient_home(self, patient: User) -> schemas.PatientHome:
         requests = self.store.requests_of("patient", patient.id)
         return schemas.PatientHome(
-            user=_user(patient),
+            user=app_user(patient),
             inbox=[self._view(item, "patient") for item in requests if item.status == "delivered"],
             past=[
                 self._view(item, "patient")
@@ -374,7 +464,7 @@ class Community:
         saved = self.store.profile(user.id)
         if saved is not None:
             return InterestProfile.from_dict(saved)
-        profile = build_profile(user.interests)
+        profile = build_profile(user.interests, user.bio)
         self.store.save_profile(user.id, profile.to_dict())
         return profile
 
@@ -460,5 +550,5 @@ def _fits(zone: Zone, lam: float, format_key: str, effort: float) -> bool:
     return zone.contains(lam, effort, request_axes(lam, format_key))
 
 
-def _user(user: User) -> schemas.AppUser:
-    return schemas.AppUser(id=user.id, role=user.role, name=user.name, interests=user.interests)
+def _email(email: str | None) -> str | None:
+    return email.strip().lower() if email else None

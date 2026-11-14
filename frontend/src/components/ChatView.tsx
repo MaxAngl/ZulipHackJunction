@@ -1,254 +1,280 @@
-import { useRef, useState } from 'react'
-import type { Role } from '../api/client'
-import {
-  type ConversationThread,
-  type MessageAttachment,
-  readThreads,
-  saveThreads,
-} from '../session'
+import { useEffect, useRef, useState } from 'react'
+import type {
+  Attachment,
+  PublicProfile,
+  Role,
+  Thread,
+  TypingSignals,
+} from '../api/client'
+import { pickedImage, readAsDataUrl } from '../images'
+import { markSeen, readSeen } from '../session'
+import { useTypingSignals } from '../typing'
+import PeerProfileModal from './PeerProfileModal'
+
+const MAX_FILE_BYTES = 2_000_000
+const QUICK_THANKS = 'Thank you, that really helped!'
 
 type ChatViewProps = {
   role: Role
-  userName: string
+  userId: string
+  threads: Thread[]
+  busy: boolean
+  // Fil ouvert, piloté par l'écran (pour ouvrir le fil qui vient de naître).
+  openId: string | null
+  onOpen: (threadId: string | null) => void
+  // Renvoie vrai si le message est parti.
+  onSend: (
+    threadId: string,
+    text: string,
+    attachments: Attachment[],
+    typing?: TypingSignals,
+  ) => Promise<boolean>
+  onDecline?: (threadId: string) => Promise<void>
   onStartNewRequest?: () => void
 }
 
-function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
-  const [threads, setThreads] = useState<ConversationThread[]>(() =>
-    readThreads(role),
+function clock(seconds: number): string {
+  const date = new Date(seconds * 1000)
+  const sameDay = date.toDateString() === new Date().toDateString()
+  return sameDay
+    ? date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+}
+
+function peerName(thread: Thread): string {
+  if (thread.peer) {
+    return `${thread.peer.name} ${thread.peer.last_name}`.trim()
+  }
+  return 'The community'
+}
+
+function lastIncoming(thread: Thread): number {
+  const incoming = thread.messages.filter((message) => !message.mine)
+  return incoming.length ? incoming[incoming.length - 1].created_at : 0
+}
+
+// Où en est un fil, en deux ou trois mots, dans la liste.
+function badge(thread: Thread, role: Role): string | null {
+  if (thread.kind === 'need') {
+    return thread.status === 'open' ? 'Waiting for a helper' : null
+  }
+  if (thread.status === 'to_answer') return 'Needs your answer'
+  if (thread.status === 'on_its_way') return 'On its way'
+  if (thread.thanked) return 'Service completed'
+  return role === 'helper' ? 'Answered' : null
+}
+
+function avatar(
+  profile: PublicProfile | null,
+  name: string,
+  className: string,
+) {
+  return profile?.avatar_url ? (
+    <img src={profile.avatar_url} alt={name} className={className} />
+  ) : (
+    <div className="thread-avatar-fallback">{name.charAt(0).toUpperCase()}</div>
   )
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
-  const [viewingPeerProfile, setViewingPeerProfile] =
-    useState<ConversationThread | null>(null)
-  const [privateProfileNotice, setPrivateProfileNotice] = useState<
-    string | null
-  >(null)
+}
+
+// Les fils de la vraie app : une demande (avec sa réponse et le merci) ou un besoin de patient.
+function ChatView({
+  role,
+  userId,
+  threads,
+  busy,
+  openId,
+  onOpen,
+  onSend,
+  onDecline,
+  onStartNewRequest,
+}: ChatViewProps) {
+  // Fils déjà lus : relus à chaque rendu (l'écran se rafraîchit toutes les 4 secondes).
+  const seen = readSeen(userId)
+  const [viewingPeer, setViewingPeer] = useState<PublicProfile | null>(null)
+  const [privateNotice, setPrivateNotice] = useState<string | null>(null)
   const [inputText, setInputText] = useState('')
-  const [attachments, setAttachments] = useState<MessageAttachment[]>([])
-  const [limitWarning, setLimitWarning] = useState<string | null>(null)
-
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  const [fileError, setFileError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
-  const activeThread = threads.find((t) => t.id === activeThreadId) ?? null
+  const activeThread = threads.find((thread) => thread.id === openId) ?? null
+  const answering =
+    role === 'patient' && activeThread?.status === 'to_answer'
+      ? activeThread.id
+      : null
+  const { onInput, collect } = useTypingSignals(answering)
 
-  function selectThread(t: ConversationThread) {
-    setActiveThreadId(t.id)
-    setLimitWarning(null)
-    setPrivateProfileNotice(null)
-    if (!t.isRead) {
-      const updated = threads.map((item) =>
-        item.id === t.id ? { ...item, isRead: true } : item,
-      )
-      setThreads(updated)
-      saveThreads(role, updated)
-    }
+  // Un fil ouvert est lu, y compris les messages qui arrivent pendant qu'on le regarde.
+  const activeLast = activeThread ? lastIncoming(activeThread) : 0
+  useEffect(() => {
+    if (!activeThread || activeLast === 0) return
+    markSeen(userId, activeThread.id, activeLast)
+  }, [activeThread, activeLast, userId])
+
+  const messageCount = activeThread?.messages.length ?? 0
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight })
+  }, [messageCount, openId])
+
+  function isUnread(thread: Thread): boolean {
+    const last = lastIncoming(thread)
+    return last > 0 && last > (seen[thread.id] ?? 0)
   }
 
-  function handleOpenPeerProfile(t: ConversationThread) {
-    if (t.peerProfile && t.peerProfile.allowProfileView === false) {
-      setPrivateProfileNotice(
-        `${t.peerName} a choisi de ne pas rendre son profil consultable.`,
-      )
-      return
-    }
-    setPrivateProfileNotice(null)
-    setViewingPeerProfile(t)
-  }
-
-  function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = e.target.files
-    if (!files || files.length === 0) return
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i]
-      const reader = new FileReader()
-      const isImg = file.type.startsWith('image/')
-      const isVid = file.type.startsWith('video/')
-      const type: 'image' | 'video' | 'file' = isImg
-        ? 'image'
-        : isVid
-          ? 'video'
-          : 'file'
-
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          const newAtt: MessageAttachment = {
-            type,
-            name: file.name,
-            url: reader.result,
-            size: `${(file.size / 1024).toFixed(0)} Ko`,
-          }
-          setAttachments((prev) => [...prev, newAtt])
-        }
-      }
-      reader.readAsDataURL(file)
-    }
-    e.target.value = ''
-  }
-
-  function handleSendMessage(e: React.FormEvent) {
-    e.preventDefault()
-    if (!activeThread) return
-    if (!inputText.trim() && attachments.length === 0) return
-
-    // Check anti-spam limit for helper (max 5 messages per cycle)
-    if (role === 'helper' && activeThread.helperMessageCount >= 5) {
-      setLimitWarning(
-        'Limit of 5 messages reached to prevent spam. Please wait for your peer to reply or start a new request cycle.',
-      )
-      return
-    }
-
-    const timeStr = new Date().toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      senderRole: role,
-      senderName: userName || (role === 'helper' ? 'Helper' : 'Patient'),
-      text: inputText.trim(),
-      timestamp: timeStr,
-      attachments: attachments.length > 0 ? attachments : undefined,
-    }
-
-    const updatedThreads = threads.map((th) => {
-      if (th.id === activeThread.id) {
-        return {
-          ...th,
-          lastMessageText: newMsg.text || 'Shared file',
-          lastMessageTime: timeStr,
-          messages: [...th.messages, newMsg],
-          helperMessageCount:
-            role === 'helper'
-              ? th.helperMessageCount + 1
-              : th.helperMessageCount,
-        }
-      }
-      return th
-    })
-
-    setThreads(updatedThreads)
-    saveThreads(role, updatedThreads)
+  function openThread(thread: Thread | null) {
     setInputText('')
     setAttachments([])
-    setLimitWarning(null)
+    setFileError(null)
+    setPrivateNotice(null)
+    onOpen(thread ? thread.id : null)
   }
 
-  function handleMarkFinished() {
-    if (!activeThread) return
-    const updatedThreads = threads.map((th) => {
-      if (th.id === activeThread.id) {
-        return {
-          ...th,
-          isFinished: true,
-        }
-      }
-      return th
-    })
-    setThreads(updatedThreads)
-    saveThreads(role, updatedThreads)
+  function openPeer(thread: Thread) {
+    if (!thread.peer) return
+    if (!thread.peer.visible) {
+      setPrivateNotice(
+        `${thread.peer.name} chose to keep their profile private.`,
+      )
+      return
+    }
+    setPrivateNotice(null)
+    setViewingPeer(thread.peer)
   }
 
-  function handleRestartHelp() {
-    if (!activeThread) return
-    const updatedThreads = threads.map((th) => {
-      if (th.id === activeThread.id) {
-        return {
-          ...th,
-          isFinished: false,
-          helperMessageCount: 0, // Nouveau cycle
+  async function handleFiles(event: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.target.files ?? [])
+    event.target.value = ''
+    setFileError(null)
+    for (const file of files.slice(0, 4 - attachments.length)) {
+      try {
+        const isImage = file.type.startsWith('image/')
+        if (!isImage && file.size > MAX_FILE_BYTES) {
+          setFileError(`${file.name} is too large (2 MB at most).`)
+          continue
         }
+        const url = isImage
+          ? await pickedImage(file, 1200)
+          : await readAsDataUrl(file)
+        const type = isImage
+          ? 'image'
+          : file.type.startsWith('video/')
+            ? 'video'
+            : 'file'
+        setAttachments((current) => [
+          ...current,
+          {
+            type,
+            name: file.name.slice(0, 120),
+            url,
+            size: `${Math.max(1, Math.round(file.size / 1024))} KB`,
+          },
+        ])
+      } catch {
+        setFileError(`${file.name} could not be read.`)
       }
-      return th
-    })
-    setThreads(updatedThreads)
-    saveThreads(role, updatedThreads)
-    if (onStartNewRequest) {
-      onStartNewRequest()
     }
   }
 
-  // --- VIEW 1 : Conversations List ---
+  async function submit(text: string) {
+    if (!activeThread) return
+    if (!text.trim() && attachments.length === 0) return
+    const typing = answering ? collect() : undefined
+    const sent = await onSend(activeThread.id, text.trim(), attachments, typing)
+    if (sent) {
+      setInputText('')
+      setAttachments([])
+    }
+  }
+
+  const privateToast = privateNotice && (
+    <div className="profile-private-toast" role="alert">
+      <div className="flex-between">
+        <div className="row-align-center-tight">
+          <span className="private-toast-icon">🔒</span>
+          <span className="font-small">{privateNotice}</span>
+        </div>
+        <button
+          type="button"
+          className="private-toast-close"
+          onClick={() => setPrivateNotice(null)}
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  )
+
+  // --- Vue 1 : la liste des fils ---
   if (!activeThread) {
+    const unread = threads.filter(isUnread).length
     return (
       <section className="stack chat-list-section">
         <div className="chat-list-header">
           <h2>Messages</h2>
-          <span className="quiet font-small">
-            {threads.filter((t) => !t.isRead).length} unread
-          </span>
+          <span className="quiet font-small">{unread} unread</span>
         </div>
 
         {threads.length === 0 ? (
           <div className="empty-state stack text-center">
-            <p className="quiet">No active conversations yet.</p>
+            <p className="quiet">
+              {role === 'patient'
+                ? 'No requests yet. When someone in the community needs you, it shows up here.'
+                : 'No conversations yet. Send a first request to start one.'}
+            </p>
             {onStartNewRequest && (
               <button
                 type="button"
                 className="button button-primary button-wide"
                 onClick={onStartNewRequest}
               >
-                New Request
+                {role === 'patient' ? 'Ask the community' : 'New request'}
               </button>
             )}
           </div>
         ) : (
           <div className="threads-list" role="list">
-            {threads.map((t) => {
-              const avatar =
-                t.peerAvatar ??
-                (t.peerRole === 'patient'
-                  ? '/moomins/Muumipeikko2.jpg'
-                  : undefined)
-
+            {threads.map((thread) => {
+              const name = peerName(thread)
+              const last = thread.messages[thread.messages.length - 1]
+              const unreadThread = isUnread(thread)
               return (
                 <div
-                  key={t.id}
+                  key={thread.id}
                   role="listitem"
-                  className={`thread-row-item ${!t.isRead ? 'thread-row-unread' : ''}`}
-                  onClick={() => selectThread(t)}
+                  className={`thread-row-item ${unreadThread ? 'thread-row-unread' : ''}`}
+                  onClick={() => openThread(thread)}
                 >
                   <div
                     className="thread-avatar-wrapper thread-avatar-clickable"
                     title={
-                      t.peerProfile?.allowProfileView === false
+                      thread.peer?.visible === false
                         ? 'Private profile'
                         : 'View profile'
                     }
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      handleOpenPeerProfile(t)
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      openPeer(thread)
                     }}
                   >
-                    {avatar ? (
-                      <img
-                        src={avatar}
-                        alt={t.peerName}
-                        className="thread-row-avatar"
-                      />
-                    ) : (
-                      <div className="thread-avatar-fallback">
-                        {t.peerName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    {!t.isRead && <span className="thread-unread-dot" />}
+                    {avatar(thread.peer, name, 'thread-row-avatar')}
+                    {unreadThread && <span className="thread-unread-dot" />}
                   </div>
 
                   <div className="thread-row-center">
                     <div className="thread-row-top">
-                      <strong className="thread-row-name">{t.peerName}</strong>
+                      <strong className="thread-row-name">{name}</strong>
                       <span className="thread-row-time">
-                        {t.lastMessageTime}
+                        {clock(thread.updated_at)}
                       </span>
                     </div>
                     <div className="thread-row-bottom">
-                      <p className="thread-row-snippet">{t.lastMessageText}</p>
-                      {t.isFinished && (
+                      <p className="thread-row-snippet">
+                        {last.text || 'Shared a file'}
+                      </p>
+                      {badge(thread, role) && (
                         <span className="thread-status-badge">
-                          Service completed
+                          {badge(thread, role)}
                         </span>
                       )}
                     </div>
@@ -271,26 +297,38 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
             })}
           </div>
         )}
+        {privateToast}
+        {viewingPeer && (
+          <PeerProfileModal
+            profile={viewingPeer}
+            onClose={() => setViewingPeer(null)}
+          />
+        )}
       </section>
     )
   }
 
-  // --- VIEW 2 : Active multimedia conversation ---
-  const currentAvatar =
-    activeThread.peerAvatar ??
-    (activeThread.peerRole === 'patient'
-      ? '/moomins/Muumipeikko2.jpg'
-      : undefined)
+  // --- Vue 2 : un fil ---
+  const name = peerName(activeThread)
+  const helperMustThank =
+    role === 'helper' &&
+    activeThread.kind === 'request' &&
+    activeThread.status === 'answered' &&
+    !activeThread.thanked
+  const placeholder = answering
+    ? 'Write your answer…'
+    : helperMustThank
+      ? `Tell ${activeThread.peer?.name ?? 'them'} what it brought you…`
+      : 'Write a message...'
 
   return (
     <section className="stack chat-conversation-wrap">
-      {/* Header */}
       <div className="chat-conv-header">
         <button
           type="button"
           className="chat-back-btn"
           aria-label="Back to conversations"
-          onClick={() => setActiveThreadId(null)}
+          onClick={() => openThread(null)}
         >
           <svg
             width="20"
@@ -309,152 +347,135 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
         <button
           type="button"
           className="chat-conv-peer chat-conv-peer-clickable"
-          onClick={() => handleOpenPeerProfile(activeThread)}
+          onClick={() => openPeer(activeThread)}
           title="View profile"
-          aria-label={`View ${activeThread.peerName}'s profile`}
+          aria-label={`View ${name}'s profile`}
         >
-          {currentAvatar ? (
-            <img
-              src={currentAvatar}
-              alt={activeThread.peerName}
-              className="chat-conv-avatar"
-            />
-          ) : (
-            <div className="thread-avatar-fallback">
-              {activeThread.peerName.charAt(0).toUpperCase()}
-            </div>
-          )}
+          {avatar(activeThread.peer, name, 'chat-conv-avatar')}
           <div className="text-left">
             <div className="row-align-center-tight">
-              <strong>{activeThread.peerName}</strong>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                className="peer-info-icon"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="16" x2="12" y2="12" />
-                <line x1="12" y1="8" x2="12.01" y2="8" />
-              </svg>
+              <strong>{name}</strong>
             </div>
             <span className="quiet font-small block">
-              {activeThread.peerRole === 'patient'
-                ? 'Remission Patient'
-                : 'Volunteer Helper'}
+              {activeThread.peer
+                ? activeThread.peer.role === 'patient'
+                  ? 'Community member · Patient'
+                  : 'Community helper'
+                : 'Waiting for a helper'}
             </span>
           </div>
         </button>
 
-        {/* Action to finish or restart help */}
-        {role === 'helper' && (
-          <div>
-            {!activeThread.isFinished ? (
-              <button
-                type="button"
-                className="button button-ghost button-small"
-                onClick={handleMarkFinished}
-              >
-                ✓ Helped me
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="button button-primary button-small"
-                onClick={handleRestartHelp}
-              >
-                + New request
-              </button>
-            )}
-          </div>
+        {helperMustThank && (
+          <button
+            type="button"
+            className="button button-ghost button-small"
+            disabled={busy}
+            onClick={() => void submit(QUICK_THANKS)}
+          >
+            ✓ Helped me
+          </button>
         )}
+        {role === 'helper' &&
+          activeThread.kind === 'request' &&
+          activeThread.thanked &&
+          onStartNewRequest && (
+            <button
+              type="button"
+              className="button button-primary button-small"
+              onClick={onStartNewRequest}
+            >
+              + New request
+            </button>
+          )}
       </div>
 
-      {activeThread.isFinished && (
+      {activeThread.kind === 'request' && activeThread.thanked && (
         <div className="chat-finished-notice">
           <span>
-            ✓ You confirmed the help received. The conversation remains open if
-            you wish to continue chatting or send a new request.
+            {role === 'helper'
+              ? '✓ You said thank you. The conversation stays open if you want to keep chatting.'
+              : `✓ ${activeThread.peer?.name ?? 'Your helper'} said thank you. You helped someone today.`}
           </span>
         </div>
       )}
 
-      {/* Flux de messages */}
-      <div className="chat-messages-scroll">
-        {activeThread.messages.map((m) => {
-          const isMe = m.senderRole === role
-          return (
+      <div className="chat-messages-scroll" ref={scrollRef}>
+        {activeThread.messages.map((message) => (
+          <div
+            key={message.id}
+            className={`chat-bubble-row ${message.mine ? 'chat-row-me' : 'chat-row-peer'}`}
+          >
             <div
-              key={m.id}
-              className={`chat-bubble-row ${isMe ? 'chat-row-me' : 'chat-row-peer'}`}
+              className={`chat-bubble ${message.mine ? 'chat-bubble-me' : 'chat-bubble-peer'}`}
             >
-              <div
-                className={`chat-bubble ${isMe ? 'chat-bubble-me' : 'chat-bubble-peer'}`}
-              >
-                {m.text && <p className="chat-text">{m.text}</p>}
-
-                {m.attachments && m.attachments.length > 0 && (
-                  <div className="chat-attachments-grid">
-                    {m.attachments.map((att, idx) => (
-                      <div key={idx} className="chat-attachment-item">
-                        {att.type === 'image' && (
-                          <img
-                            src={att.url}
-                            alt={att.name}
-                            className="chat-attached-media"
-                          />
-                        )}
-                        {att.type === 'video' && (
-                          <video
-                            src={att.url}
-                            controls
-                            className="chat-attached-media"
-                          />
-                        )}
-                        {att.type === 'file' && (
-                          <div className="chat-file-card">
-                            <span>📄 {att.name}</span>
-                            <small className="quiet">{att.size}</small>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <span className="chat-time">{m.timestamp}</span>
-              </div>
+              {message.kind === 'thanks' && (
+                <span className="eyebrow">Thank you</span>
+              )}
+              {message.text && <p className="chat-text">{message.text}</p>}
+              {message.attachments.length > 0 && (
+                <div className="chat-attachments-grid">
+                  {message.attachments.map((attachment, index) => (
+                    <div key={index} className="chat-attachment-item">
+                      {attachment.type === 'image' && (
+                        <img
+                          src={attachment.url}
+                          alt={attachment.name}
+                          className="chat-attached-media"
+                        />
+                      )}
+                      {attachment.type === 'video' && (
+                        <video
+                          src={attachment.url}
+                          controls
+                          className="chat-attached-media"
+                        />
+                      )}
+                      {attachment.type === 'file' && (
+                        <a
+                          className="chat-file-card"
+                          href={attachment.url}
+                          download={attachment.name}
+                        >
+                          <span>📄 {attachment.name}</span>
+                          <small className="quiet">{attachment.size}</small>
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              <span className="chat-time">{clock(message.created_at)}</span>
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
 
-      {limitWarning && (
+      {fileError && (
         <p className="error font-small" role="alert">
-          {limitWarning}
+          {fileError}
         </p>
       )}
 
-      {/* Prévisualisation des pièces jointes en attente */}
       {attachments.length > 0 && (
         <div className="chat-staged-attachments">
-          {attachments.map((att, index) => (
+          {attachments.map((attachment, index) => (
             <div key={index} className="staged-pill">
               <span>
-                {att.type === 'image'
+                {attachment.type === 'image'
                   ? '📷'
-                  : att.type === 'video'
+                  : attachment.type === 'video'
                     ? '🎥'
                     : '📄'}{' '}
-                {att.name}
+                {attachment.name}
               </span>
               <button
                 type="button"
                 className="staged-remove"
                 onClick={() =>
-                  setAttachments((prev) => prev.filter((_, i) => i !== index))
+                  setAttachments((current) =>
+                    current.filter((_, i) => i !== index),
+                  )
                 }
               >
                 ✕
@@ -464,211 +485,101 @@ function ChatView({ role, userName, onStartNewRequest }: ChatViewProps) {
         </div>
       )}
 
-      {/* Boîte de saisie libre et actions multimédias */}
-      <form onSubmit={handleSendMessage} className="chat-composer-form">
-        <input
-          type="file"
-          ref={fileInputRef}
-          multiple
-          accept="image/*,video/*,.pdf,.doc,.docx,.txt"
-          className="visually-hidden"
-          onChange={handleFileUpload}
-        />
-
-        <button
-          type="button"
-          className="chat-attach-btn"
-          title="Attach photo, video, or file"
-          aria-label="Attach file"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+      {activeThread.can_write ? (
+        <>
+          <form
+            className="chat-composer-form"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void submit(inputText)
+            }}
           >
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-          </svg>
-        </button>
-
-        <input
-          type="text"
-          value={inputText}
-          placeholder="Write a message..."
-          className="chat-input-field"
-          onChange={(e) => setInputText(e.target.value)}
-        />
-
-        <button
-          type="submit"
-          className="chat-send-btn"
-          disabled={!inputText.trim() && attachments.length === 0}
-          aria-label="Send"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="22" y1="2" x2="11" y2="13" />
-            <polygon points="22 2 15 22 11 13 2 9 22 2" />
-          </svg>
-        </button>
-      </form>
-
-      {/* Warning when profile is private */}
-      {privateProfileNotice && (
-        <div className="profile-private-toast" role="alert">
-          <div className="flex-between">
-            <div className="row-align-center-tight">
-              <span className="private-toast-icon">🔒</span>
-              <span className="font-small">{privateProfileNotice}</span>
-            </div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              multiple
+              accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+              className="visually-hidden"
+              onChange={(event) => void handleFiles(event)}
+            />
+            {!answering && (
+              <button
+                type="button"
+                className="chat-attach-btn"
+                title="Attach photo, video, or file"
+                aria-label="Attach file"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+              </button>
+            )}
+            <input
+              type="text"
+              value={inputText}
+              maxLength={1000}
+              placeholder={placeholder}
+              aria-label={answering ? 'Your answer' : 'Message'}
+              className="chat-input-field"
+              onInput={answering ? onInput : undefined}
+              onChange={(event) => setInputText(event.target.value)}
+            />
+            <button
+              type="submit"
+              className="chat-send-btn"
+              disabled={busy || (!inputText.trim() && attachments.length === 0)}
+              aria-label="Send"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </form>
+          {answering && onDecline && (
             <button
               type="button"
-              className="private-toast-close"
-              onClick={() => setPrivateProfileNotice(null)}
+              className="link quiet"
+              disabled={busy}
+              onClick={() => void onDecline(activeThread.id)}
             >
-              ✕
+              Not now
             </button>
-          </div>
-        </div>
+          )}
+        </>
+      ) : (
+        <p className="quiet font-small text-center" role="status">
+          {activeThread.kind === 'need'
+            ? 'Shared with the community. A helper will pick it up soon.'
+            : `Sent. ${activeThread.peer?.name ?? 'They'} will answer when they can.`}
+        </p>
       )}
 
-      {/* --- PEER PROFILE MODAL --- */}
-      {viewingPeerProfile && (
-        <div
-          className="peer-profile-modal-backdrop"
-          onClick={() => setViewingPeerProfile(null)}
-        >
-          <div
-            className="peer-profile-modal-card"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="peer-profile-title"
-          >
-            <div className="peer-profile-modal-header">
-              <span className="eyebrow">Member Profile</span>
-              <button
-                type="button"
-                className="peer-profile-modal-close"
-                onClick={() => setViewingPeerProfile(null)}
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="peer-profile-content-scroll stack">
-              {/* Identity hero */}
-              <div className="peer-profile-hero">
-                <div className="peer-avatar-xlarge-wrap">
-                  {viewingPeerProfile.peerProfile?.avatarUrl ||
-                  viewingPeerProfile.peerAvatar ? (
-                    <img
-                      src={
-                        viewingPeerProfile.peerProfile?.avatarUrl ??
-                        viewingPeerProfile.peerAvatar
-                      }
-                      alt={viewingPeerProfile.peerName}
-                      className="peer-avatar-xlarge"
-                    />
-                  ) : (
-                    <div className="peer-avatar-xlarge-fallback">
-                      {viewingPeerProfile.peerName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                </div>
-
-                <h2 id="peer-profile-title" className="peer-profile-fullname">
-                  {viewingPeerProfile.peerProfile
-                    ? `${viewingPeerProfile.peerProfile.firstName} ${viewingPeerProfile.peerProfile.lastName}`
-                    : viewingPeerProfile.peerName}
-                </h2>
-
-                <div className="peer-profile-sub-badges">
-                  <span className="peer-role-tag">
-                    {viewingPeerProfile.peerRole === 'patient'
-                      ? 'Remission Patient'
-                      : 'Volunteer Helper'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Interests & Bio */}
-              <div className="peer-profile-section stack-compact">
-                <span className="eyebrow">Interests & Bio</span>
-                <p className="peer-bio-text">
-                  {viewingPeerProfile.peerProfile?.bio ||
-                    (viewingPeerProfile.peerRole === 'patient'
-                      ? 'Passionate about sourdough baking, nature, and Nordic gardening.'
-                      : 'Dedicated volunteer, passionate about analog photography and urban cycling.')}
-                </p>
-
-                {/* Chips */}
-                <div className="peer-interests-chips">
-                  {(
-                    viewingPeerProfile.peerProfile?.interests ?? [
-                      'baking',
-                      'gardening',
-                      'jazz',
-                      'reading',
-                    ]
-                  ).map((tag) => (
-                    <span key={tag} className="peer-interest-pill">
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Up to 3 passion photos */}
-              <div className="peer-profile-section stack-compact">
-                <span className="eyebrow">
-                  Passion photos (
-                  {viewingPeerProfile.peerProfile?.passionPhotos?.length ?? 2}
-                  /3)
-                </span>
-                <div className="passion-photos-grid">
-                  {(
-                    viewingPeerProfile.peerProfile?.passionPhotos ?? [
-                      '/moomins/Muumipeikko2.jpg',
-                      '/moomins/Characters-04-2.svg',
-                    ]
-                  ).map((pic, idx) => (
-                    <div key={idx} className="passion-photo-card">
-                      <img
-                        src={pic}
-                        alt={`Passion ${idx + 1}`}
-                        className="passion-photo-thumb"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Back button */}
-              <button
-                type="button"
-                className="button button-primary button-wide mt-2"
-                onClick={() => setViewingPeerProfile(null)}
-              >
-                Back to conversation
-              </button>
-            </div>
-          </div>
-        </div>
+      {privateToast}
+      {viewingPeer && (
+        <PeerProfileModal
+          profile={viewingPeer}
+          onClose={() => setViewingPeer(null)}
+        />
       )}
     </section>
   )

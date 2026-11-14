@@ -16,8 +16,25 @@ export type PatientAction = Schemas['RespondRequest']['action']
 export type TypingSignals = Schemas['TypingSignals']
 export type ErrorResponse = Schemas['ErrorResponse']
 export type AppUser = Schemas['AppUser']
-export type Role = AppUser['role']
+export type AccountRole = AppUser['role']
+export type Role = Schemas['SignupRequest']['role']
 export type SessionResponse = Schemas['SessionResponse']
+export type SignupRequest = Schemas['SignupRequest']
+export type ProfileUpdate = Schemas['ProfileUpdate']
+export type PublicProfile = Schemas['PublicProfile']
+export type OpenNeed = Schemas['OpenNeed']
+export type Thread = Schemas['Thread']
+export type ThreadMessage = Schemas['ThreadMessage']
+export type ThreadsResponse = Schemas['ThreadsResponse']
+export type Attachment = Schemas['Attachment']
+export type FeedbackCategory = Schemas['FeedbackRequest']['category']
+export type ClinicianHome = Schemas['ClinicianHome']
+export type ClinicianPatient = Schemas['ClinicianPatient']
+export type ClinicianNotes = Schemas['ClinicianNotes']
+export type AdminHome = Schemas['AdminHome']
+export type AdminMember = Schemas['AdminMember']
+export type AdminExchange = Schemas['AdminExchange']
+export type AdminFeedback = Schemas['AdminFeedback']
 export type HelperHome = Schemas['HelperHome']
 export type PatientHome = Schemas['PatientHome']
 export type AppRequest = Schemas['AppRequest']
@@ -37,7 +54,7 @@ export class ApiError extends Error {
   }
 }
 
-// `token` identifie l'appareil dans la vraie app. La console de démo n'en a pas besoin.
+// `token` identifie la session dans la vraie app. La console de démo n'en a pas besoin.
 async function request<T>(
   path: string,
   init?: RequestInit,
@@ -59,15 +76,21 @@ async function request<T>(
   return (await response.json()) as T
 }
 
-function post<T>(path: string, body?: unknown, token?: string): Promise<T> {
+function sendJson<T>(
+  method: 'POST' | 'PUT' | 'PATCH',
+  path: string,
+  body?: unknown,
+  token?: string,
+): Promise<T> {
   return request<T>(
     path,
-    {
-      method: 'POST',
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
+    { method, body: body === undefined ? undefined : JSON.stringify(body) },
     token,
   )
+}
+
+function post<T>(path: string, body?: unknown, token?: string): Promise<T> {
+  return sendJson<T>('POST', path, body, token)
 }
 
 export function getHealth(): Promise<HealthResponse> {
@@ -114,13 +137,132 @@ export function reset(): Promise<LoopState> {
 
 // --- Vraie app -------------------------------------------------------------------------
 
-export function join(
-  role: Role,
-  name: string,
-  interests: string[],
-): Promise<SessionResponse> {
-  return post<SessionResponse>('/api/app/join', { role, name, interests })
+// --- Comptes : inscription, connexion, profil ------------------------------------------
+
+export function signup(body: SignupRequest): Promise<SessionResponse> {
+  return post<SessionResponse>('/api/app/signup', body)
 }
+
+// Tout compte se connecte ici : aidant, patient, clinicien ou admin.
+export function login(
+  email: string,
+  password: string,
+): Promise<SessionResponse> {
+  return post<SessionResponse>('/api/app/login', { email, password })
+}
+
+export function logout(token: string): Promise<unknown> {
+  return post<unknown>('/api/app/logout', undefined, token)
+}
+
+export function getMe(token: string): Promise<AppUser> {
+  return request<AppUser>('/api/app/me', undefined, token)
+}
+
+export function updateMe(token: string, body: ProfileUpdate): Promise<AppUser> {
+  return sendJson<AppUser>('PATCH', '/api/app/me', body, token)
+}
+
+// Message à l'équipe ; `token` facultatif : un visiteur peut écrire aussi.
+export function sendFeedback(
+  token: string | null,
+  category: FeedbackCategory,
+  message: string,
+): Promise<unknown> {
+  return post<unknown>(
+    '/api/app/feedback',
+    { category, message },
+    token ?? undefined,
+  )
+}
+
+// --- Fils de discussion : demandes et besoins ------------------------------------------
+
+export function getThreads(token: string): Promise<ThreadsResponse> {
+  return request<ThreadsResponse>('/api/app/threads', undefined, token)
+}
+
+// Patient face à une demande : c'est sa réponse, avec la frappe relevée.
+// Aidant après la réponse : son premier message est son merci.
+export function postMessage(
+  token: string,
+  threadId: string,
+  text: string,
+  attachments: Attachment[] = [],
+  typing?: TypingSignals,
+): Promise<ThreadsResponse> {
+  return post<ThreadsResponse>(
+    `/api/app/threads/${encodeURIComponent(threadId)}/messages`,
+    { text, attachments, typing },
+    token,
+  )
+}
+
+export function declineThread(
+  token: string,
+  threadId: string,
+): Promise<ThreadsResponse> {
+  return post<ThreadsResponse>(
+    `/api/app/threads/${encodeURIComponent(threadId)}/decline`,
+    undefined,
+    token,
+  )
+}
+
+export function postNeed(
+  token: string,
+  text: string,
+): Promise<ThreadsResponse> {
+  return post<ThreadsResponse>('/api/app/patient/needs', { text }, token)
+}
+
+export function takeNeed(
+  token: string,
+  needId: string,
+): Promise<ThreadsResponse> {
+  return post<ThreadsResponse>(
+    `/api/app/helper/needs/${encodeURIComponent(needId)}/take`,
+    undefined,
+    token,
+  )
+}
+
+// --- Portails : clinicien et admin -----------------------------------------------------
+
+export function getClinicianHome(token: string): Promise<ClinicianHome> {
+  return request<ClinicianHome>('/api/clinician', undefined, token)
+}
+
+export function saveClinicianNotes(
+  token: string,
+  patientId: string,
+  notes: ClinicianNotes,
+): Promise<ClinicianHome> {
+  return sendJson<ClinicianHome>(
+    'PUT',
+    `/api/clinician/patients/${encodeURIComponent(patientId)}/notes`,
+    notes,
+    token,
+  )
+}
+
+export function getAdminHome(token: string): Promise<AdminHome> {
+  return request<AdminHome>('/api/admin', undefined, token)
+}
+
+export function resolveFeedback(
+  token: string,
+  feedbackId: string,
+  resolved: boolean,
+): Promise<AdminHome> {
+  return post<AdminHome>(
+    `/api/admin/feedback/${encodeURIComponent(feedbackId)}`,
+    { resolved },
+    token,
+  )
+}
+
+// --- Écrans d'origine : aidant et patient ----------------------------------------------
 
 export function getHelperHome(token: string): Promise<HelperHome> {
   return request<HelperHome>('/api/app/helper', undefined, token)
