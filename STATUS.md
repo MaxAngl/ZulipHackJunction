@@ -56,8 +56,10 @@ Changements qui touchent les autres (contrat, dépendance, convention, fichier s
 
 ## Rami (Antigravity)
 
-- **En cours :** #31, poursuite des évolutions et finitions de l'interface (UI/UX).
+- **En cours :** #31 (évolutions et finitions UI/UX de la page aidant) et #33 (robustesse API Gemini).
 - **Bloqué :** —
 - **Notes pour la suite :**
   - #11 est mergée dans main.
+  - Page aidant : sélection de profil interactive, affichage des hobbies, propositions IA dédiées, bouton « Send mine » centré et suppression de « Not now ».
   - L'inscription applique les contraintes de Max (max 40 car., max 8 intérêts).
+  - L'implémentation Gemini utilise par défaut `gemini-1.5-flash` et `text-embedding-004` avec repli automatique en cas de 404/400 et support d'endpoints régionaux/proxy (`GEMINI_API_ROOT`).
