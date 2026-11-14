@@ -13,6 +13,7 @@ export type HistoryEntry = Schemas['HistoryEntry']
 export type Person = Schemas['Person']
 export type SendRequest = Schemas['SendRequest']
 export type PatientAction = Schemas['RespondRequest']['action']
+export type TypingSignals = Schemas['TypingSignals']
 export type ErrorResponse = Schemas['ErrorResponse']
 export type AppUser = Schemas['AppUser']
 export type Role = AppUser['role']
@@ -96,9 +97,13 @@ export function skip(): Promise<LoopState> {
   return post<LoopState>('/api/loop/skip')
 }
 
-// Étapes 9 à 12 : réponse du patient, puis apprentissage.
-export function respond(action: PatientAction): Promise<LoopState> {
-  return post<LoopState>('/api/loop/respond', { action })
+// Étapes 9 à 12 : réponse du patient, puis apprentissage. `typing` : la frappe relevée
+// pendant qu'il écrivait (voir src/typing.ts), si l'écran la mesure.
+export function respond(
+  action: PatientAction,
+  typing?: TypingSignals,
+): Promise<LoopState> {
+  return post<LoopState>('/api/loop/respond', { action, typing })
 }
 
 export function reset(): Promise<LoopState> {
@@ -150,14 +155,16 @@ export function getPatientHome(token: string): Promise<PatientHome> {
   return request<PatientHome>('/api/app/patient', undefined, token)
 }
 
+// `typing` est facultatif : la frappe relevée par `useTypingSignals` (src/typing.ts).
 export function replyToRequest(
   token: string,
   requestId: string,
   text: string,
+  typing?: TypingSignals,
 ): Promise<PatientHome> {
   return post<PatientHome>(
     '/api/app/patient/reply',
-    { request_id: requestId, text },
+    { request_id: requestId, text, typing },
     token,
   )
 }

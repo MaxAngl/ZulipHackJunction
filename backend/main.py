@@ -60,7 +60,7 @@ def get_loop() -> LoopState:
 
 @app.post("/api/loop/theta", responses=ERROR_RESPONSES)
 def set_theta(body: ThetaRequest) -> LoopState:
-    """Étape 1 : nouvelle mesure de l'état du patient (capteur simulé)."""
+    """Étape 1 : change l'état de fond du patient virtuel ; θ et L(θ) sont relus."""
     return loop.set_theta(body.theta)
 
 
@@ -85,7 +85,7 @@ def skip() -> LoopState:
 @app.post("/api/loop/respond", responses=ERROR_RESPONSES)
 def respond(body: RespondRequest) -> LoopState:
     """Étapes 9 à 12 : réponse du patient, nouvelle mesure, récompense, apprentissage."""
-    return loop.respond(body.action)
+    return loop.respond(body.action, body.typing)
 
 
 @app.post("/api/loop/reset", responses=ERROR_RESPONSES)
@@ -170,8 +170,8 @@ def patient_home(user: Patient) -> PatientHome:
 
 @app.post("/api/app/patient/reply", responses=ERROR_RESPONSES)
 def patient_reply(body: ReplyRequest, user: Patient) -> PatientHome:
-    """Étapes 9 à 12 : le patient répond, son état est réestimé, la zone s'ajuste."""
-    return get_community().reply(user, body.request_id, body.text)
+    """Étapes 9 à 12 : le patient répond, son état est relu, son vecteur s'ajuste."""
+    return get_community().reply(user, body.request_id, body.text, body.typing)
 
 
 @app.post("/api/app/patient/decline", responses=ERROR_RESPONSES)
@@ -181,5 +181,5 @@ def patient_decline(body: DeclineRequest, user: Patient) -> PatientHome:
 
 @app.post("/api/app/patient/state", responses=ERROR_RESPONSES)
 def patient_state(body: ThetaRequest, user: Patient) -> PatientHome:
-    """Entrée pour un capteur externe : il pousse l'état θ du patient."""
+    """Entrée de démonstration : fixe le niveau de fond du corps virtuel du patient."""
     return get_community().push_state(user, body.theta)

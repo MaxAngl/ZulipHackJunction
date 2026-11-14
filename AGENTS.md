@@ -9,9 +9,9 @@ Le guide pratique pour les humains (installation, boucle de travail, prompts typ
 ## Projet
 
 **Sujet :** Needed (nom provisoire), pour le challenge Junction sur le maintien à domicile après un traitement de la dépression par TMS. Une communauté où ce sont les patients en rémission qui rendent service : une IA décide quoi leur demander, quand et de la part de qui, selon leur état.
-**Démo attendue :** deux choses. La **vraie app** (`#/helper`, `#/patient`) : deux personnes s'inscrivent sur leur téléphone, l'une demande un service, l'autre répond, la première remercie. Et la **console** (`#/demo`) : la boucle fermée pour un patient simulé, où l'on voit l'état θ bouger, la zone λ(θ) se déplacer, les demandes générées, mesurées et filtrées, puis la zone s'ajuster.
+**Démo attendue :** deux choses. La **vraie app** (`#/helper`, `#/patient`) : deux personnes s'inscrivent sur leur téléphone, l'une demande un service, l'autre répond, la première remercie. Et la **console** (`#/demo`) : la boucle fermée pour un patient simulé, où l'on voit les signaux θ, l'état L(θ) lu par l'autoencodeur, la zone sur six axes sortie par le réseau B, les demandes générées, mesurées et filtrées, la récompense de 0 à 100 et le vecteur du patient qui s'ajuste.
 **À lire :** [HYPOTHESES.md](HYPOTHESES.md) liste ce qui a été décidé sans validation de l'équipe et ce qui est simulé dans le code actuel.
-**Modèle cible :** [docs/modele.md](docs/modele.md) définit les objets, les axes d'une demande, les trois réseaux, leur entraînement et leur évaluation. Les trois réseaux sont codés et entraînés (`ml/nets`, poids dans `ml/weights`, résultats en section 14) ; l'app, elle, tourne encore avec l'ancienne règle tant que le branchement n'est pas mergé. Avant de toucher à `ml/`, lire ce document et sa section « Écarts avec le code actuel ».
+**Modèle cible :** [docs/modele.md](docs/modele.md) définit les objets, les axes d'une demande, les trois réseaux, leur entraînement et leur évaluation. Les trois réseaux sont codés, entraînés (`ml/nets`, poids dans `ml/weights`, résultats en section 14) et branchés dans l'app, console et vraie app. Seul le patient lui-même reste simulé : sa montre et la façon dont une demande agit sur lui (`ml/virtual.py`). Avant de toucher à `ml/`, lire ce document et sa section 8, « Ce qui reste simulé ».
 
 ## Règles d'or (pour chaque agent, à chaque tâche)
 
@@ -97,15 +97,17 @@ gh pr merge --squash --delete-branch       # merger quand la CI est verte
 backend/
   main.py            # routes FastAPI (toutes sous /api)
   schemas.py         # CONTRAT : modèles Pydantic requête/réponse
-  loop.py            # console de démo : la boucle en 12 étapes, un patient simulé, état en mémoire
-  sensor.py          # capteur d'état θ SIMULÉ (console de démo seulement)
-  community.py       # vraie app : comptes, demandes, réponses, θ estimé d'après le comportement
+  loop.py            # console de démo : la boucle en 12 étapes sur les réseaux, un patient virtuel, état en mémoire
+  community.py       # vraie app : comptes, demandes, réponses ; même boucle, un corps virtuel par patient
+  readout.py         # traduit ce que rendent les réseaux vers le contrat d'API
   store.py           # vraie app : stockage SQLite (data/needed.db, ignoré par git)
   errors.py          # ApiError + format d'erreur unique
   export_openapi.py  # schemas -> contract/openapi.json
   tests/             # tests du contrat d'API
 ml/
-  model.py           # CONTRAT : zone_for, learn (modèle de zone SIMULÉ) et tout ce que le backend importe
+  model.py           # CONTRAT : tout ce que le backend importe (brain, VirtualPatient, chaîne de demandes)
+  brain.py           # les réseaux vus par l'app : lire L(θ), sortir la zone, noter, régler le vecteur
+  virtual.py         # patient virtuel SIMULÉ : tient lieu de montre tant qu'aucune n'est branchée
   pipeline.py        # générer -> mesurer λ -> filtrer -> choisir trois demandes
   matching.py        # appariement patient–aidant : profils d'intérêts, couverture, mariages stables
   gemini.py          # client REST Gemini (génération JSON, embeddings)
@@ -124,7 +126,8 @@ contract/
 frontend/
   src/api/schema.d.ts  # GÉNÉRÉ depuis contract/openapi.json, ne pas éditer
   src/api/client.ts    # seul endroit qui appelle fetch()
-  src/components/      # console de démo : un composant par fichier (téléphones, plan des demandes)
+  src/components/      # console de démo : un composant par fichier (téléphones, plan des demandes, état, six axes)
+  src/typing.ts        # relevé de la frappe du patient (durées et comptes, jamais le texte)
   src/screens/         # vraie app (accueil, inscription, aidant, patient) et écran de la console
   src/session.ts       # jeton de l'appareil, par rôle
   src/App.tsx          # routes : #/ accueil, #/helper, #/patient, #/demo
@@ -193,6 +196,8 @@ Ne jamais « réparer » le test de contrat en régénérant `openapi.json` sans
 
 Le plus récent en haut. Format : `AAAA-MM-JJ — décision — pourquoi`.
 
+- 2026-11-14 — L'app tourne sur les réseaux : état L(θ), zone à six axes, récompense de 0 à 100, vecteur du patient. `backend/sensor.py` est supprimé — remplacé par `ml/virtual.py`, un patient virtuel tiré du même simulateur que les données d'entraînement ; c'est la seule partie encore simulée.
+- 2026-11-14 — Cinq des six positions d'une demande viennent de son format (`ml/formats.py`), posées à la main — aucun modèle ne note encore une demande axe par axe ; la position entre les intérêts reste mesurée sur le texte.
 - 2026-11-14 — Nouvelle dépendance `torch`, en version CPU — les trois réseaux font 82 000 paramètres et s'entraînent en sept minutes sur un portable ; la version GPU pèserait plusieurs Go pour rien.
 - 2026-11-14 — Les poids entraînés sont versionnés dans `ml/weights` — moins d'1 Mo ; l'app et les coéquipiers les utilisent sans réentraîner. Les réentraîner si les signaux de θ changent (un test le signale).
 - 2026-11-14 — Le réseau A est un comité de cinq petits réseaux, qui prédit aussi si le patient répondra, et B s'entraîne sur son avis prudent. **Cela dépasse les 45 000 paramètres décidés plus bas (82 000)** — un seul A, seul, laissait B aller chercher de bonnes notes là où A n'avait pas de données ; mesures en section 14 de `docs/modele.md`.

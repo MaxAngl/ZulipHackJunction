@@ -4,20 +4,31 @@ CONTRAT avec backend/ : le backend n'importe que depuis ce fichier. Les signatur
 types exportés ici (voir `__all__`) ne changent pas sans prévenir l'équipe (voir AGENTS.md).
 L'intérieur se change librement.
 
-LE MODÈLE DE ZONE EST SIMULÉ. `zone_for` applique la règle de départ de l'équipe (le « modèle
-commun ») et `learn` est une règle écrite à la main qui imite un apprentissage par patient.
-Rien n'est entraîné. Le vrai modèle remplacera ces deux fonctions en gardant leurs signatures.
+LA ZONE VIENT DES RÉSEAUX ENTRAÎNÉS. `brain()` charge les poids de `ml/weights` et rend un
+`Brain` : il lit l'état L(θ) (autoencodeur), sort la zone sur six axes (réseau B, seul), note une
+demande après coup et règle le vecteur personnel du patient (à travers le réseau A). Ces réseaux
+sont entraînés sur des données simulées (docs/modele.md, section 14).
+
+`VirtualPatient` tient lieu de montre : il produit les 25 signaux de θ. C'est la seule partie
+encore simulée de la boucle.
+
+`zone_for` et `learn` sont l'ancienne règle écrite à la main, à un seul nombre. Elles ne servent
+plus à l'app : elles restent comme point de comparaison (`ml.nets.policy.FixedRule`).
 """
 
 import math
 import os
 from pathlib import Path
 
-from ml.formats import FORMATS, RequestFormat
+from ml.brain import COMPONENT_LABELS, Brain, Outcome, Reading, brain
+from ml.formats import FORMATS, RequestFormat, request_axes
 from ml.formats import label_of as format_label
 from ml.matching import InterestProfile, build_profile, stable_match
 from ml.pipeline import generate_candidates, measure_message, provider_info, select_three
+from ml.simulation.spec import SIGNALS
 from ml.types import (
+    AXIS_KEYS,
+    AXIS_LABELS,
     Candidate,
     InterestPair,
     Provider,
@@ -25,21 +36,33 @@ from ml.types import (
     Review,
     Slot,
     Zone,
+    ZoneBox,
     ZoneParams,
 )
+from ml.virtual import VirtualPatient
 
 __all__ = [
+    "AXIS_KEYS",
+    "AXIS_LABELS",
+    "COMPONENT_LABELS",
     "FORMATS",
+    "SIGNALS",
+    "Brain",
     "Candidate",
     "InterestPair",
     "InterestProfile",
+    "Outcome",
     "Provider",
     "ProviderInfo",
+    "Reading",
     "RequestFormat",
     "Review",
     "Slot",
+    "VirtualPatient",
     "Zone",
+    "ZoneBox",
     "ZoneParams",
+    "brain",
     "build_profile",
     "common_center",
     "effort_cap",
@@ -49,6 +72,7 @@ __all__ = [
     "load_env_file",
     "measure_message",
     "provider_info",
+    "request_axes",
     "select_three",
     "stable_match",
     "zone_for",

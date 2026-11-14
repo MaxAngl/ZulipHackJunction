@@ -40,15 +40,46 @@ class FormatState(BaseModel):
     effort: float = Field(ge=0, le=1)
 
 
+class AxisState(BaseModel):
+    """Ce que la zone permet sur l'un des six axes d'une demande."""
+
+    key: str
+    label: str
+    low: float = Field(description="Borne basse : un objectif, jamais une obligation")
+    high: float = Field(description="Borne haute : sur un axe de coût, jamais dépassée")
+    kind: Literal["interval", "ceiling"]
+
+
 class ZoneState(BaseModel):
     """Zone des demandes acceptables pour le patient, maintenant."""
 
     center: float = Field(description="Centre sur l'axe λ (0 = aidant, 1 = patient)")
     low: float
     high: float
-    half_width: float = Field(description="Demi-largeur : l'incertitude du modèle")
-    effort_max: float = Field(description="Effort maximal acceptable, entre 0 et 1")
-    common_center: float = Field(description="Centre du modèle commun, avant correction")
+    half_width: float = Field(description="Demi-largeur de l'intervalle sur l'axe λ")
+    effort_max: float = Field(description="Effort du format le plus lourd que la zone permet")
+    common_center: float = Field(description="Centre du modèle général, sans vecteur personnel")
+    axes: list[AxisState] = Field(
+        default_factory=list, description="La zone sur les six axes, sortie par le réseau B"
+    )
+
+
+class ComponentState(BaseModel):
+    """Une des six composantes de l'état L(θ) du patient."""
+
+    key: str
+    label: str
+    value: float = Field(ge=0, le=1)
+    reference: float = Field(description="Moyenne des personnes saines : L_ref")
+
+
+class SignalState(BaseModel):
+    """Un des signaux bruts de θ, au dernier relevé."""
+
+    name: str
+    unit: str
+    modality: str = Field(description="watch, app ou touch")
+    value: float | None = Field(description="Absente si le signal n'a pas été relevé")
 
 
 class CandidateState(BaseModel):
@@ -66,6 +97,7 @@ class CandidateState(BaseModel):
     off_topic: bool
     slot: Slot | None = Field(description="Case occupée parmi les trois propositions")
     provider: Provider
+    axes: list[float] = Field(default_factory=list, description="Position sur les six axes")
 
 
 class MessageState(BaseModel):
@@ -82,6 +114,7 @@ class MessageState(BaseModel):
     source: MessageSource
     status: Literal["delivered", "held"]
     hold_reason: str | None = Field(description="Pourquoi le message est retenu, s'il l'est")
+    axes: list[float] = Field(default_factory=list, description="Position sur les six axes")
 
 
 class RoundState(BaseModel):
@@ -103,12 +136,20 @@ class HistoryEntry(BaseModel):
     format_label: str
     source: MessageSource
     action: PatientAction
-    theta_before: float
-    theta_expected: float
-    theta_after: float
-    reward: float = Field(description="θ après − θ attendu")
+    theta_before: float = Field(description="Moyenne de L(θ) avant la demande")
+    theta_expected: float = Field(description="Obsolète : égal à theta_before")
+    theta_after: float = Field(description="Moyenne de L(θ) vingt-quatre heures après")
+    reward: float = Field(
+        description="De 0 à 100 : le patient s'est-il rapproché de L_ref ? 50 = rien n'a changé"
+    )
     center_before: float
-    center_after: float = Field(description="Centre de la zone au même θ, après apprentissage")
+    center_after: float = Field(description="Centre de la zone au même état, après apprentissage")
+    fit: float | None = Field(
+        default=None, description="Vérité cachée du patient virtuel : la demande lui convenait-elle"
+    )
+    overload: float | None = Field(
+        default=None, description="Vérité cachée : de combien elle dépassait ce qu'il supporte"
+    )
 
 
 class GeneratorState(BaseModel):
@@ -118,9 +159,13 @@ class GeneratorState(BaseModel):
 
 
 class ModelState(BaseModel):
-    kind: Literal["simulated"] = "simulated"
-    offset: float = Field(description="Correction personnelle du centre de la zone")
+    kind: Literal["simulated", "networks"] = "networks"
+    offset: float = Field(description="Écart entre le centre de la zone et celui du modèle général")
     observations: int
+    parameters: int = Field(default=0, description="Nombre de paramètres des trois réseaux")
+    vector: list[float] = Field(
+        default_factory=list, description="Vecteur personnel du patient : 8 nombres"
+    )
 
 
 class LoopState(BaseModel):
@@ -128,7 +173,20 @@ class LoopState(BaseModel):
 
     patient: Person
     helpers: list[Person]
-    theta: float = Field(ge=0, le=1, description="État du patient (capteur simulé)")
+    theta: float = Field(ge=0, le=1, description="Moyenne des six composantes de L(θ)")
+    level: float = Field(
+        default=0.5,
+        ge=0,
+        le=1,
+        description="Niveau de fond caché du patient virtuel, réglé par le curseur de la démo",
+    )
+    state: list[ComponentState] = Field(
+        default_factory=list, description="L(θ) : l'état lu par l'autoencodeur"
+    )
+    distance: float = Field(default=0.0, description="Distance de L(θ) à L_ref")
+    signals: list[SignalState] = Field(
+        default_factory=list, description="θ : les 25 signaux bruts du dernier relevé"
+    )
     formats: list[FormatState]
     zone: ZoneState
     round: RoundState
@@ -149,8 +207,26 @@ class SendRequest(BaseModel):
     text: str | None = Field(default=None, max_length=600)
 
 
+class TypingSignals(BaseModel):
+    """Ce que l'app relève pendant que le patient écrit sa réponse.
+
+    Des durées et des comptes, jamais les caractères tapés. Ce sont les trois signaux de frappe
+    de θ (docs/modele.md, section 11).
+    """
+
+    characters: int = Field(ge=0, description="Caractères tapés, effacements compris")
+    corrections: int = Field(ge=0, description="Nombre d'effacements")
+    open_delay_seconds: float | None = Field(
+        default=None, ge=0, description="Entre l'arrivée de la demande et son ouverture"
+    )
+    first_key_delay_seconds: float | None = Field(
+        default=None, ge=0, description="Entre l'ouverture et la première touche"
+    )
+
+
 class RespondRequest(BaseModel):
     action: PatientAction
+    typing: TypingSignals | None = None
 
 
 # --- La vraie app : comptes, demandes et réponses entre de vraies personnes ---------------
@@ -213,6 +289,7 @@ class PatientHome(BaseModel):
 class ReplyRequest(BaseModel):
     request_id: str
     text: str = Field(min_length=1, max_length=1000)
+    typing: TypingSignals | None = None
 
 
 class DeclineRequest(BaseModel):

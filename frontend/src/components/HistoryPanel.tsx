@@ -4,19 +4,18 @@ type HistoryPanelProps = {
   history: HistoryEntry[]
 }
 
-function signed(value: number): string {
-  return `${value > 0 ? '+' : ''}${value.toFixed(2)}`
-}
+// La récompense va de 0 à 100 : 50 veut dire que l'état du patient n'a pas bougé.
+const NEUTRAL_REWARD = 50
 
-// Le journal des manches : c'est ce que le modèle apprend, et ce qu'un vrai modèle utiliserait.
+// Le journal des manches : c'est de lui que le vecteur du patient apprend.
 function HistoryPanel({ history }: HistoryPanelProps) {
   if (history.length === 0) {
     return (
       <section className="history" aria-label="Loop history">
         <h2>What the loop has learned</h2>
         <p className="quiet">
-          No answer yet. Each answer moves and narrows the zone for this
-          patient.
+          No answer yet. Each answer is scored a day later, from 0 to 100, and
+          tunes this patient's personal vector.
         </p>
       </section>
     )
@@ -37,7 +36,7 @@ function HistoryPanel({ history }: HistoryPanelProps) {
               </th>
               <th scope="col">Patient</th>
               <th scope="col" className="number">
-                State θ
+                State L
               </th>
               <th scope="col" className="number">
                 Reward
@@ -66,10 +65,12 @@ function HistoryPanel({ history }: HistoryPanelProps) {
                   </td>
                   <td
                     className={
-                      entry.reward >= 0 ? 'number gain' : 'number loss'
+                      entry.reward >= NEUTRAL_REWARD
+                        ? 'number gain'
+                        : 'number loss'
                     }
                   >
-                    {signed(entry.reward)}
+                    {entry.reward.toFixed(0)}
                   </td>
                   <td className="number">
                     {entry.center_before.toFixed(2)} →{' '}

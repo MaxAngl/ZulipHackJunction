@@ -14,20 +14,63 @@ class RequestFormat:
     label: str
     effort: float  # entre 0 et 1
     hint: str  # consigne donnée au générateur
+    # Position du format sur les axes d'une demande (docs/modele.md, section 3), hors axe des
+    # intérêts : concret, durée, échange humain, exposition personnelle, coût de démarrage.
+    # HYPOTHÈSE : ces valeurs sont posées à la main, format par format. Elles tiennent lieu de
+    # grille de notation tant qu'aucun modèle ne note chaque demande axe par axe.
+    axes: tuple[float, float, float, float, float]
 
 
 FORMATS: dict[str, RequestFormat] = {
     fmt.key: fmt
     for fmt in (
-        RequestFormat("opinion", "Quick opinion", 0.15, "a quick opinion, answered in one message"),
-        RequestFormat("memory", "Share a memory", 0.25, "share a memory or a short story"),
-        RequestFormat("explain", "Explain", 0.40, "explain how to do something, e.g. a voice note"),
-        RequestFormat("review", "Give feedback", 0.50, "look at something I made and comment"),
-        RequestFormat("make", "Make and show", 0.70, "do a small thing and send the result"),
-        RequestFormat("call", "Short call", 0.85, "a short live call"),
+        RequestFormat(
+            "opinion",
+            "Quick opinion",
+            0.15,
+            "a quick opinion, answered in one message",
+            (0.55, 0.10, 0.25, 0.20, 0.03),
+        ),
+        RequestFormat(
+            "memory",
+            "Share a memory",
+            0.25,
+            "share a memory or a short story",
+            (0.35, 0.25, 0.35, 0.45, 0.05),
+        ),
+        RequestFormat(
+            "explain",
+            "Explain",
+            0.40,
+            "explain how to do something, e.g. a voice note",
+            (0.65, 0.40, 0.40, 0.30, 0.08),
+        ),
+        RequestFormat(
+            "review",
+            "Give feedback",
+            0.50,
+            "look at something I made and comment",
+            (0.75, 0.45, 0.45, 0.20, 0.10),
+        ),
+        RequestFormat(
+            "make",
+            "Make and show",
+            0.70,
+            "do a small thing and send the result",
+            (0.90, 0.60, 0.30, 0.30, 0.20),
+        ),
+        RequestFormat(
+            "call", "Short call", 0.85, "a short live call", (0.50, 0.55, 0.80, 0.50, 0.18)
+        ),
     )
 }
 DEFAULT_FORMAT = "opinion"
+
+
+def request_axes(lam: float, format_key: str) -> tuple[float, ...]:
+    """Les six positions d'une demande : sa place entre les intérêts, puis celles de son format."""
+    return (round(float(lam), 3), *FORMATS.get(format_key, FORMATS[DEFAULT_FORMAT]).axes)
+
 
 # Repérage du format d'un texte libre quand Gemini n'est pas disponible. Le premier motif gagne.
 _FORMAT_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (

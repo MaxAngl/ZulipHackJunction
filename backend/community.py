@@ -3,48 +3,44 @@
 Différences avec `backend/loop.py` :
 - plusieurs aidants et plusieurs patients, enregistrés dans SQLite (`backend/store.py`) ;
 - le patient répond par écrit, l'aidant lit la réponse et remercie ;
-- l'état θ n'est plus simulé : il est estimé d'après le comportement du patient dans l'app
-  (il répond ou non, vite ou non, longuement ou non), ou poussé par un capteur externe ;
 - un patient n'a jamais plus d'une demande à la fois : les autres attendent leur tour.
+
+Comme dans la démo, l'état L(θ), la zone et le vecteur de chaque patient viennent des réseaux
+entraînés (`ml.model.brain`). Faute de montre branchée, chaque patient a un corps virtuel
+(`ml.model.VirtualPatient`) qui fournit ses relevés θ : c'est la partie SIMULÉE. Ce qui est réel :
+les personnes, leurs centres d'intérêt, les demandes, les réponses, et les signaux de frappe que
+l'app relève quand le patient écrit.
 """
 
+import hashlib
 import time
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
+
+import numpy as np
 
 from backend import schemas
 from backend.errors import ApiError
+from backend.readout import measured_typing
 from backend.store import Store, StoredRequest, User
 from ml.model import (
     Candidate,
     InterestPair,
     InterestProfile,
+    Outcome,
+    Reading,
+    VirtualPatient,
     Zone,
-    ZoneParams,
+    brain,
     build_profile,
     generate_candidates,
-    learn,
     measure_message,
+    request_axes,
     select_three,
     stable_match,
-    zone_for,
 )
 
-INITIAL_THETA = 0.6  # état à l'inscription, faute de mesure faite à la clinique
+INITIAL_THETA = 0.6  # niveau de fond à l'inscription, faute de mesure faite à la clinique
 PROPOSALS_WANTED = 3
-
-# Estimation de θ d'après le comportement. Chaque événement donne un score entre 0 et 1,
-# et θ fait 30 % du chemin vers ce score.
-BEHAVIOUR_WEIGHT = 0.3
-SCORE_REPLIED = 0.6
-BONUS_FAST = 0.2  # réponse en moins d'une heure
-BONUS_LONG = 0.2  # réponse d'au moins 80 caractères
-SCORE_DECLINED = 0.3
-FAST_SECONDS = 3600
-LONG_CHARACTERS = 80
-
-
-def _clamp(value: float) -> float:
-    return max(0.02, min(0.98, value))
 
 
 def suggestion_seed() -> int:
@@ -55,13 +51,36 @@ def suggestion_seed() -> int:
     return int(time.time())
 
 
+def body_seed(patient_id: str) -> int:
+    """Graine du corps virtuel d'un patient : la même personne retrouve le même corps.
+
+    Les tests la remplacent par une valeur fixe.
+    """
+    return int(hashlib.sha1(patient_id.encode()).hexdigest()[:8], 16)
+
+
 def _clean(interests: list[str]) -> list[str]:
     return list(dict.fromkeys(item.strip().lower() for item in interests if item.strip()))
+
+
+@dataclass
+class _Companion:
+    """Ce que la boucle sait d'un patient entre deux requêtes : son corps virtuel, ce que les
+    réseaux en lisent, et ce qu'ils ont appris de lui."""
+
+    body: VirtualPatient
+    normal: tuple[np.ndarray, np.ndarray]
+    reading: Reading
+    zone: Zone
+    vector: np.ndarray
+    outcomes: list[Outcome] = field(default_factory=list)
 
 
 class Community:
     def __init__(self, store: Store) -> None:
         self.store = store
+        self.brain = brain()
+        self._companions: dict[str, _Companion] = {}
 
     # --- Comptes -------------------------------------------------------------------------
 
@@ -170,8 +189,9 @@ class Community:
                     )
                 source = "edited" if proposal else "real_need"
 
-            zone = self._zone(patient)
-            fits = zone.contains(candidate.lam, candidate.effort) and not candidate.off_topic
+            fits = not candidate.off_topic and _fits(
+                self._zone(patient), candidate.lam, candidate.format, candidate.effort
+            )
             busy = self._pending(patient) is not None
             delivered = fits and not busy
             self.store.add_request(
@@ -217,17 +237,18 @@ class Community:
             ],
         )
 
-    def reply(self, patient: User, request_id: str, text: str) -> schemas.PatientHome:
+    def reply(
+        self,
+        patient: User,
+        request_id: str,
+        text: str,
+        typing: schemas.TypingSignals | None = None,
+    ) -> schemas.PatientHome:
         with self.store.lock:
             request = self._deliverable(patient, request_id)
-            now = time.time()
-            waited = now - (request.delivered_at or request.created_at)
-            score = SCORE_REPLIED
-            score += BONUS_FAST if waited < FAST_SECONDS else 0.0
-            score += BONUS_LONG if len(text.strip()) >= LONG_CHARACTERS else 0.0
-            self._learn(patient, request, score)
+            self._learn(patient, request, replied=True, typing=typing)
             self.store.update_request(
-                request.id, status="answered", reply=text.strip(), answered_at=now
+                request.id, status="answered", reply=text.strip(), answered_at=time.time()
             )
             self._release_held(patient.id)
             return self.patient_home(self._fresh(patient))
@@ -235,22 +256,22 @@ class Community:
     def decline(self, patient: User, request_id: str) -> schemas.PatientHome:
         with self.store.lock:
             request = self._deliverable(patient, request_id)
-            self._learn(patient, request, SCORE_DECLINED)
+            self._learn(patient, request, replied=False)
             self.store.update_request(request.id, status="declined", answered_at=time.time())
             self._release_held(patient.id)
             return self.patient_home(self._fresh(patient))
 
     def push_state(self, patient: User, theta: float) -> schemas.PatientHome:
-        """Entrée d'un capteur externe : il fournit θ, la boucle fait le reste."""
+        """Entrée de démonstration : fixe le niveau de fond du corps virtuel du patient.
+
+        Ses relevés suivent, l'autoencodeur relit L(θ), et la zone bouge. Ce réglage n'est pas
+        rejoué après un redémarrage du serveur.
+        """
         with self.store.lock:
-            self.store.save_patient_model(
-                patient.id,
-                _clamp(theta),
-                "sensor",
-                patient.zone_offset,
-                patient.zone_obs,
-                patient.tried_formats,
-            )
+            companion = self._companion(patient)
+            companion.body.set_level(theta)
+            self._read(companion)
+            self._save(patient, companion, "sensor", patient.tried_formats)
             self._release_held(patient.id)
             return self.patient_home(self._fresh(patient))
 
@@ -259,8 +280,65 @@ class Community:
     def _fresh(self, user: User) -> User:
         return self.store.user(user.id) or user
 
+    def _companion(self, patient: User) -> _Companion:
+        """Le corps virtuel du patient et ce que les réseaux en savent.
+
+        Reconstruit à la demande : la même graine redonne le même corps, et l'on rejoue les
+        demandes déjà traitées, dans l'ordre. Rien de plus n'a besoin d'être enregistré.
+        """
+        if patient.id not in self._companions:
+            body = VirtualPatient(body_seed(patient.id), INITIAL_THETA)
+            normal = self.brain.normal(body.theta)
+            reading = self.brain.reading(body.theta, normal)
+            vector = np.zeros(8, dtype=np.float32)
+            companion = _Companion(body, normal, reading, self.brain.zone(reading, vector), vector)
+            past = [
+                request
+                for request in self.store.requests_of("patient", patient.id)
+                if request.status in ("answered", "declined")
+            ]
+            for request in sorted(past, key=lambda item: item.answered_at or 0.0):
+                self._react(companion, request, replied=request.status == "answered")
+            self._companions[patient.id] = companion
+        return self._companions[patient.id]
+
+    def _read(self, companion: _Companion) -> None:
+        companion.reading = self.brain.reading(companion.body.theta, companion.normal)
+        companion.zone = self.brain.zone(companion.reading, companion.vector)
+
+    def _react(
+        self,
+        companion: _Companion,
+        request: StoredRequest,
+        replied: bool,
+        measured: dict[str, float] | None = None,
+    ) -> tuple[Reading, float]:
+        """Étapes 10 à 12 : la demande agit, une journée passe, on relit θ, on note, on apprend."""
+        before = companion.reading
+        axes = request_axes(request.lam, request.format)
+        companion.body.receive(np.array(axes), replied, measured)
+        after = self.brain.reading(companion.body.theta, companion.normal)
+        reward = self.brain.reward(before, after)
+        companion.outcomes.append(Outcome(before.context, axes, reward, replied))
+        companion.vector = self.brain.learn(companion.outcomes, companion.vector)
+        self._read(companion)
+        return before, reward
+
     def _zone(self, patient: User) -> Zone:
-        return zone_for(patient.theta, ZoneParams(patient.zone_offset, patient.zone_obs))
+        return self._companion(patient).zone
+
+    def _save(
+        self, patient: User, companion: _Companion, source: str, tried_formats: list[str]
+    ) -> None:
+        zone = companion.zone
+        self.store.save_patient_model(
+            patient.id,
+            round(companion.reading.wellbeing, 4),
+            source,
+            round(zone.center - zone.common_center, 4),
+            len(companion.outcomes),
+            tried_formats,
+        )
 
     def _pending(self, patient: User) -> StoredRequest | None:
         requests = self.store.requests_of("patient", patient.id)
@@ -312,7 +390,10 @@ class Community:
     def _proposal(self, payload: dict, proposal_id: str) -> Candidate:
         for item in payload["candidates"]:
             if item["id"] == proposal_id and item["id"] in payload["slots"]:
-                return Candidate(**{**item, "pair": InterestPair(**item["pair"])})
+                fields = {**item, "pair": InterestPair(**item["pair"])}
+                if fields.get("axes") is not None:
+                    fields["axes"] = tuple(fields["axes"])
+                return Candidate(**fields)
         raise ApiError(404, "proposal_not_found", "This suggestion is no longer available.")
 
     def _deliverable(self, patient: User, request_id: str) -> StoredRequest:
@@ -321,20 +402,23 @@ class Community:
             raise ApiError(404, "request_not_found", "This request is no longer waiting.")
         return request
 
-    def _learn(self, patient: User, request: StoredRequest, score: float) -> None:
-        """Étapes 10 à 12 : nouvel état d'après le comportement, récompense, mise à jour."""
-        theta_before = patient.theta
-        theta_after = _clamp(theta_before + BEHAVIOUR_WEIGHT * (score - theta_before))
-        reward = theta_after - theta_before  # θ attendu = θ avant : pas de dérive modélisée
-        params = learn(
-            ZoneParams(patient.zone_offset, patient.zone_obs), theta_before, request.lam, reward
-        )
+    def _learn(
+        self,
+        patient: User,
+        request: StoredRequest,
+        replied: bool,
+        typing: schemas.TypingSignals | None = None,
+    ) -> None:
+        """La réaction du patient, vraie, agit sur son corps virtuel ; les réseaux font le reste."""
+        companion = self._companion(patient)
+        before, reward = self._react(companion, request, replied, measured_typing(typing))
         tried = list(dict.fromkeys([*patient.tried_formats, request.format]))
-        self.store.save_patient_model(
-            patient.id, theta_after, "behaviour", params.offset, params.n_obs, tried
-        )
+        self._save(patient, companion, "wearable", tried)
         self.store.update_request(
-            request.id, theta_before=theta_before, theta_after=theta_after, reward=reward
+            request.id,
+            theta_before=round(before.wellbeing, 4),
+            theta_after=round(companion.reading.wellbeing, 4),
+            reward=round(reward, 2),
         )
 
     def _release_held(self, patient_id: str) -> None:
@@ -344,7 +428,8 @@ class Community:
             return
         zone = self._zone(patient)
         for request in self.store.requests_of("patient", patient.id):
-            if request.status == "held" and zone.contains(request.lam, request.effort):
+            fits = _fits(zone, request.lam, request.format, request.effort)
+            if request.status == "held" and fits:
                 self.store.update_request(
                     request.id, status="delivered", hold_reason=None, delivered_at=time.time()
                 )
@@ -369,6 +454,10 @@ class Community:
             thanks=request.thanks,
             created_at=request.created_at,
         )
+
+
+def _fits(zone: Zone, lam: float, format_key: str, effort: float) -> bool:
+    return zone.contains(lam, effort, request_axes(lam, format_key))
 
 
 def _user(user: User) -> schemas.AppUser:
