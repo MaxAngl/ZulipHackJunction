@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   type AppUser,
   getHelperHome,
+  type HelperHome,
   postMessage,
   type SendRequest,
   sendToPatient,
@@ -31,7 +32,21 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
   const [editText, setEditText] = useState('')
   const [ownText, setOwnText] = useState('')
   const [updatedUser, setUpdatedUser] = useState<AppUser | null>(null)
+  // Vrai pendant que le modèle écrit les propositions : une demi-minute avec Claude.
+  const [writing, setWriting] = useState(false)
   const asked = useRef(false)
+
+  const write = useCallback(
+    async (action: () => Promise<HelperHome>) => {
+      setWriting(true)
+      try {
+        await run(action)
+      } finally {
+        setWriting(false)
+      }
+    },
+    [run],
+  )
 
   // Rien à proposer en ouvrant l'onglet : on demande une fois à la boucle de chercher.
   const hasProposals = (home?.proposals.length ?? 0) > 0
@@ -40,8 +55,8 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
       return
     }
     asked.current = true
-    void run(() => suggest(token))
-  }, [home, activeTab, hasProposals, run, token])
+    void write(() => suggest(token))
+  }, [home, activeTab, hasProposals, write, token])
 
   async function sendRequest(body: SendRequest) {
     const next = await run(() => sendToPatient(token, body))
@@ -56,7 +71,7 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
 
   async function otherIdeas() {
     setEditingId(null)
-    await run(async () => {
+    await write(async () => {
       await skipSuggestions(token)
       return suggest(token)
     })
@@ -105,22 +120,35 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
               </div>
             </section>
 
-            {!patient && (
-              <section className="card-helper-patient stack text-center">
-                <p className="quiet">
-                  {busy
-                    ? 'Finding someone who would enjoy your question…'
-                    : 'Nobody to suggest right now.'}
+            {writing && (
+              <section
+                className="helper-writing"
+                role="status"
+                aria-live="polite"
+              >
+                <span className="helper-writing-bar" aria-hidden="true" />
+                <h2 className="helper-writing-title">
+                  {patient
+                    ? `Writing new requests for ${patient.name}…`
+                    : 'Finding someone to ask…'}
+                </h2>
+                <p>
+                  Three requests written for how they feel today. It takes about
+                  half a minute; you can read your messages meanwhile.
                 </p>
-                {!busy && (
-                  <button
-                    type="button"
-                    className="button button-primary"
-                    onClick={() => void run(() => suggest(token))}
-                  >
-                    Try again
-                  </button>
-                )}
+              </section>
+            )}
+
+            {!patient && !writing && !busy && (
+              <section className="card-helper-patient stack text-center">
+                <p className="quiet">Nobody to suggest right now.</p>
+                <button
+                  type="button"
+                  className="button button-primary"
+                  onClick={() => void write(() => suggest(token))}
+                >
+                  Try again
+                </button>
               </section>
             )}
 
@@ -181,72 +209,80 @@ function HelperScreen({ token, onLeave }: HelperScreenProps) {
                 </div>
 
                 <div className="proposals">
-                  {home.proposals.map((proposal) => (
-                    <div key={proposal.id} className="helper-proposal-card">
-                      {editingId === proposal.id ? (
-                        <>
-                          <textarea
-                            value={editText}
-                            rows={3}
-                            maxLength={600}
-                            aria-label="Edit request"
-                            onChange={(e) => setEditText(e.target.value)}
-                          />
-                          <div className="row">
-                            <button
-                              type="button"
-                              className="button button-primary"
-                              disabled={busy || editText.trim() === ''}
-                              onClick={() =>
-                                void sendRequest({
-                                  proposal_id: proposal.id,
-                                  text: editText.trim(),
-                                })
-                              }
-                            >
-                              Send
-                            </button>
-                            <button
-                              type="button"
-                              className="button"
-                              onClick={() => setEditingId(null)}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <p className="helper-proposal-text">
-                            {proposal.text}
-                          </p>
-                          <div className="row">
-                            <button
-                              type="button"
-                              className="button button-primary"
-                              disabled={busy}
-                              onClick={() =>
-                                void sendRequest({ proposal_id: proposal.id })
-                              }
-                            >
-                              Ask {patient.name}
-                            </button>
-                            <button
-                              type="button"
-                              className="button"
-                              disabled={busy}
-                              onClick={() => {
-                                setEditingId(proposal.id)
-                                setEditText(proposal.text)
-                              }}
-                            >
-                              Edit
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
+                  {/* Pendant « Other ideas », les anciennes ne sont plus proposées. */}
+                  {!writing &&
+                    home.proposals.map((proposal) => (
+                      <div key={proposal.id} className="helper-proposal-card">
+                        {editingId === proposal.id ? (
+                          <>
+                            <textarea
+                              value={editText}
+                              rows={3}
+                              maxLength={600}
+                              aria-label="Edit request"
+                              onChange={(e) => setEditText(e.target.value)}
+                            />
+                            <div className="row">
+                              <button
+                                type="button"
+                                className="button button-primary"
+                                disabled={busy || editText.trim() === ''}
+                                onClick={() =>
+                                  void sendRequest({
+                                    proposal_id: proposal.id,
+                                    text: editText.trim(),
+                                  })
+                                }
+                              >
+                                Send
+                              </button>
+                              <button
+                                type="button"
+                                className="button"
+                                onClick={() => setEditingId(null)}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <p className="helper-proposal-text">
+                              {proposal.text}
+                            </p>
+                            <div className="row">
+                              <button
+                                type="button"
+                                className="button button-primary"
+                                disabled={busy}
+                                onClick={() =>
+                                  void sendRequest({ proposal_id: proposal.id })
+                                }
+                              >
+                                Ask {patient.name}
+                              </button>
+                              <button
+                                type="button"
+                                className="button"
+                                disabled={busy}
+                                onClick={() => {
+                                  setEditingId(proposal.id)
+                                  setEditText(proposal.text)
+                                }}
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  {!writing && home.proposals.length === 0 && (
+                    <p className="quiet">
+                      No request fits how {patient.name} feels right now. Try
+                      other ideas.
+                    </p>
+                  )}
                 </div>
                 <div className="button-center-wrap">
                   <button

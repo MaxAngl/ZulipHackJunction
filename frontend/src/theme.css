@@ -384,6 +384,76 @@ button.chip.chip-on {
   font-size: var(--text-lg);
 }
 
+/* Pendant que le modèle écrit (une demi-minute avec Claude, issue #78) : le même bloc inversé
+   que les propositions, à leur place, avec une barre cyan qui glisse. */
+.helper-writing {
+  --pad: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--pad);
+  background: #0a0a0a;
+  color: #faf8f2;
+  border-radius: var(--radius);
+}
+
+[data-theme='dark'] .helper-writing {
+  background: #faf8f2;
+  color: #0a0a0a;
+}
+
+.helper-writing-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.helper-writing p {
+  margin: 0;
+  color: #bdb7aa;
+  font-size: var(--text-sm);
+}
+
+[data-theme='dark'] .helper-writing p {
+  color: #4d493f;
+}
+
+.helper-writing-bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+}
+
+.helper-writing-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 35%;
+  background: var(--cyan);
+  animation: helper-writing-slide 1.4s ease-in-out infinite;
+}
+
+@keyframes helper-writing-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(290%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .helper-writing-bar::after {
+    width: 100%;
+    animation: none;
+  }
+}
+
 /* --- Messagerie : des lignes séparées par un filet, des bulles en aplats -------------- */
 
 .thread-row-item {

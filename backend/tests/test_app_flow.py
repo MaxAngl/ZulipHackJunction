@@ -1,11 +1,13 @@
 """La vraie app, de l'inscription au merci : deux personnes, une demande, une réponse."""
 
+import threading
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from backend.community import Community
+from backend.errors import ApiError
 from backend.main import app, get_community
 from backend.schemas import (
     ErrorResponse,
@@ -16,7 +18,7 @@ from backend.schemas import (
 )
 from backend.store import Store
 from backend.tests.accounts import account, signup_body
-from ml.model import SIGNALS, request_axes
+from ml.model import SIGNALS, generate_candidates, measure_message, request_axes
 
 client = TestClient(app)
 
@@ -348,3 +350,49 @@ def test_what_the_networks_learned_about_a_patient_survives_a_restart(tmp_path: 
     assert after.reading.wellbeing == pytest.approx(before.reading.wellbeing)
     assert after.vector == pytest.approx(before.vector, abs=1e-5)
     assert after.zone.center == pytest.approx(before.zone.center, abs=1e-4)
+
+
+def _base_is_free(store: Store) -> bool:
+    """Le verrou de la base, vu d'un autre fil : libre, ou gardé par quelqu'un."""
+    seen: list[bool] = []
+
+    def probe() -> None:
+        taken = store.lock.acquire(timeout=1)
+        if taken:
+            store.lock.release()
+        seen.append(taken)
+
+    thread = threading.Thread(target=probe)
+    thread.start()
+    thread.join()
+    return seen[0]
+
+
+def test_the_base_stays_free_while_the_model_writes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """Avec Claude, une suggestion prend une demi-minute : le reste de l'app doit répondre
+    pendant ce temps, et la relecture d'un texte modifié aussi (issue #78)."""
+    community = Community(Store(tmp_path / "needed.db"))
+    account(community.store, "patient", "Aino", ["gardening"])
+    helper = account(community.store, "helper", "Mikko", ["cooking"])
+    free: list[bool] = []
+
+    def watched(real):
+        def call(*args, **kwargs):
+            free.append(_base_is_free(community.store))
+            return real(*args, **kwargs)
+
+        return call
+
+    monkeypatch.setattr("backend.community.generate_candidates", watched(generate_candidates))
+    monkeypatch.setattr("backend.community.measure_message", watched(measure_message))
+    home = community.suggest(helper)
+    community.send(helper, home.proposals[0].id, "Which herb would you start on a balcony?")
+    assert len(free) >= 2 and all(free)
+
+    again = community.suggest(helper)
+    community.send(helper, again.proposals[0].id, None)
+    with pytest.raises(ApiError) as sent_twice:
+        community.send(helper, again.proposals[0].id, None)
+    assert sent_twice.value.code == "no_proposals"
