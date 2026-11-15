@@ -50,19 +50,37 @@ _local_scale = {"gain": 1.0, "shift": 0.0}  # idem pour le modèle local (issue 
 GENERATION_SYSTEM = """You write short requests for a community app where members ask each other \
 for small favours.
 
-A member (the asker) is about to ask another member (the recipient) for a small favour. It must \
-be something the asker would genuinely want, and something the recipient can give thanks to \
-what they like or know. The point of every request is to let the recipient feel competent and \
-useful: someone really relies on a skill, a taste or a memory of theirs.
+A member (the asker) is about to ask another member (the recipient) for a small favour. The \
+point of every request is to let the recipient feel competent and useful: someone really relies \
+on a skill, a taste or an experience of theirs. That only works if the request is real.
+
+What makes a good request (this comes first, before position and format):
+- It is a real question the asker needs answered, in a concrete situation of their own: a \
+plan, a problem, a choice, a purchase, a first attempt. Say that situation in a few words (what \
+for, when, what went wrong).
+- The answer is something the asker can act on: a choice between options, a name, an amount, a \
+step, a fix, a tip.
+- Test each request before writing it: would a sensible adult send this to an acquaintance who \
+knows the subject, and would the answer change what they do next? If not, drop it.
+- No gimmicks: never a themed mash-up of the two interests (a loaf scored with stars, a scarf in \
+team colours, a playlist for houseplants), no whimsical or rhetorical questions ("is that \
+silly?", "would you rather"), nothing about fiction, dreams or naming things. Never move the \
+recipient's activity into the asker's setting where it does not belong (baking at a campsite, \
+knitting in the stands): the asker's setting is the reason for asking, not the place where \
+the recipient's hobby happens.
+- A memory is asked for because it helps the asker now (a first attempt, a mistake to avoid), \
+never out of nostalgia.
+- The two members have never met: never refer to a moment they shared.
 
 Blending the two interests of a pair:
-- When a request should touch both interests, find ONE concrete situation where they genuinely \
-meet, and ask about it. Examples: gardening x cooking: "Which herbs should I plant so I always \
-have fresh basil for my pasta?"; jazz x woodworking: "What record would you put on for an hour \
-of sanding in the workshop?".
+- The asker's interest gives the situation, the recipient's interest gives the answer. \
+Examples: climbing x cooking: "I'm climbing all day on Saturday. What could I cook on Friday \
+that is still good cold at the crag?"; sailing x knitting: "I'm crewing on a boat this autumn. \
+Which wool stays warm even when it gets damp?".
 - Never glue a sentence about the asker's hobby to an unrelated question about the recipient's \
-("I'm planning a bike ride. What's your favourite jazz album?" is wrong). If you find no \
-natural link, write a request closer to the recipient's interest instead.
+("I'm planning a bike ride. What's your favourite jazz album?" is wrong). If no real situation \
+links the two, write a plain useful question about the recipient's interest instead: a natural \
+request a little off the target position is better than a forced one.
 - Any reason you give for asking this person must follow from their interest or profile.
 
 Reading the interests:
@@ -318,7 +336,9 @@ Write {CANDIDATES_PER_PAIR} requests for each pair:
 - about two thirds inside the acceptable range and {within}, at different positions within \
 the range;
 - the others just outside the range or {beyond}, so both limits can be checked;
-- vary the formats and never repeat an idea.{avoid_block}
+- vary the formats and never repeat an idea;
+- every request passes the test of a real, useful question: when the two interests do not meet \
+naturally, stay with the recipient's interest rather than force a mix.{avoid_block}
 
 For each request give "pair" (its number), "format" (a key), "position" (your own estimate, \
 0 to 1) and "text"."""
