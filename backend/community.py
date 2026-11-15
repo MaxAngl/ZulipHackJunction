@@ -13,6 +13,7 @@ l'app relève quand le patient écrit.
 """
 
 import hashlib
+import threading
 import time
 from dataclasses import asdict, dataclass, field
 
@@ -84,6 +85,11 @@ class Community:
         self.store = store
         self.brain = brain()
         self._companions: dict[str, _Companion] = {}
+        # Les appels au modèle (une trentaine de secondes avec Claude) passent l'un après
+        # l'autre : `ml/pipeline.py` garde un état partagé (recalage de l'échelle, note du
+        # fournisseur). Ils ne prennent jamais `store.lock` : le reste de l'app répond pendant
+        # ce temps (issue #78).
+        self._writing = threading.Lock()
 
     # --- Comptes -------------------------------------------------------------------------
 
@@ -229,7 +235,11 @@ class Community:
         )
 
     def suggest(self, helper: User) -> schemas.HelperHome:
-        """Choisit un patient, calcule sa zone, génère, mesure et garde trois propositions."""
+        """Choisit un patient, calcule sa zone, génère, mesure et garde trois propositions.
+
+        Le choix du patient et l'enregistrement se font sous le verrou de la base ; la
+        génération, qui peut prendre une demi-minute, se fait hors de lui.
+        """
         with self.store.lock:
             patient = self._pick_patient(helper)
             if patient is None:
@@ -238,8 +248,11 @@ class Community:
                 )
             zone = self._zone(patient)
             pairs = self._pairs(helper, patient)
-            candidates: list[Candidate] = []
-            chosen: list[tuple[str, Candidate]] = []
+            tried = set(patient.tried_formats)
+
+        candidates: list[Candidate] = []
+        chosen: list[tuple[str, Candidate]] = []
+        with self._writing:
             for attempt in range(2):  # une seconde génération si la zone est peu fournie
                 candidates += generate_candidates(
                     pairs=pairs,
@@ -251,17 +264,23 @@ class Community:
                     patient_bio=patient.bio,
                     helper_bio=helper.bio,
                 )
-                chosen = select_three(candidates, zone, set(patient.tried_formats))
+                chosen = select_three(candidates, zone, tried)
                 if len(chosen) >= PROPOSALS_WANTED:
                     break
-            payload = {
-                "candidates": [asdict(candidate) for candidate in candidates],
-                "slots": [candidate.id for _, candidate in chosen],
-            }
+
+        payload = {
+            "candidates": [asdict(candidate) for candidate in candidates],
+            "slots": [candidate.id for _, candidate in chosen],
+        }
+        with self.store.lock:
             self.store.save_suggestions(helper.id, patient.id, payload)
             return self.helper_home(helper)
 
     def send(self, helper: User, proposal_id: str | None, text: str | None) -> schemas.HelperHome:
+        """Envoie une proposition telle quelle, modifiée, ou un texte de l'aidant.
+
+        Un texte modifié ou libre est relu et mesuré hors du verrou de la base (appel au modèle).
+        """
         with self.store.lock:
             saved = self.store.suggestions(helper.id)
             patient = self.store.user(saved[0]) if saved else None
@@ -271,24 +290,31 @@ class Community:
             written = (text or "").strip()
             if proposal is None and not written:
                 raise ApiError(422, "empty_message", "Pick a suggestion or write a request.")
+            zone = self._zone(patient)
 
-            if proposal is not None and written in ("", proposal.text):
-                candidate, source = proposal, "suggested"
-            else:
-                pairs = [
-                    InterestPair(mine, theirs)
-                    for mine in patient.interests
-                    for theirs in helper.interests
-                ]
+        if proposal is not None and written in ("", proposal.text):
+            candidate, source = proposal, "suggested"
+        else:
+            pairs = [
+                InterestPair(mine, theirs)
+                for mine in patient.interests
+                for theirs in helper.interests
+            ]
+            with self._writing:
                 candidate, review = measure_message(
-                    written, pairs, proposal.pair if proposal else None, self._zone(patient)
+                    written, pairs, proposal.pair if proposal else None, zone
                 )
-                if not review.safe:
-                    raise ApiError(
-                        422, "message_rejected", "This request can't be sent. Please rephrase it."
-                    )
-                source = "edited" if proposal else "real_need"
+            if not review.safe:
+                raise ApiError(
+                    422, "message_rejected", "This request can't be sent. Please rephrase it."
+                )
+            source = "edited" if proposal else "real_need"
 
+        with self.store.lock:
+            # Entre-temps, une autre action a pu envoyer ou remplacer ces propositions.
+            current = self.store.suggestions(helper.id)
+            if current is None or current[0] != patient.id:
+                raise ApiError(409, "no_proposals", "Ask for suggestions first.")
             fits = not candidate.off_topic and _fits(
                 self._zone(patient), candidate.lam, candidate.format, candidate.effort
             )
